@@ -113,6 +113,20 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTH_USER_MODEL = 'accounts.User'
 
+# Django REST Framework settings
+# Tells DRF how to authenticate incoming requests. Without this block, DRF
+# has no idea JWT "Authorization: Bearer <token>" headers are a valid way
+# to authenticate, so it silently ignores them and returns
+# "Authentication credentials were not provided."
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
