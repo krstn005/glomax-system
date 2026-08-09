@@ -42,6 +42,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'phone_number', 'address', 'role']
 
+
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
@@ -50,7 +51,35 @@ class GlomaxTokenObtainPairSerializer(TokenObtainPairSerializer):
     Custom login serializer - adds 'role' and 'username' directly into
     the token response, so React knows which dashboard to show
     immediately after login, without a second API call.
+
+    Also accepts EITHER an email OR a username in the same "username"
+    field the login form submits (matches the login spec: "Email or
+    Username, Password"). If the submitted value contains "@", it's
+    treated as an email and swapped for the matching account's actual
+    username before SimpleJWT's normal validation runs. If no account
+    matches that email, we deliberately let validation continue and
+    fail with SimpleJWT's normal "no active account" error, rather
+    than revealing whether that email exists in the system.
     """
+
+    def validate(self, attrs):
+        login_field = self.username_field  # 'username' by default
+        submitted_value = attrs.get(login_field)
+
+        if submitted_value and '@' in submitted_value:
+            try:
+                matched_user = User.objects.get(email__iexact=submitted_value)
+                attrs[login_field] = matched_user.username
+            except User.DoesNotExist:
+                pass  # fall through - normal invalid-credentials error will fire
+            except User.MultipleObjectsReturned:
+                pass  # ambiguous email match - fall through to normal error too
+
+        data = super().validate(attrs)
+        data['role'] = self.user.role
+        data['username'] = self.user.username
+        data['user_id'] = self.user.id
+        return data
 
     @classmethod
     def get_token(cls, user):
@@ -58,10 +87,3 @@ class GlomaxTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['role'] = user.role
         token['username'] = user.username
         return token
-
-    def validate(self, attrs):
-        data = super().validate(attrs)
-        data['role'] = self.user.role
-        data['username'] = self.user.username
-        data['user_id'] = self.user.id
-        return data
