@@ -46,12 +46,19 @@ class Ticket(models.Model):
     # --- Fields from the Submit Schedule Request Page (Figma: CST - NR) ---
     property_address = models.CharField(max_length=255)
     contact_number = models.CharField(max_length=20)
-    preferred_date = models.DateField()
+    preferred_date = models.DateField()  # requested by the Customer at submission
     solar_package = models.CharField(max_length=100)
     system_type = models.CharField(
         max_length=20,
         choices=SystemType.choices,
         blank=True,  # auto-filled once a package is selected
+    )
+
+    # --- Set by Staff on the Assign Partner Installer page ---
+    visit_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Actual scheduled visit date, set by Staff when assigning a Partner Installer.",
     )
 
     # --- Status tracking (matches the Request Status timeline page) ---
