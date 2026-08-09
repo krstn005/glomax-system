@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'tickets',
     'assessments',
     'pricing',
+    'finalsheet',
 ]
 
 MIDDLEWARE = [
