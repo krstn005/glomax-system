@@ -1,8 +1,8 @@
 from django.utils import timezone
 from rest_framework import generics, permissions, status
-from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import Ticket
 from .serializers import (
@@ -10,6 +10,8 @@ from .serializers import (
     TicketSerializer,
     TicketAssignSerializer,
     TicketDecisionSerializer,
+    TicketApproveSerializer,
+    TicketReturnForRevisionSerializer,
 )
 from accounts.permissions import (
     IsCustomer,
@@ -17,12 +19,11 @@ from accounts.permissions import (
     IsStaff,
     IsStaffOrAdmin,
     IsPartnerInstaller,
-    IsAssignedPartnerInstaller,
+    IsAdmin,
 )
-from assessments.serializers import AssessmentSerializer, AssessmentCreateSerializer
 
 
-# --- Stage 1 views (unchanged) ---
+# --- Stage 1 views (Customer) ---
 
 class TicketListCreateView(generics.ListCreateAPIView):
     """
@@ -57,9 +58,8 @@ class TicketDetailView(generics.RetrieveAPIView):
     """
     GET /api/tickets/<id>/  - view one ticket's full details.
     IsAccountOwner blocks a Customer from viewing a ticket that isn't
-    theirs. NOTE: Staff/Admin also need to view any ticket - that's
-    handled separately by StaffTicketListView / StaffTicketDetailView
-    below rather than loosening this Customer-facing view.
+    theirs. Staff/Admin/Partner Installer use the role-scoped list
+    views below instead of this Customer-facing one.
     """
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
@@ -97,10 +97,8 @@ class TicketWithdrawView(APIView):
 
 class StaffTicketListView(generics.ListAPIView):
     """
-    GET /api/tickets/staff/  - Staff/Admin view of ALL tickets, not
-    just one customer's (Incoming Requests / Ticket Progress pages).
-    Optional ?status=STATUS_VALUE filter, e.g.
-    /api/tickets/staff/?status=REQUEST_SUBMITTED
+    GET /api/tickets/staff/  - Staff/Admin view of ALL tickets.
+    Optional ?status=STATUS_VALUE filter.
     """
     serializer_class = TicketSerializer
     permission_classes = [permissions.IsAuthenticated, IsStaffOrAdmin]
@@ -116,9 +114,6 @@ class StaffTicketListView(generics.ListAPIView):
 class TicketAssignView(APIView):
     """
     PATCH /api/tickets/<id>/assign/  - Assign Partner Installer page.
-    Staff picks a Partner Installer + Visit Date. Moves status to
-    PI_ASSIGNED. From this point on, the Customer's Withdraw button
-    is hidden (enforced by TicketWithdrawView's status/assignment check).
     """
     permission_classes = [permissions.IsAuthenticated, IsStaff]
 
@@ -137,18 +132,16 @@ class TicketAssignView(APIView):
         ticket.assigned_at = timezone.now()
         ticket.save()
 
-        # NOTE: SMS + in-system notification to the Partner Installer
-        # is intentionally not implemented yet (Semaphore not purchased).
-
         return Response(TicketSerializer(ticket).data)
 
 
 class TicketDecisionView(APIView):
     """
     PATCH /api/tickets/<id>/decision/  - Assessment Review page.
-    Staff's decision after reviewing the Partner Installer's
-    submitted assessment: Forward to Admin, Not Compatible (Cannot
-    Proceed), or Not Compatible (Can Reapply).
+    Staff's decision: Forward to Admin, Not Compatible (Cannot
+    Proceed), or Not Compatible (Can Reapply). Also handles
+    resubmission after an Admin Return for Revision (ticket comes
+    back in STAFF_REVIEW status).
     """
     permission_classes = [permissions.IsAuthenticated, IsStaff]
 
@@ -164,6 +157,9 @@ class TicketDecisionView(APIView):
 
         if decision == 'FORWARD_TO_ADMIN':
             ticket.status = Ticket.Status.ADMIN_REVIEW
+            # Clear old revision notes once resubmitted so the
+            # Admin isn't looking at stale feedback on the next review.
+            ticket.admin_revision_notes = None
         elif decision == 'NOT_COMPATIBLE_CANNOT':
             ticket.status = Ticket.Status.NOT_COMPATIBLE_CANNOT_PROCEED
             ticket.completed_at = timezone.now()
@@ -180,9 +176,8 @@ class TicketDecisionView(APIView):
 
 class InstallerTicketListView(generics.ListAPIView):
     """
-    GET /api/tickets/installer/  - Partner Installer's view of tickets
-    assigned to them (Incoming Tickets page). Optional ?status= filter,
-    same pattern as StaffTicketListView.
+    GET /api/tickets/installer/  - tickets assigned to the logged-in
+    Partner Installer. Optional ?status=STATUS_VALUE filter.
     """
     serializer_class = TicketSerializer
     permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller]
@@ -195,41 +190,84 @@ class InstallerTicketListView(generics.ListAPIView):
         return queryset
 
 
-class TicketAssessmentSubmitView(APIView):
-    """
-    POST /api/tickets/<id>/assessment/  - Roof Assessment Digital Form.
-    The assigned Partner Installer submits their on-site findings plus
-    1-2 Proof of Visit Photos (multipart/form-data). Only allowed while
-    status is PI_ASSIGNED, and only for the ticket assigned to THIS
-    Partner Installer (enforced by IsAssignedPartnerInstaller, checked
-    manually below since this is a plain APIView). Moves status to
-    ASSESSMENT_SUBMITTED.
-    """
-    permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller, IsAssignedPartnerInstaller]
-    parser_classes = [MultiPartParser, FormParser]
+# --- Stage 4 views (Admin) ---
 
-    def post(self, request, pk):
+class AdminTicketListView(generics.ListAPIView):
+    """
+    GET /api/tickets/admin/  - Admin's Pending Approval queue (and
+    general ticket visibility). Optional ?status=STATUS_VALUE filter,
+    e.g. /api/tickets/admin/?status=ADMIN_REVIEW
+    """
+    serializer_class = TicketSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def get_queryset(self):
+        queryset = Ticket.objects.all().order_by('-created_at')
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        return queryset
+
+
+class TicketApproveView(APIView):
+    """
+    PATCH /api/tickets/<id>/approve/  - Pending Approval page's
+    Approve action. Creates the FinalSheet snapshot and moves the
+    ticket to APPROVED + COMPLETED.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def patch(self, request, pk):
+        # Local import avoids a circular import at module load time
+        # (finalsheet.models imports Ticket already).
+        from finalsheet.models import FinalSheet
+
         try:
             ticket = Ticket.objects.get(pk=pk)
         except Ticket.DoesNotExist:
             return Response({"detail": "Ticket not found."}, status=404)
 
-        self.check_object_permissions(request, ticket)
-
-        serializer = AssessmentCreateSerializer(
-            data=request.data,
-            context={'ticket': ticket, 'request': request},
-        )
+        serializer = TicketApproveSerializer(data=request.data, context={'ticket': ticket})
         serializer.is_valid(raise_exception=True)
-        assessment = serializer.save()
 
-        ticket.status = Ticket.Status.ASSESSMENT_SUBMITTED
+        FinalSheet.objects.create(
+            ticket=ticket,
+            approved_by=request.user,
+            final_cost=serializer.validated_data['final_cost'],
+            payment_terms_summary=serializer.validated_data['payment_terms_summary'],
+        )
+
+        ticket.status = Ticket.Status.APPROVED
+        ticket.completed_at = timezone.now()
         ticket.save()
 
-        return Response(
-            {
-                **TicketSerializer(ticket).data,
-                'assessment': AssessmentSerializer(assessment).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        # NOTE: SMS + email to the Customer with the Final Sheet
+        # attached is intentionally not implemented yet (Semaphore
+        # not purchased, email notifications not yet built).
+
+        return Response(TicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
+
+
+class TicketReturnForRevisionView(APIView):
+    """
+    PATCH /api/tickets/<id>/return-for-revision/  - Pending Approval
+    page's Return for Revision action. Sends the ticket back to Staff
+    with notes, moving status to STAFF_REVIEW so it reappears on
+    Staff's Assessment Review page for adjustment + resubmission.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def patch(self, request, pk):
+        try:
+            ticket = Ticket.objects.get(pk=pk)
+        except Ticket.DoesNotExist:
+            return Response({"detail": "Ticket not found."}, status=404)
+
+        serializer = TicketReturnForRevisionSerializer(data=request.data, context={'ticket': ticket})
+        serializer.is_valid(raise_exception=True)
+
+        ticket.status = Ticket.Status.STAFF_REVIEW
+        ticket.admin_revision_notes = serializer.validated_data['notes']
+        ticket.save()
+
+        return Response(TicketSerializer(ticket).data)

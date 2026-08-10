@@ -61,6 +61,13 @@ class Ticket(models.Model):
         help_text="Actual scheduled visit date, set by Staff when assigning a Partner Installer.",
     )
 
+    # --- Set by Admin on Return for Revision (Pending Approval page) ---
+    admin_revision_notes = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Admin's notes explaining why a ticket was sent back to Staff for revision.",
+    )
+
     # --- Status tracking (matches the Request Status timeline page) ---
     status = models.CharField(
         max_length=30,
