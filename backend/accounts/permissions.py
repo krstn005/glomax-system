@@ -114,3 +114,26 @@ class IsAccountOwner(permissions.BasePermission):
             and request.user.is_authenticated
             and getattr(obj, 'customer_id', None) == request.user.id
         )
+
+
+class IsAssignedPartnerInstaller(permissions.BasePermission):
+    """
+    Object-level permission: only allows the request to proceed if the
+    object's `partner_installer` is the requesting user (e.g. a Partner
+    Installer submitting an assessment for a ticket assigned to THEM,
+    not someone else's ticket).
+
+    Same pattern as IsAccountOwner, but for the partner_installer field
+    instead of customer. Since this is used from a plain APIView (not
+    a generic view), the view must call self.check_object_permissions()
+    itself after fetching the object.
+    """
+
+    message = "This ticket is not assigned to you."
+
+    def has_object_permission(self, request, view, obj):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and getattr(obj, 'partner_installer_id', None) == request.user.id
+        )

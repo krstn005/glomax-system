@@ -1,5 +1,6 @@
 from django.utils import timezone
 from rest_framework import generics, permissions, status
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -10,7 +11,15 @@ from .serializers import (
     TicketAssignSerializer,
     TicketDecisionSerializer,
 )
-from accounts.permissions import IsCustomer, IsAccountOwner, IsStaff, IsStaffOrAdmin
+from accounts.permissions import (
+    IsCustomer,
+    IsAccountOwner,
+    IsStaff,
+    IsStaffOrAdmin,
+    IsPartnerInstaller,
+    IsAssignedPartnerInstaller,
+)
+from assessments.serializers import AssessmentSerializer, AssessmentCreateSerializer
 
 
 # --- Stage 1 views (unchanged) ---
@@ -165,3 +174,62 @@ class TicketDecisionView(APIView):
         ticket.save()
 
         return Response(TicketSerializer(ticket).data)
+
+
+# --- Stage 3 views (Partner Installer) ---
+
+class InstallerTicketListView(generics.ListAPIView):
+    """
+    GET /api/tickets/installer/  - Partner Installer's view of tickets
+    assigned to them (Incoming Tickets page). Optional ?status= filter,
+    same pattern as StaffTicketListView.
+    """
+    serializer_class = TicketSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller]
+
+    def get_queryset(self):
+        queryset = Ticket.objects.filter(partner_installer=self.request.user).order_by('-created_at')
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        return queryset
+
+
+class TicketAssessmentSubmitView(APIView):
+    """
+    POST /api/tickets/<id>/assessment/  - Roof Assessment Digital Form.
+    The assigned Partner Installer submits their on-site findings plus
+    1-2 Proof of Visit Photos (multipart/form-data). Only allowed while
+    status is PI_ASSIGNED, and only for the ticket assigned to THIS
+    Partner Installer (enforced by IsAssignedPartnerInstaller, checked
+    manually below since this is a plain APIView). Moves status to
+    ASSESSMENT_SUBMITTED.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller, IsAssignedPartnerInstaller]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+        try:
+            ticket = Ticket.objects.get(pk=pk)
+        except Ticket.DoesNotExist:
+            return Response({"detail": "Ticket not found."}, status=404)
+
+        self.check_object_permissions(request, ticket)
+
+        serializer = AssessmentCreateSerializer(
+            data=request.data,
+            context={'ticket': ticket, 'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        assessment = serializer.save()
+
+        ticket.status = Ticket.Status.ASSESSMENT_SUBMITTED
+        ticket.save()
+
+        return Response(
+            {
+                **TicketSerializer(ticket).data,
+                'assessment': AssessmentSerializer(assessment).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
