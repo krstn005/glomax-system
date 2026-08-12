@@ -25,8 +25,9 @@ class TicketSerializer(serializers.ModelSerializer):
     """
     Used for reading ticket data back - list view, detail view, and
     responses after create/withdraw/assign/decision/approve actions.
-    Includes the nested assessment (Stage 3) and final_sheet (Stage 4)
-    when they exist, so the frontend gets the full picture in one call.
+    Includes the nested assessment (Stage 3), final_sheet (Stage 4),
+    and quotations (Stage A) when they exist, so the frontend gets the
+    full picture in one call.
     """
 
     ticket_number = serializers.ReadOnlyField()
@@ -37,6 +38,7 @@ class TicketSerializer(serializers.ModelSerializer):
     )
     assessment = serializers.SerializerMethodField()
     final_sheet = serializers.SerializerMethodField()
+    quotations = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
@@ -56,6 +58,7 @@ class TicketSerializer(serializers.ModelSerializer):
             'admin_revision_notes',
             'assessment',
             'final_sheet',
+            'quotations',
             'created_at',
             'updated_at',
             'assigned_at',
@@ -75,6 +78,10 @@ class TicketSerializer(serializers.ModelSerializer):
         from finalsheet.serializers import FinalSheetSerializer
         final_sheet = getattr(obj, 'final_sheet', None)
         return FinalSheetSerializer(final_sheet).data if final_sheet else None
+
+    def get_quotations(self, obj):
+        from pricing.serializers import QuotationSerializer
+        return QuotationSerializer(obj.quotations.all(), many=True).data
 
 
 class TicketAssignSerializer(serializers.Serializer):
