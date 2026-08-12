@@ -23,6 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
 
+# Used to verify Google Sign-In ID tokens (Continue with Google / Sign up with Google)
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 

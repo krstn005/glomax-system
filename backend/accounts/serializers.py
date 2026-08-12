@@ -131,3 +131,15 @@ class ManagedUserSerializer(serializers.ModelSerializer):
             'is_active',
         ]
         read_only_fields = fields
+
+
+class GoogleLoginSerializer(serializers.Serializer):
+    """
+    Used by both the Login and Register pages' "Continue with Google" /
+    "Sign up with Google" buttons. Accepts the ID token Google's frontend
+    library hands back after the user picks an account - the actual
+    verification of that token happens in the view, not here, since it
+    requires calling out to Google's servers (not a pure data validation
+    step).
+    """
+    id_token = serializers.CharField()

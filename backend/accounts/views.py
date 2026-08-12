@@ -1,13 +1,21 @@
+import uuid
+
+from django.conf import settings
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
+
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
     GlomaxTokenObtainPairSerializer,
     StaffPartnerInstallerCreateSerializer,
     ManagedUserSerializer,
+    GoogleLoginSerializer,
 )
 from .models import User
 from accounts.permissions import IsAdmin
@@ -41,6 +49,77 @@ class MeView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+# --- Google login (Customer only) ---
+
+class GoogleLoginView(APIView):
+    """
+    POST /api/accounts/google-login/  - "Continue with Google" /
+    "Sign up with Google" buttons on the Login and Register pages.
+
+    Verifies the ID token directly with Google (no client secret
+    needed for this - verification uses Google's public keys), then:
+      - if an account with that email already exists, logs into it
+      - otherwise creates a new CUSTOMER account automatically, using
+        the Google account's name/email, with an unusable password
+        (the account can only ever be accessed via Google login,
+        unless the person later sets a real password through Settings
+        - not built yet, matches the rest of the project's pattern of
+        building the core flow first)
+
+    Returns the exact same response shape as the normal login endpoint
+    (access, refresh, role, username, user_id), so the frontend can
+    treat both login methods identically after this point.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = GoogleLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data['id_token']
+
+        try:
+            payload = google_id_token.verify_oauth2_token(
+                token,
+                google_requests.Request(),
+                settings.GOOGLE_CLIENT_ID,
+            )
+        except ValueError:
+            return Response({"detail": "Invalid Google token."}, status=400)
+
+        email = payload.get('email')
+        if not email:
+            return Response({"detail": "Google account has no email."}, status=400)
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            # Create a new Customer account automatically. Username
+            # can't just be the email (User.username has its own
+            # uniqueness/format elsewhere) so we base it on the email's
+            # local part plus a short random suffix to avoid collisions.
+            base_username = email.split('@')[0][:20]
+            username = f"{base_username}_{uuid.uuid4().hex[:6]}"
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                role=User.Role.CUSTOMER,
+            )
+            user.set_unusable_password()
+            user.save()
+
+        refresh = RefreshToken.for_user(user)
+        refresh['role'] = user.role
+        refresh['username'] = user.username
+
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'role': user.role,
+            'username': user.username,
+            'user_id': user.id,
+        })
 
 
 # --- Admin account management (Stage C) ---
