@@ -87,3 +87,47 @@ class GlomaxTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['role'] = user.role
         token['username'] = user.username
         return token
+
+
+class StaffPartnerInstallerCreateSerializer(serializers.ModelSerializer):
+    """
+    Used by Admin to create a new Staff or Partner Installer account
+    (Manage Staff / Manage Partner Installers pages' "Create New" form).
+    `role` is NOT accepted here - it's set explicitly in the view
+    depending on which endpoint was called, so an Admin can never
+    accidentally create an ADMIN or CUSTOMER account through this form.
+    """
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'phone_number', 'password']
+
+    def create(self, validated_data):
+        role = self.context['role']
+        return User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            phone_number=validated_data.get('phone_number', ''),
+            password=validated_data['password'],
+            role=role,
+        )
+
+
+class ManagedUserSerializer(serializers.ModelSerializer):
+    """
+    Read-only representation of a Staff/Partner Installer account for
+    the Manage Staff / Manage Partner Installers table listing.
+    """
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'username',
+            'email',
+            'phone_number',
+            'address',
+            'is_active',
+        ]
+        read_only_fields = fields
