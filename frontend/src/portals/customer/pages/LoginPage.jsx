@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { ChevronLeft, User } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { login } from '../../../api/auth';
 import { googleLogin } from '../../../api/google';
+import logo from '../../../assets/images/logo.jpg';
 import '../styles/auth.css';
 
 export default function LoginPage() {
@@ -49,7 +51,7 @@ export default function LoginPage() {
       const data = await googleLogin(credentialResponse.credential);
       handleAuthSuccess(data);
     } catch (err) {
-      console.error('Google login failed:', err);
+      console.error('Google sign-in failed:', err);
       setError('Google sign-in failed. Please try again.');
     }
   }
@@ -57,23 +59,29 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-brand">
-        <div className="auth-brand-icon">G</div>
+        <img src={logo} alt="Glomax Solar Enterprises" className="auth-brand-logo" />
         <span className="auth-brand-name">Glomax Solar Enterprises</span>
       </div>
 
       <div className="auth-card">
-        <button
-          type="button"
-          className="auth-back-button"
-          onClick={() => navigate('/')}
-          aria-label="Back"
-        >
-          &#8249;
-        </button>
+        <div className="auth-back-row">
+          <button
+            type="button"
+            className="auth-back-button"
+            onClick={() => navigate('/')}
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} />
+          </button>
+        </div>
 
-        <div className="auth-icon-circle">&#128100;</div>
-        <h1 className="auth-title">Customer Portal</h1>
-        <p className="auth-subtitle">Submit requests and track your installation</p>
+        <div className="auth-header">
+          <div className="auth-icon-circle">
+            <User size={24} />
+          </div>
+          <h1 className="auth-title">Customer Portal</h1>
+          <p className="auth-subtitle">Submit requests and track your installation</p>
+        </div>
 
         <div className="auth-tabs">
           <button type="button" className="auth-tab active">
@@ -116,7 +124,7 @@ export default function LoginPage() {
               id="password"
               type="password"
               className="auth-input"
-              placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
+              placeholder="********"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

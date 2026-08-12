@@ -36,17 +36,11 @@ body {
   margin-bottom: 20px;
 }
 
-.auth-brand-icon {
+.auth-brand-logo {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background: var(--navy);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--gold);
-  font-weight: 700;
-  font-size: 14px;
+  border-radius: 8px;
+  object-fit: contain;
 }
 
 .auth-brand-name {
@@ -65,26 +59,37 @@ body {
   position: relative;
 }
 
+.auth-back-row {
+  margin-bottom: 8px;
+}
+
 .auth-back-button {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--bg-light);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: #ffffff;
   cursor: pointer;
   color: var(--text-dark);
-  font-size: 16px;
+  padding: 0;
+  transition: background 0.15s ease;
+}
+
+.auth-back-button:hover {
+  background: var(--bg-light);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 24px;
 }
 
 .auth-icon-circle {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--navy);
   color: #fff;
@@ -92,7 +97,6 @@ body {
   align-items: center;
   justify-content: center;
   margin: 0 auto 16px;
-  font-size: 24px;
 }
 
 .auth-title {
@@ -107,7 +111,8 @@ body {
   text-align: center;
   font-size: 13px;
   color: var(--text-muted);
-  margin: 0 0 24px;
+  margin: 0;
+  line-height: 1.5;
 }
 
 .auth-tabs {
@@ -115,7 +120,7 @@ body {
   background: var(--bg-light);
   border-radius: 10px;
   padding: 4px;
-  margin-bottom: 24px;
+  margin: 24px 0;
 }
 
 .auth-tab {

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { ChevronLeft, User } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { register } from '../../../api/auth';
 import { googleLogin } from '../../../api/google';
+import logo from '../../../assets/images/logo.jpg';
 import '../styles/auth.css';
 
 export default function RegisterPage() {
@@ -34,10 +36,6 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     try {
       await register(form);
-      // NOTE: The Figma design routes to an OTP verification screen here,
-      // but SMS/email verification (Semaphore) is intentionally deferred
-      // for now - accounts activate immediately, so we go straight to
-      // Login with a success message instead.
       navigate('/login', { state: { justRegistered: true } });
     } catch (err) {
       const data = err.response?.data;
@@ -62,31 +60,38 @@ export default function RegisterPage() {
       localStorage.setItem('username', data.username);
       navigate('/dashboard');
     } catch (err) {
-      console.error('Google sign-up failed:', err);
-      setError('Google sign-up failed. Please try again.');
+      console.error('Google sign-in failed:', err);
+      setError('Google sign-in failed. Please try again.');
     }
   }
+
 
   return (
     <div className="auth-page">
       <div className="auth-brand">
-        <div className="auth-brand-icon">G</div>
+        <img src={logo} alt="Glomax Solar Enterprises" className="auth-brand-logo" />
         <span className="auth-brand-name">Glomax Solar Enterprises</span>
       </div>
 
       <div className="auth-card">
-        <button
-          type="button"
-          className="auth-back-button"
-          onClick={() => navigate('/')}
-          aria-label="Back"
-        >
-          &#8249;
-        </button>
+        <div className="auth-back-row">
+          <button
+            type="button"
+            className="auth-back-button"
+            onClick={() => navigate('/')}
+            aria-label="Back"
+          >
+            <ChevronLeft size={18} />
+          </button>
+        </div>
 
-        <div className="auth-icon-circle">&#128100;</div>
-        <h1 className="auth-title">Customer Portal</h1>
-        <p className="auth-subtitle">Submit requests and track your installation</p>
+        <div className="auth-header">
+          <div className="auth-icon-circle">
+            <User size={24} />
+          </div>
+          <h1 className="auth-title">Customer Portal</h1>
+          <p className="auth-subtitle">Submit requests and track your installation</p>
+        </div>
 
         <div className="auth-tabs">
           <Link to="/login" className="auth-tab">
@@ -163,7 +168,7 @@ export default function RegisterPage() {
               name="password"
               type="password"
               className="auth-input"
-              placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
+              placeholder="********"
               value={form.password}
               onChange={handleChange}
               required
@@ -177,7 +182,7 @@ export default function RegisterPage() {
               name="confirm_password"
               type="password"
               className="auth-input"
-              placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
+              placeholder="********"
               value={form.confirm_password}
               onChange={handleChange}
               required
