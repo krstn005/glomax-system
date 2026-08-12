@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'assessments',
     'pricing',
     'finalsheet',
+    'inquiries'
 ]
 
 MIDDLEWARE = [
