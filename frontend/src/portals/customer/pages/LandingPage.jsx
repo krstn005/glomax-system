@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Building2, Zap, Wrench, ChevronDown, Sun } from 'lucide-react';
+import { Home, Building2, Zap, Wrench, ChevronDown } from 'lucide-react';
 import { submitInquiry } from '../../../api/inquiries';
 import heroImage from '../assets/images/landing_hero.jpg';
 import aboutImage from '../assets/images/landing_section.jpg';
@@ -193,9 +193,6 @@ export default function LandingPage() {
         style={{ backgroundImage: `linear-gradient(to right, rgba(15, 30, 53, 0.85), rgba(15, 30, 53, 0.5)), url(${heroImage})` }}
       >
         <div className="landing-hero-content">
-          <span className="landing-hero-badge">
-            <Sun size={16} /> Professional Solar Installation in the Philippines
-          </span>
           <h1>
             Save on Electricity
             <br />
@@ -234,11 +231,15 @@ export default function LandingPage() {
             <div className="landing-section-label">About Us</div>
             <h2>Powering Filipino Homes Since 2014</h2>
             <p>
-              Glomax Solar Enterprises is a trusted solar installation company with over 10 years
-              of experience serving residential and commercial clients across the Philippines. We
-              are committed to making clean, renewable energy accessible and affordable for every
-              Filipino family. Our team of certified solar technicians and engineers ensures every
-              installation meets the highest safety and quality standards.
+              Switch to clean, renewable solar energy and cut your electricity bills by up to 80%.
+              Glomax Solar Enterprises provides professional installation for residential and
+              commercial properties across the Philippines.
+            </p>
+            <p>
+              Glomax Enterprises Solar is a solar installation company based in Manila, Philippines
+              with over 10 years of experience helping homeowners get solar panels installed at
+              their properties. We are committed to making clean and renewable energy accessible
+              and affordable for every Filipino family.
             </p>
           </div>
           <img src={aboutImage} alt="Glomax solar installation team" className="landing-about-image" />
