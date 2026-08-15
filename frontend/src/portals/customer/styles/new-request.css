@@ -1,0 +1,372 @@
+.nr-heading h1 {
+  color: #0d1f3c;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.nr-heading p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+/* Step indicator */
+.nr-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.nr-step-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.nr-step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid #d1d5db;
+  color: #9ca3af;
+  background: #fff;
+}
+
+.nr-step-circle.active {
+  border-color: #0d1f3c;
+  color: #0d1f3c;
+}
+
+.nr-step-circle.done {
+  background: #0d1f3c;
+  border-color: #0d1f3c;
+  color: #fff;
+}
+
+.nr-step-label {
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.nr-step-label-active {
+  color: #0d1f3c;
+}
+
+.nr-step-line {
+  width: 80px;
+  height: 2px;
+  background: #d1d5db;
+}
+
+.nr-step-line.done {
+  background: #0d1f3c;
+}
+
+/* Card */
+.nr-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.nr-card h2 {
+  color: #0d1f3c;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 20px;
+}
+
+.nr-field {
+  margin-bottom: 16px;
+}
+
+.nr-field label {
+  display: block;
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.nr-field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.nr-field-label-top {
+  font-size: 13px;
+  color: #374151;
+  margin: 20px 0 12px;
+}
+
+/* Package grid */
+.nr-package-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.nr-package-card {
+  text-align: left;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+}
+
+.nr-package-card.selected {
+  border: 2px solid #eab308;
+  background: #fffbeb;
+}
+
+.nr-package-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.nr-package-name {
+  font-weight: 700;
+  color: #0d1f3c;
+  font-size: 14px;
+}
+
+.nr-package-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+.tag-ongrid { background: #f3f4f6; color: #374151; }
+.tag-hybrid { background: #f0fdf4; color: #15803d; }
+
+.nr-package-desc {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0 0 8px;
+}
+
+.nr-package-price {
+  font-weight: 700;
+  color: #0d1f3c;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* System type */
+.nr-system-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.nr-system-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.nr-system-card h3 {
+  font-size: 14px;
+  color: #0d1f3c;
+  margin: 0 0 4px;
+}
+
+.nr-system-card p {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Confirmation table */
+.nr-confirm-table {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 8px 20px;
+  margin-bottom: 16px;
+}
+
+.nr-confirm-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.nr-confirm-row:last-child { border-bottom: none; }
+.nr-confirm-row span { color: #6b7280; }
+.nr-confirm-row strong { color: #0d1f3c; }
+
+.nr-notice {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.nr-error {
+  color: #dc2626;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+/* Actions */
+.nr-actions {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.nr-actions-right { justify-content: flex-end; border-top: none; padding-top: 0; }
+.nr-actions-center { justify-content: center; gap: 12px; border-top: none; padding-top: 0; }
+
+.nr-btn-primary {
+  background: #0d1f3c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nr-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nr-btn-secondary {
+  background: #fff;
+  color: #0d1f3c;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Success screen */
+.nr-success-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 48px;
+  max-width: 500px;
+  margin: 60px auto 0;
+  text-align: center;
+}
+
+.nr-success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.nr-success-card h2 {
+  color: #0d1f3c;
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+
+.nr-success-card p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 4px 0;
+}
+
+.nr-ticket-number {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0d1f3c !important;
+  margin: 4px 0 16px !important;
+}
+
+.nr-success-sub {
+  margin-bottom: 24px !important;
+}
+
+/* Modal */
+.nr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.nr-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.nr-modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #0d1f3c;
+  color: #eab308;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.nr-modal h3 {
+  color: #0d1f3c;
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.nr-modal p {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0 0 20px;
+}
+
+.nr-modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.nr-modal-actions button {
+  flex: 1;
+}
