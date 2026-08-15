@@ -54,7 +54,6 @@ class UserSerializer(serializers.ModelSerializer):
             'notify_sms_updates',
             'notify_request_approval',
             'notify_request_rejection',
-            'notify_installation_complete',
             'notify_promotions',
         ]
         # id and role are never editable by the user themselves - role

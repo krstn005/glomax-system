@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, User } from 'lucide-react';
+import { ChevronLeft, User, Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { register } from '../../../api/auth';
 import { googleLogin } from '../../../api/google';
+import { sanitizePhoneNumber } from '../../../utils/phone';
 import logo from '../../../assets/images/logo.jpg';
 import '../styles/auth.css';
 
@@ -18,10 +19,19 @@ export default function RegisterPage() {
     confirm_password: '',
   });
   const [error, setError] = useState('');
+  const [phoneWarning, setPhoneWarning] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  function handlePhoneChange(e) {
+    const { value, hadInvalidChar } = sanitizePhoneNumber(e.target.value);
+    setForm({ ...form, phone_number: value });
+    setPhoneWarning(hadInvalidChar ? 'Phone Number can only contain numbers.' : '');
   }
 
   async function handleSubmit(e) {
@@ -139,12 +149,14 @@ export default function RegisterPage() {
               id="phone_number"
               name="phone_number"
               type="tel"
-              className="auth-input"
+              inputMode="numeric"
+              className="auth-input auth-input-tel"
               placeholder="09171234567"
               value={form.phone_number}
-              onChange={handleChange}
+              onChange={handlePhoneChange}
               required
             />
+            {phoneWarning && <p className="auth-field-warning">{phoneWarning}</p>}
           </div>
 
           <div className="auth-field">
@@ -163,30 +175,50 @@ export default function RegisterPage() {
 
           <div className="auth-field">
             <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              className="auth-input"
-              placeholder="********"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
+            <div className="auth-password-wrap">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                className="auth-input"
+                placeholder="********"
+                value={form.password}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <div className="auth-field">
             <label htmlFor="confirm_password">Confirm Password</label>
-            <input
-              id="confirm_password"
-              name="confirm_password"
-              type="password"
-              className="auth-input"
-              placeholder="********"
-              value={form.confirm_password}
-              onChange={handleChange}
-              required
-            />
+            <div className="auth-password-wrap">
+              <input
+                id="confirm_password"
+                name="confirm_password"
+                type={showConfirmPassword ? 'text' : 'password'}
+                className="auth-input"
+                placeholder="********"
+                value={form.confirm_password}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              >
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <button type="submit" className="auth-submit-button" disabled={isSubmitting}>

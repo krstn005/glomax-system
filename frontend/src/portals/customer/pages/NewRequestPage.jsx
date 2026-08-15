@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTicket } from '../../../api/tickets';
+import { sanitizePhoneNumber } from '../../../utils/phone';
 import CustomerLayout from '../components/CustomerLayout';
 import '../styles/new-request.css';
 
@@ -23,6 +24,7 @@ export default function NewRequestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [ticketNumber, setTicketNumber] = useState('');
+  const [phoneWarning, setPhoneWarning] = useState('');
 
   const [form, setForm] = useState({
     fullName: '',
@@ -35,6 +37,12 @@ export default function NewRequestPage() {
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handlePhoneChange(e) {
+    const { value, hadInvalidChar } = sanitizePhoneNumber(e.target.value);
+    updateField('contactNumber', value);
+    setPhoneWarning(hadInvalidChar ? 'Phone Number can only contain numbers.' : '');
   }
 
   function goToStep2(e) {
@@ -60,7 +68,7 @@ export default function NewRequestPage() {
       setTicketNumber(data.ticket_number);
       setShowConfirm(false);
       setStep(4); // success screen
-    } catch {
+    } catch  {
       setSubmitError('Something went wrong submitting your request. Please try again.');
       setShowConfirm(false);
     } finally {
@@ -111,14 +119,16 @@ export default function NewRequestPage() {
               />
             </div>
             <div className="nr-field">
-              <label>Contact Number *</label>
+              <label>Phone Number *</label>
               <input
-                type="text"
-                placeholder="0012 345 6780"
+                type="tel"
+                inputMode="numeric"
+                placeholder="0012 3456 780"
                 value={form.contactNumber}
-                onChange={(e) => updateField('contactNumber', e.target.value)}
+                onChange={handlePhoneChange}
                 required
               />
+              {phoneWarning && <p className="nr-field-warning">{phoneWarning}</p>}
             </div>
             <div className="nr-field">
               <label>Address *</label>
@@ -198,7 +208,7 @@ export default function NewRequestPage() {
               <strong>{form.fullName}</strong>
             </div>
             <div className="nr-confirm-row">
-              <span>Contact Number</span>
+              <span>Phone Number</span>
               <strong>{form.contactNumber}</strong>
             </div>
             <div className="nr-confirm-row">
@@ -220,7 +230,7 @@ export default function NewRequestPage() {
           </div>
 
           <div className="nr-notice">
-            An SMS confirmation will be sent to your contact number upon submission. Our team will review your request within 1-2 business days.
+            An SMS confirmation will be sent to your Phone Number upon submission. Our team will review your request within 1-2 business days.
           </div>
 
           {submitError && <div className="nr-error">{submitError}</div>}

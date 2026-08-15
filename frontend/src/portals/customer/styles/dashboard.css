@@ -11,7 +11,7 @@
   margin: 0 0 24px;
 }
 
-.db-loading, .db-error, .db-empty {
+.db-loading, .db-error {
   color: #6b7280;
   font-size: 14px;
   padding: 16px 0;
@@ -176,6 +176,14 @@
   font-weight: 500;
   color: #0d1f3c;
   text-decoration: none;
+}
+
+.db-empty {
+  color: #6b7280;
+  font-size: 14px;
+  padding: 24px 20px;
+  margin: 0;
+  text-align: center;
 }
 
 .db-table { width: 100%; border-collapse: collapse; }

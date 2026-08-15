@@ -1,8 +1,23 @@
-.pr-loading, .pr-error, .pr-empty {
+.pr-loading, .pr-error {
   color: #6b7280;
   font-size: 14px;
 }
 .pr-error { color: #dc2626; }
+
+.pr-empty-state {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.pr-empty {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+  text-align: center;
+}
 
 .pr-table-wrap {
   background: #fff;

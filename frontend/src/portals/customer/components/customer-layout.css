@@ -96,6 +96,7 @@
   padding: 0 24px;
   flex-shrink: 0;
   box-sizing: border-box;
+  gap: 12px;
 }
 
 .cst-portal-pill {
@@ -106,6 +107,8 @@
   font-size: 14px;
   font-weight: 500;
   margin: 0 auto;
+  flex-shrink: 1;
+  white-space: nowrap;
 }
 
 .cst-header-right {
@@ -113,6 +116,7 @@
   align-items: center;
   gap: 12px;
   position: relative;
+  flex-shrink: 0;
 }
 
 .cst-bell {
@@ -121,6 +125,7 @@
   color: #fff;
   cursor: pointer;
   padding: 8px;
+  flex-shrink: 0;
 }
 
 .cst-avatar {
@@ -160,6 +165,7 @@
   color: #fff;
   font-size: 14px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .cst-profile-btn {
@@ -171,6 +177,7 @@
   cursor: pointer;
   padding: 6px 8px;
   border-radius: 6px;
+  flex-shrink: 0;
 }
 
 .cst-profile-btn:hover {
@@ -180,6 +187,7 @@
 .cst-chevron {
   color: rgba(255, 255, 255, 0.6);
   transition: transform 0.15s;
+  flex-shrink: 0;
 }
 
 .cst-chevron.open {
@@ -192,9 +200,10 @@
   top: 56px;
   right: 0;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  width: 200px;
+  width: 264px;
+  max-width: calc(100vw - 32px);
   overflow: hidden;
   z-index: 50;
 }
@@ -202,23 +211,35 @@
 .cst-profile-menu-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: 12px;
+  padding: 16px;
   border-bottom: 1px solid #f3f4f6;
+  box-sizing: border-box;
+}
+
+.cst-profile-menu-header .cst-avatar,
+.cst-profile-menu-header .cst-avatar-img {
+  flex-shrink: 0;
 }
 
 .cst-profile-menu-header span {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 14px;
   font-weight: 600;
   color: #0d1f3c;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .cst-profile-menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 10px 16px;
+  padding: 12px 16px;
   background: transparent;
   border: none;
   text-align: left;
@@ -226,6 +247,11 @@
   color: #374151;
   text-decoration: none;
   cursor: pointer;
+  box-sizing: border-box;
+}
+
+.cst-profile-menu-item svg {
+  flex-shrink: 0;
 }
 
 .cst-profile-menu-item:hover {
@@ -235,6 +261,36 @@
 .cst-profile-menu-signout {
   color: #dc2626;
   border-top: 1px solid #f3f4f6;
+}
+
+/* Tablet: tighten spacing a bit, name still shows in full */
+@media (max-width: 768px) {
+  .cst-header {
+    padding: 0 16px;
+  }
+}
+
+/* Mobile: hide the header name to save space - the avatar is still
+   visible, and the full name is always shown inside the dropdown */
+@media (max-width: 480px) {
+  .cst-username {
+    display: none;
+  }
+
+  .cst-header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .cst-profile-menu {
+    width: 240px;
+    right: -8px;
+  }
+
+  .cst-profile-menu-header,
+  .cst-profile-menu-item {
+    padding: 12px 14px;
+  }
 }
 
 /* ---- Content ---- */
@@ -248,7 +304,7 @@
   color: #0d1f3c;
   font-size: 20px;
   font-weight: 700;
-  margin: 0 0 2px;
+  margin: 0 0 6px;
 }
 
 .cst-page-heading p {

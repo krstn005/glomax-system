@@ -26,10 +26,10 @@ export default function CustomerLayout({ children, pageTitle, pageSubtitle }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pictureUrl, setPictureUrl] = useState(null);
+  const [displayName, setDisplayName] = useState(() => localStorage.getItem('username') || 'Customer');
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const menuRef = useRef(null);
 
-  const displayName = localStorage.getItem('username') || 'Customer';
   const initials = displayName.slice(0, 2).toUpperCase();
 
   function handleSignOutClick() {
@@ -45,23 +45,24 @@ export default function CustomerLayout({ children, pageTitle, pageSubtitle }) {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadPicture() {
+    async function loadProfile() {
       try {
         const res = await apiClient.get('/accounts/me/');
         if (!cancelled) {
           setPictureUrl(res.data.profile_picture || null);
+          setDisplayName(localStorage.getItem('username') || 'Customer');
         }
       } catch {
         // fails silently - just falls back to showing initials
       }
     }
 
-    loadPicture();
-    window.addEventListener('profile-picture-updated', loadPicture);
+    loadProfile();
+    window.addEventListener('profile-picture-updated', loadProfile);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('profile-picture-updated', loadPicture);
+      window.removeEventListener('profile-picture-updated', loadProfile);
     };
   }, []);
 

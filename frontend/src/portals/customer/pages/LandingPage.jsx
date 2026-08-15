@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, Building2, Zap, Wrench, ChevronDown } from 'lucide-react';
 import { submitInquiry } from '../../../api/inquiries';
+import { sanitizePhoneNumber } from '../../../utils/phone';
 import heroImage from '../assets/images/landing_hero.jpg';
 import aboutImage from '../assets/images/landing_section.jpg';
 import logo from '../../../assets/images/logo.jpg';
@@ -126,6 +127,7 @@ export default function LandingPage() {
     subject: 'ROOF_ASSESSMENT',
     message: '',
   });
+  const [phoneWarning, setPhoneWarning] = useState('');
   const [status, setStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -137,12 +139,29 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  function scrollToElement(el) {
+    if (!el) return;
+    const navbarHeight = 88; // matches scroll-margin-top in landing.css
+    const topPosition = el.getBoundingClientRect().top + window.scrollY - navbarHeight;
+    window.scrollTo({ top: topPosition, behavior: 'smooth' });
+  }
+
   function scrollToContact() {
-    contactRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollToElement(contactRef.current);
+  }
+
+  function scrollToSection(sectionId) {
+    scrollToElement(document.getElementById(sectionId));
   }
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  function handlePhoneChange(e) {
+    const { value, hadInvalidChar } = sanitizePhoneNumber(e.target.value);
+    setForm({ ...form, phone_number: value });
+    setPhoneWarning(hadInvalidChar ? 'Phone Number can only contain numbers.' : '');
   }
 
   async function handleSubmit(e) {
@@ -169,11 +188,11 @@ export default function LandingPage() {
           <span>Glomax Solar Enterprises</span>
         </div>
         <div className="landing-navbar-links">
-          <a href="#hero">Home</a>
-          <a href="#about">About Us</a>
-          <a href="#services">Services</a>
-          <a href="#faqs">FAQs</a>
-          <a href="#packages">Solar Packages</a>
+          <a onClick={() => scrollToSection('hero')}>Home</a>
+          <a onClick={() => scrollToSection('about')}>About Us</a>
+          <a onClick={() => scrollToSection('services')}>Services</a>
+          <a onClick={() => scrollToSection('packages')}>Solar Packages</a>
+          <a onClick={() => scrollToSection('faqs')}>FAQs</a>
           <a onClick={scrollToContact}>Contact Us</a>
         </div>
         <div className="landing-navbar-actions">
@@ -327,7 +346,7 @@ export default function LandingPage() {
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedCapacity(tier.capacity);
-                    scrollToContact();
+                    navigate('/login');
                   }}
                 >
                   Get This Package
@@ -359,7 +378,11 @@ export default function LandingPage() {
                     <ChevronDown size={18} />
                   </span>
                 </button>
-                {isOpen && <div className="landing-faq-answer">{faq.answer}</div>}
+                <div className={`landing-faq-answer-wrapper ${isOpen ? 'open' : ''}`}>
+                  <div className="landing-faq-answer-inner">
+                    <div className="landing-faq-answer">{faq.answer}</div>
+                  </div>
+                </div>
               </div>
             );
           })}
@@ -403,10 +426,12 @@ export default function LandingPage() {
                   id="phone_number"
                   name="phone_number"
                   type="tel"
+                  inputMode="numeric"
                   value={form.phone_number}
-                  onChange={handleChange}
+                  onChange={handlePhoneChange}
                   required
                 />
+                {phoneWarning && <p className="landing-field-warning">{phoneWarning}</p>}
               </div>
             </div>
 

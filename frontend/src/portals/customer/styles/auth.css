@@ -246,3 +246,44 @@ body {
   display: flex;
   justify-content: center;
 }
+
+.auth-field-warning {
+  color: #dc2626;
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+
+/* Password show/hide toggle */
+.auth-password-wrap {
+  position: relative;
+}
+
+.auth-password-wrap .auth-input {
+  padding-right: 40px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+}
+
+.auth-password-toggle:hover {
+  color: #0d1f3c;
+}
+
+/* Fixes the phone field rendering wider than other fields in some browsers */
+.auth-input-tel {
+  width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}

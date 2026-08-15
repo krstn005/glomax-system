@@ -43,8 +43,7 @@ class User(AbstractUser):
     notify_email_updates = models.BooleanField(default=True)
     notify_sms_updates = models.BooleanField(default=True)
     notify_request_approval = models.BooleanField(default=True)
-    notify_request_rejection = models.BooleanField(default=True)
-    notify_installation_complete = models.BooleanField(default=True)
+    notify_request_rejection = models.BooleanField(default=True) 
     notify_promotions = models.BooleanField(default=False)
 
     def __str__(self):

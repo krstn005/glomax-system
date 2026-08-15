@@ -50,7 +50,9 @@ export default function PastRequestsPage() {
 
       {!loading && !error && (
         pastTickets.length === 0 ? (
-          <p className="pr-empty">You don't have any past requests yet.</p>
+          <div className="pr-empty-state">
+            <p className="pr-empty">You don't have any past requests yet.</p>
+          </div>
         ) : (
           <div className="pr-table-wrap">
             <table className="pr-table">

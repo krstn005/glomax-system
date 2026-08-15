@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Camera } from 'lucide-react';
 import apiClient from '../../../api/client';
+import { sanitizePhoneNumber } from '../../../utils/phone';
 import CustomerLayout from '../components/CustomerLayout';
 import '../styles/settings.css';
 
@@ -49,6 +50,7 @@ function ProfileTab() {
   const [pictureUrl, setPictureUrl] = useState(null);
   const [pictureFile, setPictureFile] = useState(null);
   const [picturePreview, setPicturePreview] = useState(null);
+  const [phoneWarning, setPhoneWarning] = useState('');
   const fileInputRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,12 @@ function ProfileTab() {
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handlePhoneChange(e) {
+    const { value, hadInvalidChar } = sanitizePhoneNumber(e.target.value);
+    updateField('phone', value);
+    setPhoneWarning(hadInvalidChar ? 'Phone Number can only contain numbers.' : '');
   }
 
   function handlePictureChange(e) {
@@ -168,7 +176,8 @@ function ProfileTab() {
         </div>
         <div className="set-field">
           <label>Phone Number</label>
-          <input value={form.phone} onChange={(e) => updateField('phone', e.target.value)} />
+          <input type="tel" inputMode="numeric" value={form.phone} onChange={handlePhoneChange} />
+          {phoneWarning && <p className="set-field-warning">{phoneWarning}</p>}
         </div>
         <div className="set-field">
           <label>Home Address</label>
@@ -203,7 +212,6 @@ function NotificationsTab() {
     notify_sms_updates: true,
     notify_request_approval: true,
     notify_request_rejection: true,
-    notify_installation_complete: true,
     notify_promotions: false,
   });
   const [loading, setLoading] = useState(true);
@@ -221,7 +229,6 @@ function NotificationsTab() {
           notify_sms_updates: res.data.notify_sms_updates,
           notify_request_approval: res.data.notify_request_approval,
           notify_request_rejection: res.data.notify_request_rejection,
-          notify_installation_complete: res.data.notify_installation_complete,
           notify_promotions: res.data.notify_promotions,
         });
       } catch {
@@ -289,13 +296,6 @@ function NotificationsTab() {
           <p className="set-toggle-sub">Notify when your request is rejected</p>
         </div>
         <Toggle checked={prefs.notify_request_rejection} onClick={() => toggle('notify_request_rejection')} />
-      </div>
-      <div className="set-toggle-row">
-        <div>
-          <p className="set-toggle-title">Installation Complete</p>
-          <p className="set-toggle-sub">Notify when installation is completed</p>
-        </div>
-        <Toggle checked={prefs.notify_installation_complete} onClick={() => toggle('notify_installation_complete')} />
       </div>
       <div className="set-toggle-row">
         <div>

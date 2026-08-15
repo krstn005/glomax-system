@@ -37,7 +37,7 @@ export default function DashboardPage() {
       const data = await getMyTickets();
       setTickets(data);
       setError('');
-    } catch (err) {
+    } catch  {
       setError('Could not load your requests. Please try again.');
     } finally {
       setLoading(false);
@@ -61,7 +61,7 @@ export default function DashboardPage() {
       setActionBusy(true);
       await withdrawTicket(ticketId);
       await loadTickets();
-    } catch (err) {
+    } catch {
       alert('Something went wrong withdrawing your request. Please try again.');
     } finally {
       setActionBusy(false);
@@ -72,7 +72,7 @@ export default function DashboardPage() {
     <CustomerLayout>
       <div className="db-heading">
         <h1>Welcome back, {firstName}!</h1>
-        <p>Here's an overview of your solar installation requests.</p>
+        <p>Here's an overview of your roof assessment requests.</p>
       </div>
 
       {loading && <p className="db-loading">Loading your requests...</p>}
