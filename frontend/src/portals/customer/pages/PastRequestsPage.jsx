@@ -30,7 +30,7 @@ export default function PastRequestsPage() {
         const data = await getMyTickets();
         setTickets(data);
         setError('');
-      } catch (err) {
+      } catch {
         setError('Could not load your requests. Please try again.');
       } finally {
         setLoading(false);
@@ -92,10 +92,6 @@ export default function PastRequestsPage() {
           </div>
         )
       )}
-
-      <div className="pr-new-btn-wrap">
-        <a href="/new-request" className="pr-new-btn">+ Submit New Request</a>
-      </div>
 
       {selectedTicket && (
         <div className="pr-modal-overlay" onClick={() => setSelectedTicket(null)}>

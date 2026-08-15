@@ -16,6 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,3 +27,10 @@ urlpatterns = [
     path('api/', include('finalsheet.urls')),
     path('api/inquiries/', include('inquiries.urls')),
 ]
+
+# Serve uploaded files (like profile pictures and Proof of Visit photos)
+# during development. In production this would be handled differently
+# (e.g. by a proper web server or cloud storage), but this is the
+# correct, standard way to do it while running locally with `runserver`.
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

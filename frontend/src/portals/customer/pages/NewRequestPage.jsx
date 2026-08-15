@@ -60,7 +60,7 @@ export default function NewRequestPage() {
       setTicketNumber(data.ticket_number);
       setShowConfirm(false);
       setStep(4); // success screen
-    } catch (err) {
+    } catch {
       setSubmitError('Something went wrong submitting your request. Please try again.');
       setShowConfirm(false);
     } finally {
@@ -259,7 +259,6 @@ export default function NewRequestPage() {
       {showConfirm && (
         <div className="nr-modal-overlay" onClick={() => setShowConfirm(false)}>
           <div className="nr-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="nr-modal-icon">➤</div>
             <h3>Submit Request?</h3>
             <p>
               Are you sure you want to submit this request? Once submitted, our team will begin reviewing it.
@@ -269,7 +268,7 @@ export default function NewRequestPage() {
                 Cancel
               </button>
               <button className="nr-btn-primary" disabled={submitting} onClick={handleSubmit}>
-                {submitting ? 'Submitting...' : 'Yes, Submit'}
+                {submitting ? 'Submitting...' : 'Submit'}
               </button>
             </div>
           </div>

@@ -1,29 +1,74 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { Camera } from 'lucide-react';
 import apiClient from '../../../api/client';
 import CustomerLayout from '../components/CustomerLayout';
 import '../styles/settings.css';
 
 const TABS = ['My Profile', 'Notifications', 'Security'];
 
+function Toggle({ checked, onClick }) {
+  return (
+    <button className={`set-toggle ${checked ? 'on' : ''}`} onClick={onClick}>
+      <span className="set-toggle-dot" />
+    </button>
+  );
+}
+
+function Toast({ message, onDone }) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, 3000);
+    return () => clearTimeout(timer);
+  }, [onDone]);
+
+  return (
+    <div className="set-toast">
+      {message}
+    </div>
+  );
+}
+
+function ConfirmModal({ title, message, confirmLabel, busy, onCancel, onConfirm }) {
+  return (
+    <div className="set-modal-overlay" onClick={onCancel}>
+      <div className="set-modal" onClick={(e) => e.stopPropagation()}>
+        <h3>{title}</h3>
+        <p>{message}</p>
+        <div className="set-modal-actions">
+          <button className="set-btn-secondary" onClick={onCancel}>Cancel</button>
+          <button className="set-btn" disabled={busy} onClick={onConfirm}>
+            {busy ? 'Saving...' : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfileTab() {
   const [form, setForm] = useState({ fullName: '', email: '', phone: '', address: '' });
+  const [pictureUrl, setPictureUrl] = useState(null);
+  const [pictureFile, setPictureFile] = useState(null);
+  const [picturePreview, setPicturePreview] = useState(null);
+  const fileInputRef = useRef(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     async function loadMe() {
       try {
-        // ⚠️ Uses the already-confirmed GET /api/accounts/me/ endpoint
         const res = await apiClient.get('/accounts/me/');
         setForm({
           fullName: res.data.username || '',
           email: res.data.email || '',
-          phone: res.data.phone || '',
+          phone: res.data.phone_number || '',
           address: res.data.address || '',
         });
-      } catch (err) {
+        setPictureUrl(res.data.profile_picture || null);
+      } catch {
         setError('Could not load your profile.');
       } finally {
         setLoading(false);
@@ -34,42 +79,81 @@ function ProfileTab() {
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
-    setSuccess(false);
   }
 
-  async function handleSave() {
+  function handlePictureChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPictureFile(file);
+    setPicturePreview(URL.createObjectURL(file));
+  }
+
+  async function performSave() {
     setSaving(true);
     setError('');
     try {
-      // ⚠️ Guessed endpoint — verify this matches your real accounts app
-      await apiClient.patch('/accounts/me/', {
-        username: form.fullName,
-        email: form.email,
-        phone: form.phone,
-        address: form.address,
-      });
+      const formData = new FormData();
+      formData.append('username', form.fullName);
+      formData.append('email', form.email);
+      formData.append('phone_number', form.phone);
+      formData.append('address', form.address);
+      if (pictureFile) {
+        formData.append('profile_picture', pictureFile);
+      }
+
+      const res = await apiClient.patch('/accounts/me/', formData);
+
       localStorage.setItem('username', form.fullName);
+      setPictureUrl(res.data.profile_picture || null);
+      setPictureFile(null);
+      setPicturePreview(null);
       setSuccess(true);
-    } catch (err) {
+      window.dispatchEvent(new Event('profile-picture-updated'));
+    } catch {
       setError('Something went wrong saving your changes. Please try again.');
     } finally {
       setSaving(false);
+      setShowConfirm(false);
     }
   }
 
   const initials = (form.fullName || 'CU').slice(0, 2).toUpperCase();
+  const displayedPicture = picturePreview || pictureUrl;
 
   if (loading) return <p className="set-loading">Loading...</p>;
 
   return (
     <div className="set-card">
+      {success && <Toast message="Changes saved successfully" onDone={() => setSuccess(false)} />}
+
       <h2>Personal Information</h2>
 
       <div className="set-photo-row">
-        <div className="set-avatar">{initials}</div>
+        <button
+          type="button"
+          className="set-avatar-clickable"
+          onClick={() => fileInputRef.current?.click()}
+          title="Click to change your photo"
+        >
+          {displayedPicture ? (
+            <img src={displayedPicture} alt="Profile" className="set-avatar-img" />
+          ) : (
+            <div className="set-avatar">{initials}</div>
+          )}
+          <span className="set-avatar-edit-badge">
+            <Camera size={12} />
+          </span>
+        </button>
         <div>
           <p className="set-photo-title">Profile Photo</p>
-          <p className="set-photo-sub">Your initials are used as your avatar</p>
+          <p className="set-photo-hint">Click your photo to upload a new one</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePictureChange}
+            style={{ display: 'none' }}
+          />
         </div>
       </div>
 
@@ -93,46 +177,86 @@ function ProfileTab() {
       </div>
 
       <div className="set-footer">
-        {success && <p className="set-success">✓ Password updated successfully!</p>}
         {error && <p className="set-error">{error}</p>}
-        <button className="set-btn" disabled={saving} onClick={handleSave}>
-          {saving ? 'Saving...' : 'Save Changes'}
+        <button className="set-btn set-btn-right" onClick={() => setShowConfirm(true)}>
+          Save Changes
         </button>
       </div>
+
+      {showConfirm && (
+        <ConfirmModal
+          title="Save Profile Changes?"
+          message="This will update your account information. Are you sure you want to continue?"
+          confirmLabel="Save Changes"
+          busy={saving}
+          onCancel={() => setShowConfirm(false)}
+          onConfirm={performSave}
+        />
+      )}
     </div>
   );
 }
 
 function NotificationsTab() {
   const [prefs, setPrefs] = useState({
-    email: true,
-    sms: true,
-    approval: true,
-    rejection: true,
-    completed: true,
-    promotions: false,
+    notify_email_updates: true,
+    notify_sms_updates: true,
+    notify_request_approval: true,
+    notify_request_rejection: true,
+    notify_installation_complete: true,
+    notify_promotions: false,
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    async function loadMe() {
+      try {
+        const res = await apiClient.get('/accounts/me/');
+        setPrefs({
+          notify_email_updates: res.data.notify_email_updates,
+          notify_sms_updates: res.data.notify_sms_updates,
+          notify_request_approval: res.data.notify_request_approval,
+          notify_request_rejection: res.data.notify_request_rejection,
+          notify_installation_complete: res.data.notify_installation_complete,
+          notify_promotions: res.data.notify_promotions,
+        });
+      } catch {
+        setError('Could not load your notification preferences.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadMe();
+  }, []);
 
   function toggle(key) {
     setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
-    setSuccess(false);
   }
 
-  function handleSave() {
-    // ⚠️ Not connected to a backend yet — no notification-preferences model exists
-    // in the project so far. This just confirms visually for now.
-    setSuccess(true);
+  async function performSave() {
+    setSaving(true);
+    setError('');
+    try {
+      await apiClient.patch('/accounts/me/', prefs);
+      setSuccess(true);
+    } catch {
+      setError('Something went wrong saving your preferences. Please try again.');
+    } finally {
+      setSaving(false);
+      setShowConfirm(false);
+    }
   }
 
-  const Toggle = ({ checked, onClick }) => (
-    <button className="set-btn set-btn-right" disabled={saving} onClick={handleSave}>
-      <span className="set-toggle-dot" />
-    </button>
-  );
+  if (loading) return <p className="set-loading">Loading...</p>;
 
   return (
     <div className="set-card">
+      {success && <Toast message="Preferences saved successfully" onDone={() => setSuccess(false)} />}
+
       <h2>Notification Preferences</h2>
 
       <div className="set-toggle-row">
@@ -140,14 +264,14 @@ function NotificationsTab() {
           <p className="set-toggle-title">Email Updates</p>
           <p className="set-toggle-sub">Receive updates via email</p>
         </div>
-        <Toggle checked={prefs.email} onClick={() => toggle('email')} />
+        <Toggle checked={prefs.notify_email_updates} onClick={() => toggle('notify_email_updates')} />
       </div>
       <div className="set-toggle-row">
         <div>
           <p className="set-toggle-title">SMS Updates</p>
           <p className="set-toggle-sub">Receive updates via SMS</p>
         </div>
-        <Toggle checked={prefs.sms} onClick={() => toggle('sms')} />
+        <Toggle checked={prefs.notify_sms_updates} onClick={() => toggle('notify_sms_updates')} />
       </div>
 
       <p className="set-section-label">Request Notifications</p>
@@ -157,34 +281,47 @@ function NotificationsTab() {
           <p className="set-toggle-title">Request Approval</p>
           <p className="set-toggle-sub">Notify when your request is approved</p>
         </div>
-        <Toggle checked={prefs.approval} onClick={() => toggle('approval')} />
+        <Toggle checked={prefs.notify_request_approval} onClick={() => toggle('notify_request_approval')} />
       </div>
       <div className="set-toggle-row">
         <div>
           <p className="set-toggle-title">Request Rejection</p>
           <p className="set-toggle-sub">Notify when your request is rejected</p>
         </div>
-        <Toggle checked={prefs.rejection} onClick={() => toggle('rejection')} />
+        <Toggle checked={prefs.notify_request_rejection} onClick={() => toggle('notify_request_rejection')} />
       </div>
       <div className="set-toggle-row">
         <div>
           <p className="set-toggle-title">Installation Complete</p>
           <p className="set-toggle-sub">Notify when installation is completed</p>
         </div>
-        <Toggle checked={prefs.completed} onClick={() => toggle('completed')} />
+        <Toggle checked={prefs.notify_installation_complete} onClick={() => toggle('notify_installation_complete')} />
       </div>
       <div className="set-toggle-row">
         <div>
           <p className="set-toggle-title">Promotions & Offers</p>
           <p className="set-toggle-sub">Receive special offers and promotions</p>
         </div>
-        <Toggle checked={prefs.promotions} onClick={() => toggle('promotions')} />
+        <Toggle checked={prefs.notify_promotions} onClick={() => toggle('notify_promotions')} />
       </div>
 
       <div className="set-footer">
-        {success && <p className="set-success">✓ Preferences saved (not yet connected to backend)</p>}
-        <button className="set-btn set-btn-right" onClick={handleSave}>Save Preferences</button>
+        {error && <p className="set-error">{error}</p>}
+        <button className="set-btn set-btn-right" onClick={() => setShowConfirm(true)}>
+          Save Preferences
+        </button>
       </div>
+
+      {showConfirm && (
+        <ConfirmModal
+          title="Save Notification Preferences?"
+          message="Your notification settings will be updated. Are you sure you want to continue?"
+          confirmLabel="Save Preferences"
+          busy={saving}
+          onCancel={() => setShowConfirm(false)}
+          onConfirm={performSave}
+        />
+      )}
     </div>
   );
 }
@@ -194,18 +331,22 @@ function SecurityTab() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
-    setSuccess(false);
     setError('');
   }
 
-  async function handleSave() {
+  function handleSaveClick() {
     if (form.next !== form.confirm) {
       setError('New password and confirmation do not match.');
       return;
     }
+    setShowConfirm(true);
+  }
+
+  async function performSave() {
     setSaving(true);
     setError('');
     try {
@@ -220,11 +361,14 @@ function SecurityTab() {
       setError(err.response?.data?.detail || 'Could not update password. Please try again.');
     } finally {
       setSaving(false);
+      setShowConfirm(false);
     }
   }
 
   return (
     <div className="set-card">
+      {success && <Toast message="Password updated successfully" onDone={() => setSuccess(false)} />}
+
       <h2>Change Password</h2>
 
       <div className="set-field set-field-wide">
@@ -255,12 +399,23 @@ function SecurityTab() {
         />
       </div>
 
-      {success && <p className="set-success">✓ Password updated successfully!</p>}
-      {error && <p className="set-error">{error}</p>}
+      <div className="set-footer">
+        {error && <p className="set-error">{error}</p>}
+        <button className="set-btn set-btn-right" onClick={handleSaveClick}>
+          Update Password
+        </button>
+      </div>
 
-      <button className="set-btn" disabled={saving} onClick={handleSave}>
-        {saving ? 'Updating...' : 'Update Password'}
-      </button>
+      {showConfirm && (
+        <ConfirmModal
+          title="Update Password?"
+          message="You'll need to use your new password the next time you sign in. Are you sure you want to continue?"
+          confirmLabel="Update Password"
+          busy={saving}
+          onCancel={() => setShowConfirm(false)}
+          onConfirm={performSave}
+        />
+      )}
     </div>
   );
 }

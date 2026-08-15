@@ -31,5 +31,21 @@ class User(AbstractUser):
     # accounts can be deactivated/reactivated by the Admin
     is_active_account = models.BooleanField(default=True)
 
+    # Profile photo, shown in the sidebar/header avatar once uploaded.
+    # Falls back to initials on the frontend if this is empty.
+    profile_picture = models.ImageField(
+        upload_to='profile_pictures/',
+        blank=True,
+        null=True,
+    )
+
+    # Notification Preferences (Customer Settings > Notifications tab)
+    notify_email_updates = models.BooleanField(default=True)
+    notify_sms_updates = models.BooleanField(default=True)
+    notify_request_approval = models.BooleanField(default=True)
+    notify_request_rejection = models.BooleanField(default=True)
+    notify_installation_complete = models.BooleanField(default=True)
+    notify_promotions = models.BooleanField(default=False)
+
     def __str__(self):
         return f"{self.username} ({self.role})"

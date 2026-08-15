@@ -58,21 +58,6 @@
   cursor: pointer;
 }
 
-.pr-new-btn-wrap {
-  margin-top: 20px;
-}
-
-.pr-new-btn {
-  display: inline-block;
-  background: #0d1f3c;
-  color: #fff;
-  border-radius: 6px;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
 /* Modal */
 .pr-modal-overlay {
   position: fixed;
@@ -87,16 +72,16 @@
 .pr-modal {
   background: #fff;
   border-radius: 12px;
-  max-width: 700px;
-  width: 100%;
-  max-height: 80vh;
+  max-width: 640px;
+  width: 92%;
+  max-height: 85vh;
   overflow-y: auto;
 }
 
 .pr-modal-header {
   background: #0d1f3c;
   color: #fff;
-  padding: 22px 30px;
+  padding: 20px 28px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;

@@ -42,13 +42,13 @@
 }
 
 .nr-step-circle.active {
-  border-color: #0d1f3c;
-  color: #0d1f3c;
+  border-color: #eab308;
+  color: #eab308;
 }
 
 .nr-step-circle.done {
-  background: #0d1f3c;
-  border-color: #0d1f3c;
+  background: #eab308;
+  border-color: #eab308;
   color: #fff;
 }
 
@@ -69,7 +69,7 @@
 }
 
 .nr-step-line.done {
-  background: #0d1f3c;
+  background: #eab308;
 }
 
 /* Card */
@@ -199,7 +199,7 @@
 
 /* Confirmation table */
 .nr-confirm-table {
-  background: #f9fafb;
+  background: #fffbeb;
   border-radius: 8px;
   padding: 8px 20px;
   margin-bottom: 16px;
@@ -209,7 +209,7 @@
   display: flex;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #fde68a;
   font-size: 14px;
 }
 
@@ -332,22 +332,9 @@
   background: #fff;
   border-radius: 12px;
   padding: 32px;
-  max-width: 400px;
-  width: 100%;
+  max-width: 380px;
+  width: 90%;
   text-align: center;
-}
-
-.nr-modal-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #0d1f3c;
-  color: #eab308;
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
 }
 
 .nr-modal h3 {

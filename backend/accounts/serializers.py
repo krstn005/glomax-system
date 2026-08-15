@@ -36,11 +36,30 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     """
     Used to send back logged-in user info (without the password) -
-    React uses this to know the user's name, role, etc.
+    React uses this to know the user's name, role, etc. Also used to
+    UPDATE profile info (My Profile tab) and notification preferences
+    (Notifications tab) via PATCH on /api/accounts/me/.
     """
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone_number', 'address', 'role']
+        fields = [
+            'id',
+            'username',
+            'email',
+            'phone_number',
+            'address',
+            'role',
+            'profile_picture',
+            'notify_email_updates',
+            'notify_sms_updates',
+            'notify_request_approval',
+            'notify_request_rejection',
+            'notify_installation_complete',
+            'notify_promotions',
+        ]
+        # id and role are never editable by the user themselves - role
+        # changes only happen through Admin actions elsewhere in the system
+        read_only_fields = ['id', 'role']
 
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer

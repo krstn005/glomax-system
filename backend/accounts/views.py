@@ -1,7 +1,7 @@
 import uuid
 
 from django.conf import settings
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -39,13 +39,24 @@ class GlomaxLoginView(TokenObtainPairView):
     serializer_class = GlomaxTokenObtainPairSerializer
 
 
-class MeView(generics.RetrieveAPIView):
+class MeView(generics.RetrieveUpdateAPIView):
     """
-    Returns the currently logged-in user's info.
-    GET /api/accounts/me/  (must include the access token)
+    Returns the currently logged-in user's info, and lets them update
+    their own profile (My Profile tab), notification preferences
+    (Notifications tab), and profile picture.
+
+    GET   /api/accounts/me/  - fetch current info (must include the access token)
+    PATCH /api/accounts/me/  - update profile fields / notification
+          preferences / profile picture (partial update - only send
+          the fields that changed)
+
+    Accepts both regular JSON (for text fields) and multipart form
+    data (needed when uploading a profile picture file at the same
+    time as other fields).
     """
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_object(self):
         return self.request.user
