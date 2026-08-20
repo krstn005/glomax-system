@@ -109,6 +109,22 @@
   box-sizing: border-box;
 }
 
+.nr-field input[type="date"] {
+  font-family: inherit;
+  color: #0d1f3c;
+  cursor: pointer;
+}
+
+.nr-field input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.nr-field input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 .nr-field-label-top {
   font-size: 13px;
   color: #374151;

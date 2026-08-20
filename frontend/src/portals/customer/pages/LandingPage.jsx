@@ -395,7 +395,7 @@ export default function LandingPage() {
           <div className="landing-section-label" style={{ textAlign: 'center' }}>Contact Us</div>
           <h2 style={{ textAlign: 'center' }}>Send Us an Inquiry</h2>
           <p style={{ textAlign: 'center', maxWidth: 480, margin: '0 auto' }}>
-            Fill out the form below and we will get back to you as soon as possible.
+            Fill out the form below and we will get back to you through your email as soon as possible.
           </p>
         </div>
 
@@ -469,6 +469,11 @@ export default function LandingPage() {
                 onChange={handleChange}
                 required
               />
+              <p className="landing-field-hint">
+                If this is a follow-up to a previous inquiry, please mention it in your message
+                (e.g. your name and roughly when you first reached out) so our team can assist
+                you faster.
+              </p>
             </div>
 
             <button type="submit" className="landing-btn-primary" disabled={status === 'submitting'}>

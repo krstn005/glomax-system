@@ -9,6 +9,18 @@ import RequestStatusPage from './portals/customer/pages/RequestStatusPage';
 import PastRequestsPage from './portals/customer/pages/PastRequestsPage';
 import FeedbackPage from './portals/customer/pages/FeedbackPage';
 import SettingsPage from './portals/customer/pages/SettingsPage';
+import PortalLoginPage from './portals/shared/pages/PortalLoginPage';
+import ProtectedRoute from './portals/shared/components/ProtectedRoute';
+import StaffDashboardPage from './portals/staff/pages/StaffDashboardPage';
+import StaffSettingsPage from './portals/staff/pages/StaffSettingsPage';
+import StaffEmailInquiriesPage from './portals/staff/pages/StaffEmailInquiriesPage';
+import AdminDashboardPage from './portals/admin/pages/AdminDashboardPage';
+import PIDashboardPage from './portals/partner-installer/pages/PIDashboardPage';
+import StaffInquiryQuotationPage from './portals/staff/pages/StaffInquiryQuotationPage';
+import StaffQuotationManagementPage from './portals/staff/pages/StaffQuotationManagementPage';
+import StaffManageTicketsPage from './portals/staff/pages/StaffManageTicketsPage';
+import StaffTicketDetailPage from './portals/staff/pages/StaffTicketDetailPage';
+import StaffQuotationDetailPage from './portals/staff/pages/StaffQuotationDetailPage';
 
 function isLoggedIn() {
   return Boolean(localStorage.getItem('access_token'));
@@ -24,6 +36,7 @@ function RequireAuth({ children }) {
 export default function App() {
   return (
     <Routes>
+      {/* Customer portal */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -76,6 +89,105 @@ export default function App() {
           </RequireAuth>
         }
       />
+
+      {/* Per-role login pages for Staff, Admin, and Partner Installer */}
+      <Route path="/staff-login" element={<PortalLoginPage role="STAFF" />} />
+      <Route path="/admin-login" element={<PortalLoginPage role="ADMIN" />} />
+      <Route
+        path="/partner-installer-login"
+        element={<PortalLoginPage role="PARTNER_INSTALLER" />}
+      />
+
+      {/* Staff portal */}
+      <Route
+        path="/staff/dashboard"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/settings"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/email-inquiries"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffEmailInquiriesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Admin portal */}
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute allowedRole="ADMIN">
+            <AdminDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Partner Installer portal */}
+      <Route
+        path="/partner-installer/dashboard"
+        element={
+          <ProtectedRoute allowedRole="PARTNER_INSTALLER">
+            <PIDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Staff Inquiry Quotation */}
+      <Route
+        path="/staff/email-inquiries/:id/quotation"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffInquiryQuotationPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/quotations"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffQuotationManagementPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Manage Tickets (list + detail) */}
+      <Route
+        path="/staff/manage-tickets"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffManageTicketsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/manage-tickets/:id"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffTicketDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+      path="/staff/quotations/:id"
+      element={
+    <ProtectedRoute allowedRole="STAFF">
+      <StaffQuotationDetailPage />
+    </ProtectedRoute>
+  }
+/>
     </Routes>
   );
 }

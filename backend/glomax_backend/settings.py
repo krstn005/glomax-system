@@ -42,8 +42,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'rest_framework',
     'corsheaders',
+    'anymail',
     'accounts',
     'tickets',
     'assessments',
@@ -174,3 +176,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
+
+# Email settings - sends real emails (e.g. Initial Quotation from the
+# Staff Email Inquiries page) through Resend instead of Django's default
+# local SMTP, which is what was causing the ConnectionRefusedError.
+EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+
+ANYMAIL = {
+    "RESEND_API_KEY": config('RESEND_API_KEY'),
+}
+
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')

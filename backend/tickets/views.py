@@ -1,3 +1,6 @@
+import re
+from decimal import Decimal, InvalidOperation
+
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
@@ -21,6 +24,25 @@ from accounts.permissions import (
     IsPartnerInstaller,
     IsAdmin,
 )
+
+
+def _parse_cost_text(raw_text):
+    """
+    Converts a free-text cost string (e.g. "P250,000", "250000.50")
+    into a Decimal, or returns None if it can't be parsed. Used when
+    auto-linking an Inquiry's Initial Quotation to a new Ticket, since
+    Inquiry.quotation_estimated_cost is free text but
+    pricing.Quotation.estimated_cost is a strict DecimalField.
+    """
+    if not raw_text:
+        return None
+    cleaned = re.sub(r'[^\d.]', '', raw_text)
+    if not cleaned:
+        return None
+    try:
+        return Decimal(cleaned)
+    except InvalidOperation:
+        return None
 
 
 # --- Stage 1 views (Customer) ---
@@ -48,9 +70,66 @@ class TicketListCreateView(generics.ListCreateAPIView):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         ticket = serializer.instance
+
+        self._link_initial_quotation(ticket)
+
         return Response(
             TicketSerializer(ticket).data,
             status=status.HTTP_201_CREATED,
+        )
+
+    def _link_initial_quotation(self, ticket):
+        """
+        If this ticket's Customer previously submitted a public
+        Inquiry (same email) that already had an Initial Quotation
+        sent via the Email Inquiries page, copy that quotation into a
+        real pricing.Quotation record now that a ticket exists to
+        attach it to. Matches the Quotation Management spec: the
+        system automatically links the Initial Quotation to the ticket
+        once the customer registers/applies with the same email used
+        in their inquiry.
+
+        Silently does nothing if there's no matching inquiry, if this
+        ticket already has an Initial Quotation, or if the stored cost
+        text can't be parsed - a failed auto-link should never block
+        the customer's ticket from being created.
+        """
+        # Local imports avoid circular imports at module load time.
+        from inquiries.models import Inquiry
+        from pricing.models import Quotation, PaymentTerms
+
+        if Quotation.objects.filter(ticket=ticket, quotation_type='INITIAL').exists():
+            return
+
+        inquiry = (
+            Inquiry.objects.filter(
+                email__iexact=ticket.customer.email,
+                quotation_sent=True,
+                subject=Inquiry.Subject.ROOF_ASSESSMENT,
+            )
+            .order_by('-quotation_sent_at')
+            .first()
+        )
+        if not inquiry:
+            return
+
+        cost = _parse_cost_text(inquiry.quotation_estimated_cost)
+        if cost is None:
+            return
+
+        payment_terms = None
+        if inquiry.quotation_payment_terms:
+            payment_terms, _ = PaymentTerms.objects.get_or_create(
+                description=inquiry.quotation_payment_terms
+            )
+
+        Quotation.objects.create(
+            ticket=ticket,
+            quotation_type='INITIAL',
+            package_details=inquiry.quotation_package_details or '',
+            estimated_cost=cost,
+            payment_terms=payment_terms,
+            notes=inquiry.quotation_message_to_customer or '',
         )
 
 
@@ -118,6 +197,8 @@ class TicketAssignView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsStaff]
 
     def patch(self, request, pk):
+        from .utils import send_assignment_email
+
         try:
             ticket = Ticket.objects.get(pk=pk)
         except Ticket.DoesNotExist:
@@ -131,6 +212,8 @@ class TicketAssignView(APIView):
         ticket.status = Ticket.Status.PARTNER_INSTALLER_ASSIGNED
         ticket.assigned_at = timezone.now()
         ticket.save()
+
+        send_assignment_email(ticket)
 
         return Response(TicketSerializer(ticket).data)
 

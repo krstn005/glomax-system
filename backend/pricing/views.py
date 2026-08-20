@@ -3,8 +3,19 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, NotFound
 
 from tickets.models import Ticket
-from .models import Quotation
-from .serializers import QuotationSerializer, QuotationCreateSerializer
+from .models import Quotation, PaymentTerms
+from .serializers import QuotationSerializer, QuotationCreateSerializer, PaymentTermsSerializer
+
+
+class PaymentTermsListView(generics.ListAPIView):
+    """
+    GET /api/pricing/payment-terms/  - read-only list of all existing
+    Payment Terms, newest first. Used to populate the dropdown on
+    Staff's Updated Quotation form.
+    """
+    queryset = PaymentTerms.objects.all()
+    serializer_class = PaymentTermsSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class TicketQuotationListCreateView(generics.ListCreateAPIView):
@@ -15,7 +26,9 @@ class TicketQuotationListCreateView(generics.ListCreateAPIView):
          later "Updated" quotations appearing as they're sent).
          Allowed for: the ticket's own Customer, or Staff/Admin.
     POST /api/tickets/<id>/quotations/  - send a new quotation for this
-         ticket (Initial or Updated). Staff only.
+         ticket (Initial or Updated). Staff only. An Updated Quotation
+         is additionally restricted to the correct ticket status (see
+         QuotationCreateSerializer.validate).
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -48,7 +61,7 @@ class TicketQuotationListCreateView(generics.ListCreateAPIView):
         if request.user.role != 'STAFF':
             raise PermissionDenied("Only Staff can send a quotation.")
 
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=request.data, context={'ticket': ticket, 'request': request})
         serializer.is_valid(raise_exception=True)
         quotation = serializer.save(ticket=ticket)
 

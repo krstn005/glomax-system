@@ -1,0 +1,357 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 2.2cm 2cm;
+  }
+  body {
+    font-family: Helvetica, Arial, sans-serif;
+    color: #111827;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+  table {
+    border-collapse: collapse;
+  }
+
+  /* ---- Header ---- */
+  .header-table {
+    width: 482pt;
+    border-bottom: 2pt solid #0d1f3c;
+    padding-bottom: 10pt;
+    margin-bottom: 18pt;
+  }
+  .header-table td {
+    vertical-align: top;
+    padding: 0;
+  }
+  .logo-cell img {
+    width: 36pt;
+    height: 36pt;
+  }
+  .eyebrow {
+    color: #eab308;
+    font-size: 9pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1.2pt;
+    margin-bottom: 4pt;
+  }
+  .title {
+    color: #0d1f3c;
+    font-size: 15pt;
+    font-weight: bold;
+    margin: 0;
+  }
+  .status-tag {
+    border: 1pt solid #166534;
+    color: #166534;
+    font-size: 8.5pt;
+    font-weight: bold;
+    letter-spacing: 0.5pt;
+    text-transform: uppercase;
+    padding: 4pt 10pt;
+  }
+  .status-date {
+    color: #9ca3af;
+    font-size: 8.5pt;
+    text-align: right;
+    margin-top: 6pt;
+  }
+
+  /* ---- Final Cost banner ---- */
+  .cost-box {
+    width: 482pt;
+    background-color: #0d1f3c;
+    border-top: 3pt solid #eab308;
+    margin-bottom: 18pt;
+  }
+  .cost-box td {
+    padding: 11pt 16pt;
+  }
+  .cost-box .label {
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.6pt;
+    color: rgba(255,255,255,0.7);
+  }
+  .cost-box .value {
+    font-size: 18pt;
+    font-weight: bold;
+    color: #eab308;
+    text-align: right;
+  }
+
+  /* ---- Section titles ---- */
+  .section-title {
+    color: #6b7280;
+    font-size: 9pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.6pt;
+    border-bottom: 1pt solid #e5e7eb;
+    padding-bottom: 6pt;
+    margin-bottom: 11pt;
+  }
+  .section-gap {
+    height: 16pt;
+  }
+
+  /* ---- Stacked label/value fields ---- */
+  .field {
+    margin-bottom: 9pt;
+  }
+  .field:last-child {
+    margin-bottom: 0;
+  }
+  .field-label {
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    color: #9ca3af;
+    margin-bottom: 2pt;
+  }
+  .field-value {
+    font-size: 10pt;
+    color: #111827;
+  }
+  .field-value.money {
+    font-weight: bold;
+    color: #0d1f3c;
+  }
+
+  /* ---- Two-column layout ---- */
+  .two-col {
+    width: 482pt;
+  }
+  .two-col td {
+    width: 241pt;
+    vertical-align: top;
+  }
+  .two-col td.right-col {
+    padding-left: 24pt;
+  }
+
+  /* ---- Photos: centered, sized larger when there's only one ---- */
+  .photo-wrap {
+    width: 482pt;
+    text-align: center;
+  }
+  table.photo-table {
+    margin: 0 auto;
+  }
+  table.photo-table td {
+    padding: 0 4pt;
+  }
+  table.photo-table td.single img {
+    width: 260pt;
+    height: 160pt;
+  }
+  table.photo-table td.multi img {
+    width: 150pt;
+    height: 100pt;
+  }
+  .no-photos {
+    color: #9ca3af;
+    font-size: 9pt;
+    margin: 0;
+  }
+
+  /* ---- Quotation Summary ---- */
+  table.quote-flow {
+    width: 482pt;
+    text-align: center;
+  }
+  table.quote-flow td.qcell {
+    width: 160pt;
+  }
+
+  /* ---- Payment & Approval ---- */
+  table.approval {
+    width: 482pt;
+  }
+  table.approval td {
+    width: 160pt;
+    vertical-align: top;
+  }
+
+  /* Keeps Quotation Summary + Payment & Approval from being
+     split across a page break, and avoids either being stranded
+     alone on a new page like Payment & Approval was before. */
+  .no-break {
+    page-break-inside: avoid;
+  }
+
+  .footer {
+    margin-top: 18pt;
+    padding-top: 10pt;
+    border-top: 0.5pt solid #f3f4f6;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 8pt;
+  }
+</style>
+</head>
+<body>
+
+  <table class="header-table">
+    <tr>
+      <td class="logo-cell" style="width:46pt;">
+        <img src="{% static 'finalsheet/logo.jpg' %}" />
+      </td>
+      <td style="width:294pt;">
+        <div class="eyebrow">Final Sheet</div>
+        <div class="title">{{ ticket.ticket_number }} &mdash; {{ ticket.customer.username }}</div>
+      </td>
+      <td style="width:142pt; text-align:right;">
+        <span class="status-tag">Approved</span>
+        <div class="status-date">{{ final_sheet.approved_at|date:"F j, Y" }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <table class="cost-box">
+    <tr>
+      <td class="label">Final Cost</td>
+      <td class="value">PHP {{ final_sheet.final_cost|floatformat:2|intcomma }}</td>
+    </tr>
+  </table>
+
+  <table class="two-col">
+    <tr>
+      <td>
+        <div class="section-title">Customer &amp; Ticket Info</div>
+
+        <div class="field">
+          <div class="field-label">Customer</div>
+          <div class="field-value">{{ ticket.customer.username }}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Property Address</div>
+          <div class="field-value">{{ ticket.property_address }}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Partner Installer</div>
+          <div class="field-value">{{ installer_name|default:"—" }}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Contact Number</div>
+          <div class="field-value">{{ ticket.contact_number }}</div>
+        </div>
+      </td>
+      <td class="right-col">
+        {% if assessment %}
+        <div class="section-title">Roof Assessment</div>
+
+        <div class="field">
+          <div class="field-label">Estimated Roof Area</div>
+          <div class="field-value">{{ assessment.estimated_roof_area_sqm }} sqm</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Roof Type</div>
+          <div class="field-value">{{ assessment.get_roof_type_display }}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Roof Condition</div>
+          <div class="field-value">{{ assessment.get_roof_condition_display }}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Recommended Package</div>
+          <div class="field-value">{{ assessment.recommended_package }}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Recommended System Type</div>
+          <div class="field-value">{{ assessment.get_recommended_system_type_display }}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Rated Capacity</div>
+          <div class="field-value">{{ assessment.rated_capacity_kw }} kW</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Number of Solar Panels</div>
+          <div class="field-value">{{ assessment.number_of_solar_panels }}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Inverter Size</div>
+          <div class="field-value">{{ assessment.inverter_size_kw }} kW</div>
+        </div>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <div class="section-gap"></div>
+  <div class="section-title">Proof of Visit Photos</div>
+  {% if photos %}
+    <div class="photo-wrap">
+      <table class="photo-table">
+        <tr>
+          {% for photo in photos %}
+          <td class="{% if photos|length == 1 %}single{% else %}multi{% endif %}">
+            <img src="{{ photo.image.url }}" />
+          </td>
+          {% endfor %}
+        </tr>
+      </table>
+    </div>
+  {% else %}
+    <p class="no-photos">No photos uploaded.</p>
+  {% endif %}
+
+  <div class="section-gap"></div>
+  <div class="no-break">
+    <div class="section-title">Quotation Summary</div>
+    <table class="quote-flow">
+      <tr>
+        <td class="qcell">
+          <div class="field-label">Initial Quotation</div>
+          <div class="field-value {% if initial_quotation %}money{% endif %}">
+            {% if initial_quotation %}PHP {{ initial_quotation.estimated_cost|floatformat:2|intcomma }}{% else %}Not recorded{% endif %}
+          </div>
+        </td>
+        <td class="qcell">
+          <div class="field-label">Updated Quotation</div>
+          <div class="field-value {% if updated_quotation %}money{% endif %}">
+            {% if updated_quotation %}PHP {{ updated_quotation.estimated_cost|floatformat:2|intcomma }}{% else %}Not recorded{% endif %}
+          </div>
+        </td>
+        <td class="qcell">
+          <div class="field-label">Final Cost</div>
+          <div class="field-value money">PHP {{ final_sheet.final_cost|floatformat:2|intcomma }}</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section-gap"></div>
+  <div class="no-break">
+    <div class="section-title">Payment &amp; Approval</div>
+    <table class="approval">
+      <tr>
+        <td>
+          <div class="field-label">Payment Terms</div>
+          <div class="field-value">{{ final_sheet.payment_terms_summary }}</div>
+        </td>
+        <td>
+          <div class="field-label">Approved By</div>
+          <div class="field-value">{{ approved_by_name|default:"—" }}</div>
+        </td>
+        <td>
+          <div class="field-label">Approved On</div>
+          <div class="field-value">{{ final_sheet.approved_at|date:"F j, Y, g:i A" }}</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="footer">
+    Glomax Solar Enterprises &middot; Generated {% now "F j, Y" %}
+  </div>
+
+</body>
+</html>

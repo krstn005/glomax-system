@@ -7,6 +7,7 @@ from .views import (
     ManageStaffListCreateView,
     ManagePartnerInstallerListCreateView,
     ManagedUserToggleActiveView,
+    StaffPartnerInstallerListView,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -26,5 +27,10 @@ urlpatterns = [
         'manage/<int:pk>/toggle-active/',
         ManagedUserToggleActiveView.as_view(),
         name='manage-toggle-active',
+    ),
+    path(
+        'partner-installers/',
+        StaffPartnerInstallerListView.as_view(),
+        name='staff-partner-installer-list',
     ),
 ]

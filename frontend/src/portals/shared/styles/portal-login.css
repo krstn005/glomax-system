@@ -1,0 +1,140 @@
+.portal-login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f3f4f6;
+  padding: 24px;
+}
+
+.portal-login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.portal-login-brand-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 6px;
+  display: block;
+}
+
+.portal-login-brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0d1f3c;
+  line-height: 1;
+}
+
+.portal-login-card {
+  width: 100%;
+  max-width: 360px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 36px 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.portal-login-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0d1f3c;
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+.portal-login-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+  margin: 0 0 24px;
+}
+
+.portal-login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.portal-login-form label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0d1f3c;
+  margin-top: 12px;
+}
+
+.portal-login-form input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.portal-login-form input:focus {
+  border-color: #eab308;
+}
+
+.portal-login-error {
+  color: #dc2626;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.portal-login-button {
+  margin-top: 20px;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: #0d1f3c;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.portal-login-button:hover:not(:disabled) {
+  background-color: #16294f;
+}
+
+.portal-login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.portal-login-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.portal-login-password-wrapper input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.portal-login-password-toggle {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.portal-login-password-toggle:hover {
+  color: #0d1f3c;
+}

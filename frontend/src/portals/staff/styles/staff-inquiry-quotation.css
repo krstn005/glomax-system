@@ -1,0 +1,386 @@
+.stfquote-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  margin-top: 28px;
+}
+
+.stfquote-page {
+  position: relative;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.stfquote-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-wrap: nowrap;
+  min-height: 76px;
+  box-sizing: border-box;
+}
+
+.stfquote-back {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #0d1f3c;
+  padding: 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.stfquote-back:hover {
+  background: #f3f4f6;
+}
+
+.stfquote-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stfquote-header-info h1 {
+  font-size: 19px;
+  font-weight: 700;
+  color: #0d1f3c;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stfquote-header-info p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 4px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stfquote-loading,
+.stfquote-error {
+  padding: 20px;
+  font-size: 14px;
+}
+
+.stfquote-error {
+  color: #dc2626;
+}
+
+.stfquote-body {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.stfquote-card {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 32px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.stfquote-section + .stfquote-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.stfquote-card h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0d1f3c;
+  margin: 0 0 16px;
+}
+
+.stfquote-original-message {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px 18px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #374151;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  width: 100%;
+  max-height: 180px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.stfquote-sent-note {
+  font-size: 13px;
+  color: #6b7280;
+  margin: -8px 0 16px;
+}
+
+.stfquote-readonly-value {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 15px;
+  color: #374151;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-height: 20px;
+  max-height: 140px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.stfquote-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 24px;
+  width: 100%;
+}
+
+.stfquote-field {
+  margin-top: 14px;
+  min-width: 0;
+}
+
+.stfquote-field-wide {
+  grid-column: 1 / -1;
+}
+
+.stfquote-field label {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.stfquote-field input,
+.stfquote-field textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 15px;
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.stfquote-field input:focus,
+.stfquote-field textarea:focus {
+  border-color: #eab308;
+}
+
+.stfquote-field textarea {
+  min-height: 120px;
+  max-height: 200px;
+  resize: vertical;
+}
+
+.stfquote-send-button {
+  margin-top: 32px;
+  grid-column: 1 / -1;
+  justify-self: end;
+  background: #0d1f3c;
+  color: #ffffff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.stfquote-send-button:hover:not(:disabled) {
+  background: #16294f;
+}
+
+.stfquote-send-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Confirmation modal */
+.stfquote-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+.stfquote-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+}
+
+.stfquote-modal h3 {
+  color: #0d1f3c;
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+
+.stfquote-modal p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.stfquote-modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.stfquote-modal-actions button {
+  flex: 1;
+}
+
+.stfquote-btn-secondary {
+  background: #ffffff;
+  color: #0d1f3c;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.stfquote-btn-confirm {
+  background: #0d1f3c;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.stfquote-btn-confirm:disabled,
+.stfquote-btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Toast, top of page - success and error variants */
+.stfquote-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 90vw;
+  border-radius: 8px;
+  padding: 14px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 300;
+}
+
+.stfquote-toast.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.stfquote-toast.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+@media (max-width: 900px) {
+  .stfquote-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .stfquote-wrapper {
+    min-height: auto;
+    margin-top: 16px;
+  }
+
+  .stfquote-header {
+    flex-wrap: wrap;
+    min-height: auto;
+  }
+
+  .stfquote-header-info h1,
+  .stfquote-header-info p {
+    white-space: normal;
+  }
+
+  .stfquote-body {
+    padding: 20px 16px;
+  }
+
+  .stfquote-card {
+    padding: 20px;
+  }
+
+  .stfquote-section + .stfquote-section {
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+
+  .stfquote-field {
+    margin-top: 14px;
+  }
+
+  .stfquote-send-button {
+    width: 100%;
+    justify-self: stretch;
+    text-align: center;
+  }
+
+  .stfquote-modal {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 400px) {
+  .stfquote-body {
+    padding: 16px 12px;
+  }
+
+  .stfquote-card {
+    padding: 16px;
+  }
+}
+
+.stfquote-inquiry-number {
+  flex-shrink: 0;
+  background: #0d1f3c;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  white-space: nowrap;
+}

@@ -1,5 +1,20 @@
 from rest_framework import serializers
+from tickets.models import Ticket
 from .models import Quotation, PaymentTerms
+
+
+class PaymentTermsSerializer(serializers.ModelSerializer):
+    """
+    Read-only list of existing Payment Terms, used to populate the
+    dropdown on Staff's Updated Quotation form (Quotation Management
+    page) - Staff picks from terms Admin has already defined, not
+    free text.
+    """
+
+    class Meta:
+        model = PaymentTerms
+        fields = ['id', 'description', 'date_added']
+        read_only_fields = fields
 
 
 class QuotationSerializer(serializers.ModelSerializer):
@@ -38,6 +53,13 @@ class QuotationCreateSerializer(serializers.ModelSerializer):
     view from the URL, not accepted here - a Staff member always sends a
     quotation for the specific ticket they're looking at, never an
     arbitrary one typed into the request body.
+
+    An Updated Quotation can only be sent while the ticket is in one of
+    the two moments Staff is allowed to revise pricing: right after the
+    Partner Installer's assessment is submitted, or after Admin has
+    returned the ticket for revision. This is enforced here (not just
+    hidden in the UI) so the restriction can't be bypassed by calling
+    the endpoint directly.
     """
     payment_terms_id = serializers.PrimaryKeyRelatedField(
         queryset=PaymentTerms.objects.all(),
@@ -55,3 +77,17 @@ class QuotationCreateSerializer(serializers.ModelSerializer):
             'payment_terms_id',
             'notes',
         ]
+
+    def validate(self, attrs):
+        ticket = self.context['ticket']
+
+        if attrs.get('quotation_type') == 'UPDATED':
+            allowed_statuses = (Ticket.Status.ASSESSMENT_SUBMITTED, Ticket.Status.STAFF_REVIEW)
+            if ticket.status not in allowed_statuses:
+                raise serializers.ValidationError(
+                    "An Updated Quotation can only be sent after the Partner "
+                    "Installer's assessment has been submitted, or after Admin "
+                    "has returned the ticket for revision."
+                )
+
+        return attrs

@@ -4,6 +4,7 @@ from .views import (
     InquiryListView,
     InquiryDetailView,
     InquiryMarkRepliedView,
+    InquirySendQuotationView,
 )
 
 urlpatterns = [
@@ -14,5 +15,10 @@ urlpatterns = [
         'staff/<int:pk>/mark-replied/',
         InquiryMarkRepliedView.as_view(),
         name='inquiry-mark-replied',
+    ),
+    path(
+        'staff/<int:pk>/send-quotation/',
+        InquirySendQuotationView.as_view(),
+        name='inquiry-send-quotation',
     ),
 ]

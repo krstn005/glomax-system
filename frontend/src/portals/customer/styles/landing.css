@@ -686,3 +686,9 @@
   -webkit-appearance: none;
   appearance: none;
 }
+
+.landing-field-hint {
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 6px;
+}

@@ -44,6 +44,12 @@ class Ticket(models.Model):
     )
 
     # --- Fields from the Submit Schedule Request Page (Figma: CST - NR) ---
+    # Full Name as typed by the Customer on the form - separate from
+    # customer.username, since the account's username may be an
+    # auto-generated string (e.g. from Google login) rather than a
+    # real name. blank/default='' so existing tickets created before
+    # this field existed don't break.
+    full_name = models.CharField(max_length=150, blank=True, default='')
     property_address = models.CharField(max_length=255)
     contact_number = models.CharField(max_length=20)
     preferred_date = models.DateField()  # requested by the Customer at submission

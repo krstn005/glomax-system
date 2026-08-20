@@ -1,5 +1,4 @@
 import uuid
-
 from django.conf import settings
 from rest_framework import generics, permissions, status, parsers
 from rest_framework.views import APIView
@@ -8,7 +7,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
-
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
@@ -18,7 +16,7 @@ from .serializers import (
     GoogleLoginSerializer,
 )
 from .models import User
-from accounts.permissions import IsAdmin
+from accounts.permissions import IsAdmin, IsStaff
 
 
 class RegisterView(generics.CreateAPIView):
@@ -44,12 +42,10 @@ class MeView(generics.RetrieveUpdateAPIView):
     Returns the currently logged-in user's info, and lets them update
     their own profile (My Profile tab), notification preferences
     (Notifications tab), and profile picture.
-
     GET   /api/accounts/me/  - fetch current info (must include the access token)
     PATCH /api/accounts/me/  - update profile fields / notification
           preferences / profile picture (partial update - only send
           the fields that changed)
-
     Accepts both regular JSON (for text fields) and multipart form
     data (needed when uploading a profile picture file at the same
     time as other fields).
@@ -68,7 +64,6 @@ class GoogleLoginView(APIView):
     """
     POST /api/accounts/google-login/  - "Continue with Google" /
     "Sign up with Google" buttons on the Login and Register pages.
-
     Verifies the ID token directly with Google (no client secret
     needed for this - verification uses Google's public keys), then:
       - if an account with that email already exists, logs into it
@@ -78,7 +73,6 @@ class GoogleLoginView(APIView):
         unless the person later sets a real password through Settings
         - not built yet, matches the rest of the project's pattern of
         building the core flow first)
-
     Returns the exact same response shape as the normal login endpoint
     (access, refresh, role, username, user_id), so the frontend can
     treat both login methods identically after this point.
@@ -203,3 +197,17 @@ class ManagedUserToggleActiveView(APIView):
         user.save()
 
         return Response(ManagedUserSerializer(user).data)
+
+
+class StaffPartnerInstallerListView(generics.ListAPIView):
+    """
+    GET /api/accounts/partner-installers/  - read-only list of active
+    Partner Installer accounts, for Staff's Assign Partner Installer
+    dropdown (Ticket Progress page). Separate from
+    ManagePartnerInstallerListCreateView (Admin-only, can create/manage
+    accounts) - Staff can only ever pick from this list, never create
+    or deactivate one.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsStaff]
+    queryset = User.objects.filter(role='PARTNER_INSTALLER', is_active=True).order_by('username')
+    serializer_class = ManagedUserSerializer

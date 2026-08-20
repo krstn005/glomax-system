@@ -9,10 +9,10 @@ class TicketCreateSerializer(serializers.ModelSerializer):
     """
     Used when a Customer submits the Schedule Request form.
     """
-
     class Meta:
         model = Ticket
         fields = [
+            'full_name',
             'property_address',
             'contact_number',
             'preferred_date',
@@ -29,7 +29,6 @@ class TicketSerializer(serializers.ModelSerializer):
     quotations (Stage A), and feedback (Stage B) when they exist, so
     the frontend gets the full picture in one call.
     """
-
     ticket_number = serializers.ReadOnlyField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     customer_username = serializers.CharField(source='customer.username', read_only=True)
@@ -46,6 +45,7 @@ class TicketSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'ticket_number',
+            'full_name',
             'customer_username',
             'partner_installer_username',
             'property_address',
@@ -122,7 +122,6 @@ class TicketDecisionSerializer(serializers.Serializer):
         ('NOT_COMPATIBLE_CANNOT', 'Not Compatible - Cannot Proceed'),
         ('NOT_COMPATIBLE_CAN_REAPPLY', 'Not Compatible - Can Reapply'),
     )
-
     decision = serializers.ChoiceField(choices=DECISION_CHOICES)
 
     def validate(self, attrs):

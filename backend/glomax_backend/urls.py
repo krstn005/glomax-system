@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/', include('pricing.urls')),
     path('api/', include('finalsheet.urls')),
     path('api/inquiries/', include('inquiries.urls')),
+    path('api/pricing/', include('pricing.urls')),
 ]
 
 # Serve uploaded files (like profile pictures and Proof of Visit photos)

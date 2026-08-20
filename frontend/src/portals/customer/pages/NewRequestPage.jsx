@@ -1,21 +1,32 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { createTicket } from '../../../api/tickets';
 import { sanitizePhoneNumber } from '../../../utils/phone';
 import CustomerLayout from '../components/CustomerLayout';
 import '../styles/new-request.css';
+import '../styles/new-request-datepicker.css';
 
 // ⚠️ Verify these match your real pricing.PriceHistory active prices
 const PACKAGES = [
-  { id: '3kw-ongrid', label: '3KW On-Grid', tag: 'On-Grid', desc: 'Residential Starter — Ideal for small households', price: 106000, systemType: 'On-Grid' },
-  { id: '6kw-ongrid', label: '6KW On-Grid', tag: 'On-Grid', desc: 'Residential Standard — Perfect for medium households', price: 155000, systemType: 'On-Grid' },
-  { id: '8kw-ongrid', label: '8KW On-Grid', tag: 'On-Grid', desc: 'Residential Large — For bigger homes with high energy use', price: 205000, systemType: 'On-Grid' },
-  { id: '10kw-ongrid', label: '10KW On-Grid', tag: 'On-Grid', desc: 'Commercial Starter — Best for small commercial properties', price: 245000, systemType: 'On-Grid' },
-  { id: '3kw-hybrid', label: '3KW Hybrid', tag: 'Hybrid', desc: 'Residential with Backup — Works during power outages', price: 215000, systemType: 'Hybrid' },
-  { id: '6kw-hybrid', label: '6KW Hybrid', tag: 'Hybrid', desc: 'Residential Premium — Best for homes needing backup power', price: 260000, systemType: 'Hybrid' },
-  { id: '8kw-hybrid', label: '8KW Hybrid', tag: 'Hybrid', desc: 'Large Residential Hybrid — High-capacity backup system', price: 335000, systemType: 'Hybrid' },
-  { id: '10kw-hybrid', label: '10KW Hybrid', tag: 'Hybrid', desc: 'Commercial Premium — For large homes or businesses', price: 375000, systemType: 'Hybrid' },
+  { id: '3kw-ongrid', label: '3KW On-Grid', tag: 'On-Grid', desc: 'Residential Starter — Ideal for small households', price: 106000, systemType: 'ON_GRID' },
+  { id: '6kw-ongrid', label: '6KW On-Grid', tag: 'On-Grid', desc: 'Residential Standard — Perfect for medium households', price: 155000, systemType: 'ON_GRID' },
+  { id: '8kw-ongrid', label: '8KW On-Grid', tag: 'On-Grid', desc: 'Residential Large — For bigger homes with high energy use', price: 205000, systemType: 'ON_GRID' },
+  { id: '10kw-ongrid', label: '10KW On-Grid', tag: 'On-Grid', desc: 'Commercial Starter — Best for small commercial properties', price: 245000, systemType: 'ON_GRID' },
+  { id: '3kw-hybrid', label: '3KW Hybrid', tag: 'Hybrid', desc: 'Residential with Backup — Works during power outages', price: 215000, systemType: 'HYBRID' },
+  { id: '6kw-hybrid', label: '6KW Hybrid', tag: 'Hybrid', desc: 'Residential Premium — Best for homes needing backup power', price: 260000, systemType: 'HYBRID' },
+  { id: '8kw-hybrid', label: '8KW Hybrid', tag: 'Hybrid', desc: 'Large Residential Hybrid — High-capacity backup system', price: 335000, systemType: 'HYBRID' },
+  { id: '10kw-hybrid', label: '10KW Hybrid', tag: 'Hybrid', desc: 'Commercial Premium — For large homes or businesses', price: 375000, systemType: 'HYBRID' },
 ];
+
+function toDateInputValue(date) {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 export default function NewRequestPage() {
   const navigate = useNavigate();
@@ -30,6 +41,7 @@ export default function NewRequestPage() {
     fullName: '',
     contactNumber: '',
     address: '',
+    preferredDate: null,
     packageId: '',
   });
 
@@ -60,8 +72,10 @@ export default function NewRequestPage() {
     setSubmitError('');
     try {
       const data = await createTicket({
+        full_name: form.fullName,
         property_address: form.address,
         contact_number: form.contactNumber,
+        preferred_date: toDateInputValue(form.preferredDate),
         solar_package: selectedPackage.label,
         system_type: selectedPackage.systemType,
       });
@@ -137,6 +151,19 @@ export default function NewRequestPage() {
                 placeholder="123 Rizal St, Quezon City"
                 value={form.address}
                 onChange={(e) => updateField('address', e.target.value)}
+                required
+              />
+            </div>
+            <div className="nr-field">
+              <label>Preferred Date *</label>
+              <DatePicker
+                selected={form.preferredDate}
+                onChange={(date) => updateField('preferredDate', date)}
+                minDate={new Date()}
+                dateFormat="MMMM d, yyyy"
+                placeholderText="Select a date"
+                className="nr-datepicker-input"
+                calendarClassName="nr-datepicker-calendar"
                 required
               />
             </div>
@@ -216,6 +243,16 @@ export default function NewRequestPage() {
               <strong>{form.address}</strong>
             </div>
             <div className="nr-confirm-row">
+              <span>Preferred Date</span>
+              <strong>
+                {form.preferredDate?.toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </strong>
+            </div>
+            <div className="nr-confirm-row">
               <span>Preferred Package</span>
               <strong>{selectedPackage.label}</strong>
             </div>
@@ -225,7 +262,7 @@ export default function NewRequestPage() {
             </div>
             <div className="nr-confirm-row">
               <span>System Type</span>
-              <strong>{selectedPackage.systemType}</strong>
+              <strong>{selectedPackage.tag}</strong>
             </div>
           </div>
 
