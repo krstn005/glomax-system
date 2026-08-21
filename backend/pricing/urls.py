@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import TicketQuotationListCreateView, PaymentTermsListView
+from .views import TicketQuotationListCreateView, PaymentTermsListView, PriceHistoryListView
 
 urlpatterns = [
     path(
@@ -11,5 +11,10 @@ urlpatterns = [
         'payment-terms/',
         PaymentTermsListView.as_view(),
         name='payment-terms-list',
+    ),
+    path(
+        'price-history/',
+        PriceHistoryListView.as_view(),
+        name='price-history-list',
     ),
 ]

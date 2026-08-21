@@ -14,3 +14,8 @@ export async function assignPartnerInstaller(ticketId, data) {
   const res = await apiClient.patch(`/tickets/${ticketId}/assign/`, data);
   return res.data;
 }
+
+export async function submitDecision(ticketId, decision) {
+  const res = await apiClient.patch(`/tickets/${ticketId}/decision/`, { decision });
+  return res.data;
+}

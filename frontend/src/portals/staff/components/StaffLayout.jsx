@@ -7,7 +7,6 @@ import {
   Activity,
   ClipboardCheck,
   CheckCircle,
-  XCircle,
   DollarSign,
   History,
   Receipt,
@@ -37,17 +36,16 @@ const NAV_GROUPS = [
     label: 'Ticket Management',
     items: [
       { to: '/staff/manage-tickets', label: 'Ticket Tracking', icon: Activity, enabled: true },
-      { to: '/staff/assessment-review', label: 'Assessment Review', icon: ClipboardCheck, enabled: false },
-      { to: '/staff/completed-tickets', label: 'Completed Tickets', icon: CheckCircle, enabled: false },
-      { to: '/staff/withdrawn-requests', label: 'Withdrawn Requests', icon: XCircle, enabled: false },
+      { to: '/staff/assessment-review', label: 'Assessment Review', icon: ClipboardCheck, enabled: true },
+      { to: '/staff/completed-tickets', label: 'Completed Tickets', icon: CheckCircle, enabled: true },
     ],
   },
   {
     label: 'Pricing',
     items: [
-      { to: '/staff/active-prices', label: 'Active Prices', icon: DollarSign, enabled: false },
-      { to: '/staff/price-history', label: 'Price History', icon: History, enabled: false },
-      { to: '/staff/payment-terms-history', label: 'Payment Terms History', icon: Receipt, enabled: false },
+      { to: '/staff/active-prices', label: 'Active Prices', icon: DollarSign, enabled: true },
+      { to: '/staff/price-history', label: 'Price History', icon: History, enabled: true },
+      { to: '/staff/payment-terms-history', label: 'Payment Terms History', icon: Receipt, enabled: true },
     ],
   },
 ];

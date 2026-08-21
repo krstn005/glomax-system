@@ -1,0 +1,199 @@
+.stfph-loading,
+.stfph-error {
+  font-size: 15px;
+  color: #6b7280;
+}
+
+.stfph-error {
+  color: #dc2626;
+}
+
+.stfph-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 13px 16px;
+  margin-top: 10px;
+  margin-bottom: 26px;
+  color: #374151;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.stfph-notice svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.stfph-notice p {
+  margin: 0;
+}
+
+.stfph-summary-title,
+.stfph-table-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0d1f3c;
+  margin: 0 0 14px;
+}
+
+.stfph-table-title {
+  margin-top: 28px;
+}
+
+.stfph-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stfph-summary-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.stfph-summary-card.hybrid {
+  background: #fef9c3;
+  border-color: #fde68a;
+}
+
+/* Price is the number Staff actually cares about - it now leads
+   visually; KW/system type is secondary identifying context above it */
+.stfph-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.stfph-summary-label span {
+  color: #9ca3af;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.stfph-summary-price {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.stfph-table-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.stfph-empty {
+  padding: 28px 16px;
+  color: #6b7280;
+  font-size: 14px;
+  text-align: center;
+}
+
+.stfph-table {
+  width: 100%;
+  min-width: 780px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.stfph-table th {
+  text-align: center;
+  padding: 14px 14px;
+  background: #0d1f3c;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.stfph-table td {
+  padding: 15px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.stfph-table th:first-child,
+.stfph-table td:first-child {
+  text-align: left;
+}
+
+.stfph-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.stfph-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.stfph-td-strong {
+  font-weight: 700;
+  color: #0d1f3c;
+}
+
+.stfph-system-type {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stfph-system-type.ongrid {
+  color: #1e40af;
+}
+
+.stfph-system-type.hybrid {
+  color: #92400e;
+}
+
+.stfph-status {
+  display: inline-block;
+  padding: 4px 11px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stfph-status.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.stfph-status.inactive {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+@media (max-width: 1300px) {
+  .stfph-summary-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1000px) {
+  .stfph-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .stfph-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

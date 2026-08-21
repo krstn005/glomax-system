@@ -3,8 +3,13 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, NotFound
 
 from tickets.models import Ticket
-from .models import Quotation, PaymentTerms
-from .serializers import QuotationSerializer, QuotationCreateSerializer, PaymentTermsSerializer
+from .models import Quotation, PaymentTerms, PriceHistory
+from .serializers import (
+    QuotationSerializer,
+    QuotationCreateSerializer,
+    PaymentTermsSerializer,
+    PriceHistorySerializer,
+)
 
 
 class PaymentTermsListView(generics.ListAPIView):
@@ -15,6 +20,18 @@ class PaymentTermsListView(generics.ListAPIView):
     """
     queryset = PaymentTerms.objects.all()
     serializer_class = PaymentTermsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class PriceHistoryListView(generics.ListAPIView):
+    """
+    GET /api/pricing/price-history/  - read-only list of all Price
+    History entries, newest first (model's default ordering). Staff's
+    Active Prices page filters this down to is_active=True on the
+    frontend; a future Price History page would show the full list.
+    """
+    queryset = PriceHistory.objects.all()
+    serializer_class = PriceHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
 
 

@@ -1,7 +1,30 @@
 from rest_framework import serializers
 from tickets.models import Ticket
 from .models import Quotation, PaymentTerms
+from .models import Quotation, PaymentTerms, PriceHistory
 
+class PriceHistorySerializer(serializers.ModelSerializer):
+    """
+    Read-only representation of a PriceHistory entry - used by both
+    Staff's Active Prices page (filtered to is_active=True) and the
+    future Admin/Staff Price History page (full log).
+    """
+
+    system_type_display = serializers.CharField(source='get_system_type_display', read_only=True)
+
+    class Meta:
+        model = PriceHistory
+        fields = [
+            'id',
+            'package_name',
+            'price',
+            'rated_capacity_kw',
+            'system_type',
+            'system_type_display',
+            'is_active',
+            'date_added',
+        ]
+        read_only_fields = fields
 
 class PaymentTermsSerializer(serializers.ModelSerializer):
     """
