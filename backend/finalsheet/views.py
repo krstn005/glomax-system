@@ -48,7 +48,6 @@ class TicketFeedbackView(APIView):
                 {"detail": "Feedback will be available once your request is completed."},
                 status=404,
             )
-
         return Response(FeedbackSerializer(feedback).data)
 
     def post(self, request, pk):
@@ -85,38 +84,42 @@ def _pdf_link_callback(uri, rel):
     this resolves an uploaded photo's MEDIA_URL, or the company logo's
     static URL, into an absolute path on disk so both can actually
     render inside the PDF.
-
-    TEMPORARY: print statements left in on purpose to debug why the
-    logo specifically isn't resolving - remove once confirmed working.
     """
     import os
     from django.conf import settings
     from django.contrib.staticfiles import finders
 
-    print(f"[PDF DEBUG] Incoming uri: {uri!r}")
-
     clean_uri = uri.lstrip("/")
     media_prefix = settings.MEDIA_URL.lstrip("/")
     static_prefix = settings.STATIC_URL.lstrip("/")
 
-    print(f"[PDF DEBUG] clean_uri={clean_uri!r} media_prefix={media_prefix!r} static_prefix={static_prefix!r}")
-
     if clean_uri.startswith(media_prefix):
         relative_path = clean_uri[len(media_prefix):]
         path = os.path.join(settings.MEDIA_ROOT, relative_path)
-        print(f"[PDF DEBUG] Matched MEDIA. Resolved path: {path!r}. Exists: {os.path.isfile(path)}")
         if os.path.isfile(path):
             return path
 
     if clean_uri.startswith(static_prefix):
         relative_path = clean_uri[len(static_prefix):]
         result = finders.find(relative_path)
-        print(f"[PDF DEBUG] Matched STATIC. finders.find({relative_path!r}) = {result!r}")
         if result:
             return result
 
-    print(f"[PDF DEBUG] No match - returning uri unchanged: {uri!r}")
     return uri
+
+
+def _format_payment_terms_lines(text):
+    """
+    Splits a comma-separated payment terms string into a list of
+    segments, e.g. "50% downpayment, 50% upon completion" ->
+    ["50% downpayment", "50% upon completion"]. Each segment is
+    rendered on its own line in the PDF (rather than joined with " | "
+    and left to wrap wherever the renderer runs out of width), so a
+    term never breaks mid-phrase across a line.
+    """
+    if not text:
+        return []
+    return [p.strip() for p in text.split(",") if p.strip()]
 
 
 class FinalSheetPDFView(APIView):
@@ -160,6 +163,7 @@ class FinalSheetPDFView(APIView):
             'updated_quotation': updated_quotation,
             'installer_name': ticket.partner_installer.username if ticket.partner_installer else None,
             'approved_by_name': final_sheet.approved_by.username if final_sheet.approved_by else None,
+            'payment_terms_lines': _format_payment_terms_lines(final_sheet.payment_terms_summary),
         })
 
         response = HttpResponse(content_type='application/pdf')

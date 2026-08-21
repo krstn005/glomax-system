@@ -8,59 +8,79 @@
   color: #dc2626;
 }
 
-.stfqd-top-row {
+.stfqd-page {
+  width: 100%;
+}
+
+.stfqd-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  gap: 16px;
+  background: #0d1f3c;
+  border-radius: 12px;
+  padding: 18px 22px;
+}
+
+.stfqd-title-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.stfqd-title-left h1 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.stfqd-title-left p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 3px 0 0;
 }
 
 .stfqd-back {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #ffffff;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  color: #0d1f3c;
-  font-size: 13px;
-  font-weight: 600;
+  justify-content: center;
   cursor: pointer;
-  padding: 6px 0;
+  flex-shrink: 0;
+}
+
+.stfqd-back:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .stfqd-ticket-link {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
-  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .stfqd-ticket-link:hover {
-  background: #bfdbfe;
-}
-
-.stfqd-back:hover {
-  color: #16294f;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .stfqd-detail {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.stfqd-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #0d1f3c;
-  margin: 0;
 }
 
 .stfqd-card {
@@ -71,10 +91,32 @@
 }
 
 .stfqd-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 16px;
   font-weight: 700;
   color: #0d1f3c;
   margin: 0 0 16px;
+}
+
+.stfqd-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stfqd-dot.initial {
+  background: #2563eb;
+}
+
+.stfqd-dot.updated {
+  background: #eab308;
+}
+
+.stfqd-dot.history {
+  background: #a855f7;
 }
 
 .stfqd-empty {
@@ -118,6 +160,86 @@
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
+}
+
+.stfqd-finalized-block {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 22px 24px 20px;
+  margin-bottom: 16px;
+}
+
+.stfqd-finalized-badge {
+  display: block;
+  width: fit-content;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin: 0 0 16px;
+}
+
+.stfqd-finalized-cost {
+  margin-bottom: 18px;
+}
+
+.stfqd-finalized-cost label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #166534;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  margin: 0 0 8px;
+}
+
+.stfqd-finalized-cost p {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #0d1f3c;
+}
+
+.stfqd-finalized-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  column-gap: 24px;
+  row-gap: 16px;
+  padding-top: 18px;
+  margin-top: 2px;
+  border-top: 1px solid #bbf7d0;
+}
+
+.stfqd-finalized-meta > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.stfqd-finalized-meta label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b8f78;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  margin: 0 0 7px;
+}
+
+.stfqd-finalized-meta p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #374151;
 }
 
 .stfqd-history {
@@ -224,7 +346,7 @@
   cursor: not-allowed;
 }
 
-/* --- Final Sheet: plain official-document styling --- */
+/* --- Final Sheet: matches the PDF export's visual language --- */
 
 .stfqd-final-card {
   border: 1px solid #e5e7eb;
@@ -232,7 +354,7 @@
 
 .stfqd-final-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
@@ -244,12 +366,23 @@
 }
 
 .stfqd-final-logo {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
   border: 1px solid #e5e7eb;
+}
+
+/* Navy vertical divider beside the logo, matching the PDF - a real
+   border-based line rather than a background-color block, so it
+   renders as a crisp thin line instead of looking like a thick gray
+   shadow. */
+.stfqd-final-divider-line {
+  width: 1.5px;
+  align-self: stretch;
+  background: #0d1f3c;
+  flex-shrink: 0;
 }
 
 .stfqd-final-eyebrow {
@@ -261,6 +394,13 @@
   margin: 0 0 4px;
 }
 
+.stfqd-final-eyebrow-date {
+  color: #9ca3af;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .stfqd-final-title {
   font-size: 18px;
   font-weight: 700;
@@ -268,28 +408,14 @@
   margin: 0;
 }
 
-.stfqd-final-badge-col {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.stfqd-final-badge {
-  background: #dcfce7;
-  color: #166534;
-  font-size: 12px;
+/* Plain bold green text, no pill/badge background - matches the PDF */
+.stfqd-final-status {
+  color: #16a34a;
+  font-size: 13px;
   font-weight: 700;
-  padding: 5px 12px;
-  border-radius: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.stfqd-final-badge-date {
-  font-size: 12px;
-  color: #9ca3af;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .stfqd-final-divider {
@@ -298,29 +424,45 @@
   margin: 16px 0 24px;
 }
 
+/* Final Cost box: bordered on all sides with a gold outline and an
+   internal divider between the label and value cells, matching the
+   PDF's boxed/split look instead of a plain flat banner. */
 .stfqd-final-cost-box {
-  background: #0d1f3c;
+  display: flex;
+  align-items: stretch;
+  border: 1.5px solid #eab308;
   border-radius: 6px;
-  padding: 14px 20px;
+  overflow: hidden;
   margin-bottom: 24px;
+}
+
+.stfqd-final-cost-label-cell {
+  background: #0d1f3c;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
+  padding: 16px 20px;
+  border-right: 1.5px solid #eab308;
 }
 
-.stfqd-final-cost-box label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.65);
-  text-transform: uppercase;
+.stfqd-final-cost-label-cell label {
+  font-size: 13px;
+  font-weight: 700;
   letter-spacing: 0.5px;
+  color: #ffffff;
 }
 
-.stfqd-final-cost-box p {
+.stfqd-final-cost-value-cell {
+  background: #0d1f3c;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px;
+}
+
+.stfqd-final-cost-value-cell p {
   margin: 0;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: #eab308;
 }
@@ -403,7 +545,7 @@
 .stfqd-quote-flow {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   flex-wrap: wrap;
 }
 
@@ -429,11 +571,6 @@
 
 .stfqd-quote-value-final {
   color: #b45309;
-}
-
-.stfqd-quote-arrow {
-  color: #9ca3af;
-  font-size: 16px;
 }
 
 .stfqd-approval-row {
@@ -463,6 +600,24 @@
   font-size: 14px;
   color: #374151;
   font-weight: 500;
+}
+
+/* Payment terms stacked one segment per line, matching the PDF */
+.stfqd-approval-terms {
+  display: flex;
+  flex-direction: column;
+}
+
+.stfqd-terms-line {
+  display: block;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.stfqd-terms-line:last-child {
+  margin-bottom: 0;
 }
 
 .stfqd-final-footer {
@@ -616,17 +771,22 @@
     align-items: flex-start;
   }
 
-  .stfqd-quote-arrow {
-    transform: rotate(90deg);
-    margin-left: 4px;
+  .stfqd-final-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .stfqd-final-header {
+  .stfqd-final-cost-box {
     flex-direction: column;
   }
 
-  .stfqd-final-badge-col {
-    align-items: flex-start;
+  .stfqd-final-cost-label-cell {
+    border-right: none;
+    border-bottom: 1.5px solid #eab308;
+  }
+
+  .stfqd-title-row {
+    flex-wrap: wrap;
   }
 }
 

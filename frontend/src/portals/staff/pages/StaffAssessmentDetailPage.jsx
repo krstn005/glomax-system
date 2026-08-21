@@ -1,15 +1,25 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, FileText, X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
 import { getStaffTickets, submitDecision } from "../../../api/staffTickets";
 import { getPaymentTerms, sendQuotation } from "../../../api/staffQuotations";
-import { formatCurrency } from "../../../utils/currency";
+import { formatCurrency, formatPaymentTerms, formatDateTime } from "../../../utils/currency";
 import "../styles/staff-assessment-detail.css";
 
 const ASSESSMENT_SUBMITTED = "ASSESSMENT_SUBMITTED";
 const STAFF_REVIEW = "STAFF_REVIEW";
 const REVIEWABLE_STATUSES = [ASSESSMENT_SUBMITTED, STAFF_REVIEW];
+
+const STATUS_TAG_CLASS = {
+  APPROVED: "approved",
+  COMPLETED: "approved",
+  NC_CANNOT_PROCEED: "not-compatible",
+  NC_CAN_REAPPLY: "not-compatible",
+  ADMIN_REVIEW: "in-progress",
+  ASSESSMENT_SUBMITTED: "in-progress",
+  STAFF_REVIEW: "in-progress",
+};
 
 const DECISION_OPTIONS = [
   {
@@ -19,16 +29,16 @@ const DECISION_OPTIONS = [
     style: "primary",
   },
   {
-    key: "NOT_COMPATIBLE_CAN_REAPPLY",
-    label: "Not Compatible — Can Reapply",
-    description: "The customer will be allowed to reapply later.",
-    style: "warning",
-  },
-  {
     key: "NOT_COMPATIBLE_CANNOT",
     label: "Not Compatible — Cannot Proceed",
-    description: "This request cannot proceed further. The ticket will be closed.",
+    description: "Not compatible, and this request cannot proceed further. The ticket will be closed.",
     style: "danger",
+  },
+  {
+    key: "NOT_COMPATIBLE_CAN_REAPPLY",
+    label: "Not Compatible — Can Reapply",
+    description: "Not compatible right now, but the customer will be allowed to reapply later.",
+    style: "warning",
   },
 ];
 
@@ -74,21 +84,6 @@ function Toast({ message, type = "success", onDone }) {
   return <div className={`stfad-toast ${type}`}>{message}</div>;
 }
 
-function FieldRow({ left, right }) {
-  return (
-    <div className="stfad-row">
-      <div className="stfad-row-cell">
-        <label>{left.label}</label>
-        <p>{left.value}</p>
-      </div>
-      <div className="stfad-row-cell">
-        <label>{right.label}</label>
-        <p>{right.value}</p>
-      </div>
-    </div>
-  );
-}
-
 export default function StaffAssessmentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -130,6 +125,7 @@ export default function StaffAssessmentDetailPage() {
   const assessment = ticket?.assessment;
   const isReturnedForRevision = ticket?.status === STAFF_REVIEW && !!ticket?.admin_revision_notes;
   const canDecide = ticket && REVIEWABLE_STATUSES.includes(ticket.status);
+  const tagClass = ticket ? STATUS_TAG_CLASS[ticket.status] || "in-progress" : "in-progress";
 
   const latestUpdatedQuotation = ticket
     ? [...(ticket.quotations || [])]
@@ -193,11 +189,6 @@ export default function StaffAssessmentDetailPage() {
 
       <div className="stfad-wrapper">
         <div className="stfad-page">
-          <button className="stfad-back" onClick={() => navigate("/staff/assessment-review")}>
-            <ArrowLeft size={16} />
-            Back to Assessment Review
-          </button>
-
           {loading && <p className="stfad-loading">Loading...</p>}
           {error && <p className="stfad-error">{error}</p>}
           {!loading && !error && !ticket && <p className="stfad-error">Ticket not found.</p>}
@@ -206,173 +197,214 @@ export default function StaffAssessmentDetailPage() {
           )}
 
           {!loading && !error && ticket && assessment && (
-            <div className="stfad-columns">
-              {/* LEFT COLUMN */}
-              <div className="stfad-left">
-                <div className="stfad-card stfad-customer-card">
-                  <div className="stfad-customer-header">
-                    <span className="stfad-avatar">
-                      {(ticket.full_name || ticket.customer_username).slice(0, 2).toUpperCase()}
-                    </span>
-                    <div>
-                      <h1>{ticket.full_name || ticket.customer_username}</h1>
-                      <p>{ticket.ticket_number}</p>
-                    </div>
+            <div className="stfad-stack">
+              <div className="stfad-title-row">
+                <div className="stfad-title-left">
+                  <button className="stfad-back" onClick={() => navigate("/staff/assessment-review")}>
+                    <ArrowLeft size={18} />
+                  </button>
+                  <div>
+                    <h1>{ticket.full_name || ticket.customer_username}</h1>
+                    <p>{ticket.ticket_number} &middot; Submitted {new Date(assessment.submitted_at).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</p>
                   </div>
-
-                  <FieldRow
-                    left={{ label: "Property Address", value: ticket.property_address }}
-                    right={{ label: "Contact Number", value: ticket.contact_number }}
-                  />
-                  <FieldRow
-                    left={{ label: "Date Submitted", value: new Date(ticket.created_at).toLocaleDateString() }}
-                    right={{ label: "Partner Installer", value: ticket.partner_installer_username || "—" }}
-                  />
-                  <FieldRow
-                    left={{ label: "Assessment Submitted", value: new Date(assessment.submitted_at).toLocaleDateString() }}
-                    right={{ label: "Preferred Package", value: ticket.solar_package }}
-                  />
                 </div>
+                <span className={`stfad-status-tag ${tagClass}`}>{ticket.status_display}</span>
+              </div>
 
-                <div className="stfad-card">
-                  <div className="stfad-card-title">
-                    <span className="stfad-title-icon">
-                      <Home size={15} />
-                    </span>
-                    <h2>Roof Assessment Data</h2>
-                    <span className="stfad-title-sub">from Partner Installer</span>
+              <div className="stfad-card">
+                <h2><span className="stfad-dot customer" />Customer Information</h2>
+                <div className="stfad-grid stfad-grid-3">
+                  <div className="stfad-field">
+                    <label>Customer</label>
+                    <p>{ticket.full_name || ticket.customer_username}</p>
                   </div>
-
-                  <FieldRow
-                    left={{ label: "Estimated Roof Area", value: `${assessment.estimated_roof_area_sqm} sqm` }}
-                    right={{ label: "Roof Type", value: assessment.roof_type_display }}
-                  />
-                  <FieldRow
-                    left={{ label: "Roof Condition", value: assessment.roof_condition_display }}
-                    right={{ label: "Recommended Package", value: assessment.recommended_package }}
-                  />
-                  <FieldRow
-                    left={{ label: "Recommended System Type", value: assessment.recommended_system_type_display }}
-                    right={{ label: "Rated Capacity", value: `${assessment.rated_capacity_kw} kW` }}
-                  />
-                  <FieldRow
-                    left={{ label: "Number of Solar Panels", value: assessment.number_of_solar_panels }}
-                    right={{ label: "Inverter Size", value: `${assessment.inverter_size_kw} kW` }}
-                  />
-
-                  <div className="stfad-notes-box">
-                    <div className="stfad-notes-icon">
-                      <FileText size={14} />
-                    </div>
-                    <div>
-                      <h3>Partner Installer Notes</h3>
-                      <p>{assessment.notes || "No notes provided."}</p>
-                    </div>
+                  <div className="stfad-field">
+                    <label>Contact</label>
+                    <p>{ticket.contact_number}</p>
                   </div>
-
-                  <div className="stfad-photos-section">
-                    <label>Proof of Visit Photos</label>
-                    {assessment.photos?.length > 0 ? (
-                      <div className="stfad-photo-grid">
-                        {assessment.photos.map((photo) => (
-                          <button
-                            key={photo.id}
-                            className="stfad-photo-thumb"
-                            onClick={() => setLightboxSrc(photo.image)}
-                          >
-                            <img src={photo.image} alt="Proof of visit" />
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="stfad-empty">No photos uploaded.</p>
-                    )}
+                  <div className="stfad-field">
+                    <label>Partner Installer</label>
+                    <p>{ticket.partner_installer_username || "—"}</p>
+                  </div>
+                  <div className="stfad-field">
+                    <label>Address</label>
+                    <p>{ticket.property_address}</p>
+                  </div>
+                  <div className="stfad-field">
+                    <label>Preferred Package</label>
+                    <p>{ticket.solar_package}</p>
+                  </div>
+                  <div className="stfad-field">
+                    <label>Preferred System Type</label>
+                    <p>{ticket.system_type === "ON_GRID" ? "On-Grid" : "Hybrid"}</p>
                   </div>
                 </div>
               </div>
 
-              {/* RIGHT COLUMN */}
-              <div className="stfad-right">
-                {isReturnedForRevision && (
-                  <div className="stfad-revision-box">
-                    <span className="stfad-revision-tag">Returned for Revision</span>
-                    <h3>Admin Revision Notes</h3>
-                    <p>{ticket.admin_revision_notes}</p>
+              <div className="stfad-card">
+                <h2><span className="stfad-dot roof" />Roof Assessment Data</h2>
+                <div className="stfad-grid stfad-grid-4">
+                  <div className="stfad-field">
+                    <label>Roof Area</label>
+                    <p>{assessment.estimated_roof_area_sqm} sq.m.</p>
+                  </div>
+                  <div className="stfad-field">
+                    <label>Roof Type</label>
+                    <p>{assessment.roof_type_display}</p>
+                  </div>
+                  <div className="stfad-field">
+                    <label>Condition</label>
+                    <p>{assessment.roof_condition_display}</p>
+                  </div>
+                  <div className="stfad-field">
+                    <label>Rec. Package</label>
+                    <p>{assessment.recommended_package}</p>
+                  </div>
+                  <div className="stfad-field">
+                    <label>System Type</label>
+                    <p>{assessment.recommended_system_type_display}</p>
+                  </div>
+                  <div className="stfad-field">
+                    <label>Capacity</label>
+                    <p>{assessment.rated_capacity_kw} kW</p>
+                  </div>
+                  <div className="stfad-field">
+                    <label>Solar Panels</label>
+                    <p>{assessment.number_of_solar_panels} pcs</p>
+                  </div>
+                  <div className="stfad-field">
+                    <label>Inverter</label>
+                    <p>{assessment.inverter_size_kw} kW</p>
+                  </div>
+                </div>
+
+                {assessment.notes && (
+                  <div className="stfad-notes-box">
+                    <h3>Worker Notes</h3>
+                    <p>{assessment.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              {assessment.photos?.length > 0 && (
+                <div className="stfad-card">
+                  <h2><span className="stfad-dot photos" />Proof of Visit Photos</h2>
+                  <div className="stfad-photo-grid">
+                    {assessment.photos.map((photo) => (
+                      <button
+                        key={photo.id}
+                        className="stfad-photo-thumb"
+                        onClick={() => setLightboxSrc(photo.image)}
+                      >
+                        <img src={photo.image} alt="Proof of visit" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {isReturnedForRevision && (
+                <div className="stfad-revision-box">
+                  <span className="stfad-revision-tag">Returned for Revision</span>
+                  <h3>Admin Revision Notes</h3>
+                  <p>{ticket.admin_revision_notes}</p>
+                </div>
+              )}
+
+              <div className="stfad-card">
+                <h2><span className="stfad-dot quote" />Updated Quotation</h2>
+
+                {latestUpdatedQuotation && (
+                  <div className="stfad-grid stfad-grid-2 stfad-quote-summary">
+                    <div className="stfad-field">
+                      <label>Current Package</label>
+                      <p>{latestUpdatedQuotation.package_details}</p>
+                    </div>
+                    <div className="stfad-field">
+                      <label>Current Cost</label>
+                      <p>{formatCurrency(latestUpdatedQuotation.estimated_cost)}</p>
+                    </div>
                   </div>
                 )}
 
-                <div className="stfad-card">
-                  <h2>Updated Quotation</h2>
-
-                  {latestUpdatedQuotation && (
-                    <div className="stfad-quote-summary">
-                      <div>
-                        <label>Current Package</label>
-                        <p>{latestUpdatedQuotation.package_details}</p>
-                      </div>
-                      <div>
-                        <label>Current Cost</label>
-                        <p>{formatCurrency(latestUpdatedQuotation.estimated_cost)}</p>
-                      </div>
+                {!latestUpdatedQuotation && ticket.final_sheet && (
+                  <div className="stfad-finalized-block">
+                    <span className="stfad-finalized-badge">Finalized</span>
+                    <div className="stfad-finalized-cost">
+                      <label>Final Cost</label>
+                      <p>{formatCurrency(ticket.final_sheet.final_cost)}</p>
                     </div>
-                  )}
-
-                  {canDecide ? (
-                    <div className="stfad-quote-form">
-                      <div className="stfad-form-field">
-                        <label>Package Details</label>
-                        <input
-                          value={packageDetails}
-                          onChange={(e) => setPackageDetails(e.target.value)}
-                          placeholder="e.g. 6KW On-Grid Package"
-                        />
-                      </div>
-                      <div className="stfad-form-field">
-                        <label>Estimated Cost</label>
-                        <input
-                          value={estimatedCost}
-                          onChange={(e) => setEstimatedCost(e.target.value)}
-                          placeholder="e.g. 250000"
-                        />
-                      </div>
-                      <div className="stfad-form-field">
+                                        <div className="stfad-finalized-meta">
+                      <div>
                         <label>Payment Terms</label>
-                        <select value={paymentTermsId} onChange={(e) => setPaymentTermsId(e.target.value)}>
-                          <option value="">Select payment terms...</option>
-                          {paymentTerms.map((pt) => (
-                            <option key={pt.id} value={pt.id}>
-                              {pt.description.slice(0, 60)}
-                            </option>
-                          ))}
-                        </select>
+                        <p>{ticket.final_sheet.payment_terms_summary ? formatPaymentTerms(ticket.final_sheet.payment_terms_summary) : "—"}</p>
                       </div>
-                      <button
-                        className="stfad-send-quote-button"
-                        onClick={handleSendQuotation}
-                        disabled={sendingQuote}
-                      >
-                        {sendingQuote ? "Sending..." : "Send Updated Quotation"}
-                      </button>
+                      <div>
+                        <label>Approved On</label>
+                        <p>{formatDateTime(ticket.final_sheet.approved_at)}</p>
+                      </div>
                     </div>
-                  ) : (
+                  </div>
+                )}
+
+                {canDecide ? (
+                  <div className="stfad-quote-form">
+                    <div className="stfad-form-field">
+                      <label>Package Details</label>
+                      <input
+                        value={packageDetails}
+                        onChange={(e) => setPackageDetails(e.target.value)}
+                        placeholder="e.g. 6KW On-Grid Package"
+                      />
+                    </div>
+                    <div className="stfad-form-field">
+                      <label>Estimated Cost</label>
+                      <input
+                        value={estimatedCost}
+                        onChange={(e) => setEstimatedCost(e.target.value)}
+                        placeholder="e.g. 250000"
+                      />
+                    </div>
+                    <div className="stfad-form-field">
+                      <label>Payment Terms</label>
+                      <select value={paymentTermsId} onChange={(e) => setPaymentTermsId(e.target.value)}>
+                        <option value="">Select payment terms...</option>
+                        {paymentTerms.map((pt) => (
+                          <option key={pt.id} value={pt.id}>
+                            {pt.description.slice(0, 60)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      className="stfad-send-quote-button"
+                      onClick={handleSendQuotation}
+                      disabled={sendingQuote}
+                    >
+                      {sendingQuote ? "Sending..." : "Send Updated Quotation"}
+                    </button>
+                  </div>
+                                ) : (
+                  !ticket.final_sheet && (
                     <p className="stfad-empty">
                       A decision has already been made for this ticket. Current status:{" "}
                       <strong>{ticket.status_display}</strong>.
                     </p>
-                  )}
-                </div>
+                  )
+                )}
+              </div>
 
-                {canDecide && (
-                  <div className="stfad-decision-panel">
-                    <h2>Decision</h2>
-                    <p>
-                      Review the roof assessment above, then choose how this ticket should
-                      proceed.
-                    </p>
+              {canDecide && (
+                <div className="stfad-card stfad-decision-card">
+                  <h2><span className="stfad-dot decision" />Decision</h2>
 
-                    {isReturnedForRevision ? (
+                  {isReturnedForRevision ? (
+                    <div className="stfad-decision-row primary">
+                      <div className="stfad-decision-text">
+                        <strong>Resubmit to Admin</strong>
+                        <span>After adjusting the quotation above, resubmit this ticket to Admin for another review.</span>
+                      </div>
                       <button
-                        className="stfad-decision-btn primary"
                         onClick={() =>
                           handleDecisionClick({ key: "FORWARD_TO_ADMIN", label: "Resubmit to Admin" })
                         }
@@ -380,27 +412,27 @@ export default function StaffAssessmentDetailPage() {
                       >
                         Resubmit to Admin
                       </button>
-                    ) : (
-                      <div className="stfad-decision-buttons">
-                        {DECISION_OPTIONS.map((opt) => (
-                          <div key={opt.key} className={`stfad-decision-option ${opt.style}`}>
-                            <div className="stfad-decision-text">
-                              <strong>{opt.label}</strong>
-                              <span>{opt.description}</span>
-                            </div>
-                            <button
-                              onClick={() => handleDecisionClick(opt)}
-                              disabled={submittingDecision}
-                            >
-                              Select
-                            </button>
+                    </div>
+                  ) : (
+                    <div className="stfad-decision-list">
+                      {DECISION_OPTIONS.map((opt) => (
+                        <div key={opt.key} className={`stfad-decision-row ${opt.style}`}>
+                          <div className="stfad-decision-text">
+                            <strong>{opt.label}</strong>
+                            <span>{opt.description}</span>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                          <button
+                            onClick={() => handleDecisionClick(opt)}
+                            disabled={submittingDecision}
+                          >
+                            Select
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

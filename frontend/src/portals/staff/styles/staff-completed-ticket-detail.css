@@ -1,17 +1,6 @@
-.stfcd-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(100vh - 168px);
-  box-sizing: border-box;
-  padding: 20px 0;
-}
-
 .stfcd-page {
   width: 100%;
-  max-width: 960px;
 }
-
 .stfcd-loading,
 .stfcd-error {
   font-size: 15px;
@@ -121,11 +110,11 @@
 }
 
 .stfcd-grid-3 {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .stfcd-grid-4 {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .stfcd-field label {

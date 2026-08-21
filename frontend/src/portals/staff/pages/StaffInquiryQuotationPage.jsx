@@ -101,136 +101,130 @@ export default function StaffInquiryQuotationPage() {
 
   return (
     <StaffLayout>
-      <div className="stfquote-wrapper">
-        <div className="stfquote-page">
-          {toast && (
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onDone={() => setToast(null)}
-            />
-          )}
+      <div className="stfquote-page">
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onDone={() => setToast(null)}
+          />
+        )}
 
-          <div className="stfquote-header">
-            <button className="stfquote-back" onClick={() => navigate("/staff/email-inquiries")}>
-              <ArrowLeft size={18} />
-            </button>
-            {inquiry && (
-              <div className="stfquote-header-info">
-                <h1>{inquiry.full_name}</h1>
-                <p>{inquiry.email} · {inquiry.subject_display}</p>
+        {loading && <p className="stfquote-loading">Loading...</p>}
+        {loadError && <p className="stfquote-error">{loadError}</p>}
+
+        {!loading && !loadError && inquiry && (
+          <div className="stfquote-stack">
+            <div className="stfquote-title-row">
+              <div className="stfquote-title-left">
+                <button className="stfquote-back" onClick={() => navigate("/staff/email-inquiries")}>
+                  <ArrowLeft size={18} />
+                </button>
+                <div>
+                  <h1>{inquiry.full_name}</h1>
+                  <p>{inquiry.email} &middot; {inquiry.subject_display}</p>
+                </div>
               </div>
-            )}
-            {inquiry && (
               <span className="stfquote-inquiry-number">Inquiry #{inquiry.id}</span>
+            </div>
+
+            <div className="stfquote-card">
+              <h2><span className="stfquote-dot message" />Customer's Message</h2>
+              <p className="stfquote-original-message">{inquiry.message}</p>
+            </div>
+
+            {alreadySent ? (
+              <div className="stfquote-card">
+                <h2><span className="stfquote-dot sent" />Initial Quotation Sent</h2>
+                <p className="stfquote-sent-note">
+                  Sent on {new Date(inquiry.quotation_sent_at).toLocaleString()}
+                </p>
+
+                <div className="stfquote-form">
+                  <div className="stfquote-field">
+                    <label>Package Details</label>
+                    <p className="stfquote-readonly-value">{inquiry.quotation_package_details}</p>
+                  </div>
+
+                  <div className="stfquote-field">
+                    <label>Estimated Cost</label>
+                    <p className="stfquote-readonly-value">{inquiry.quotation_estimated_cost}</p>
+                  </div>
+
+                  <div className="stfquote-field stfquote-field-wide">
+                    <label>Payment Terms</label>
+                    <p className="stfquote-readonly-value">{inquiry.quotation_payment_terms}</p>
+                  </div>
+
+                  <div className="stfquote-field stfquote-field-wide">
+                    <label>Message to Customer</label>
+                    <p className="stfquote-readonly-value">
+                      {inquiry.quotation_message_to_customer || "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="stfquote-card">
+                <h2><span className="stfquote-dot compose" />Compose Initial Quotation</h2>
+
+                <div className="stfquote-form">
+                  <div className="stfquote-field">
+                    <label>Package Details</label>
+                    <input
+                      value={packageDetails}
+                      onChange={(e) => setPackageDetails(e.target.value)}
+                      placeholder="e.g. 6KW On-Grid Package"
+                    />
+                  </div>
+
+                  <div className="stfquote-field">
+                    <label>Estimated Cost</label>
+                    <input
+                      value={estimatedCost}
+                      onChange={(e) => setEstimatedCost(e.target.value)}
+                      placeholder="e.g. ₱250,000"
+                    />
+                  </div>
+
+                  <div className="stfquote-field">
+                    <label>Payment Terms</label>
+                    <input
+                      value={paymentTerms}
+                      onChange={(e) => setPaymentTerms(e.target.value)}
+                      placeholder="e.g. 50% downpayment, balance on completion"
+                    />
+                  </div>
+
+                  <div className="stfquote-field stfquote-field-wide">
+                    <label>Message to Customer (optional)</label>
+                    <textarea
+                      value={messageToCustomer}
+                      onChange={(e) => setMessageToCustomer(e.target.value)}
+                      placeholder="Any extra info for the customer..."
+                    />
+                  </div>
+
+                  <button
+                    className="stfquote-send-button"
+                    disabled={sending}
+                    onClick={handleSendClick}
+                  >
+                    Send Initial Quotation
+                  </button>
+                </div>
+              </div>
             )}
           </div>
+        )}
 
-          {loading && <p className="stfquote-loading">Loading...</p>}
-          {loadError && <p className="stfquote-error">{loadError}</p>}
-
-          {!loading && !loadError && inquiry && (
-            <div className="stfquote-body">
-              <div className="stfquote-card">
-                <section className="stfquote-section">
-                  <h2>Customer's Message</h2>
-                  <p className="stfquote-original-message">{inquiry.message}</p>
-                </section>
-
-                {alreadySent ? (
-                  <section className="stfquote-section">
-                    <h2>Initial Quotation Sent</h2>
-                    <p className="stfquote-sent-note">
-                      Sent on {new Date(inquiry.quotation_sent_at).toLocaleString()}
-                    </p>
-
-                    <div className="stfquote-form">
-                      <div className="stfquote-field">
-                        <label>Package Details</label>
-                        <p className="stfquote-readonly-value">{inquiry.quotation_package_details}</p>
-                      </div>
-
-                      <div className="stfquote-field">
-                        <label>Estimated Cost</label>
-                        <p className="stfquote-readonly-value">{inquiry.quotation_estimated_cost}</p>
-                      </div>
-
-                      <div className="stfquote-field stfquote-field-wide">
-                        <label>Payment Terms</label>
-                        <p className="stfquote-readonly-value">{inquiry.quotation_payment_terms}</p>
-                      </div>
-
-                      <div className="stfquote-field stfquote-field-wide">
-                        <label>Message to Customer</label>
-                        <p className="stfquote-readonly-value">
-                          {inquiry.quotation_message_to_customer || "—"}
-                        </p>
-                      </div>
-                    </div>
-                  </section>
-                ) : (
-                  <section className="stfquote-section">
-                    <h2>Compose Initial Quotation</h2>
-
-                    <div className="stfquote-form">
-                      <div className="stfquote-field">
-                        <label>Package Details</label>
-                        <input
-                          value={packageDetails}
-                          onChange={(e) => setPackageDetails(e.target.value)}
-                          placeholder="e.g. 6KW On-Grid Package"
-                        />
-                      </div>
-
-                      <div className="stfquote-field">
-                        <label>Estimated Cost</label>
-                        <input
-                          value={estimatedCost}
-                          onChange={(e) => setEstimatedCost(e.target.value)}
-                          placeholder="e.g. ₱250,000"
-                        />
-                      </div>
-
-                      <div className="stfquote-field stfquote-field-wide">
-                        <label>Payment Terms</label>
-                        <input
-                          value={paymentTerms}
-                          onChange={(e) => setPaymentTerms(e.target.value)}
-                          placeholder="e.g. 50% downpayment, balance on completion"
-                        />
-                      </div>
-
-                      <div className="stfquote-field stfquote-field-wide">
-                        <label>Message to Customer (optional)</label>
-                        <textarea
-                          value={messageToCustomer}
-                          onChange={(e) => setMessageToCustomer(e.target.value)}
-                          placeholder="Any extra info for the customer..."
-                        />
-                      </div>
-
-                      <button
-                        className="stfquote-send-button"
-                        disabled={sending}
-                        onClick={handleSendClick}
-                      >
-                        Send Initial Quotation
-                      </button>
-                    </div>
-                  </section>
-                )}
-              </div>
-            </div>
-          )}
-
-          {showConfirm && (
-            <ConfirmModal
-              busy={sending}
-              onCancel={() => setShowConfirm(false)}
-              onConfirm={performSend}
-            />
-          )}
-        </div>
+        {showConfirm && (
+          <ConfirmModal
+            busy={sending}
+            onCancel={() => setShowConfirm(false)}
+            onConfirm={performSend}
+          />
+        )}
       </div>
     </StaffLayout>
   );

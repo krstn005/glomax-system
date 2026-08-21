@@ -5,17 +5,19 @@ import StaffLayout from "../components/StaffLayout";
 import { getStaffTickets } from "../../../api/staffTickets";
 import "../styles/staff-completed-tickets.css";
 
-// Completed Tickets is a read-only record of tickets that reached a
-// final outcome - Approved/Completed (successful) or the two Not
-// Compatible outcomes (unsuccessful, but still finished/closed).
-// Withdrawn is excluded - that already has its own tab on Ticket
-// Tracking, and isn't a "completed" outcome in the same sense.
-const FINISHED_STATUSES = ["APPROVED", "COMPLETED", "NC_CANNOT_PROCEED", "NC_CAN_REAPPLY"];
+// Completed Tickets covers tickets that have nothing left to track:
+// Approved/Completed and Not Compatible (a real outcome was reached),
+// plus Withdrawn (the customer left before any outcome). Withdrawn is
+// still its own separate tab rather than merged into Approved/Not
+// Compatible, since it isn't a decision the team made - the customer
+// opted out before staff ever reached one.
+const FINISHED_STATUSES = ["APPROVED", "COMPLETED", "NC_CANNOT_PROCEED", "NC_CAN_REAPPLY", "WITHDRAWN"];
 
 const TABS = [
   { key: "ALL", label: "All" },
   { key: "APPROVED", label: "Approved" },
   { key: "NOT_COMPATIBLE", label: "Not Compatible" },
+  { key: "WITHDRAWN", label: "Withdrawn" },
 ];
 
 const STATUS_BADGE_CLASS = {
@@ -23,6 +25,7 @@ const STATUS_BADGE_CLASS = {
   COMPLETED: "approved",
   NC_CANNOT_PROCEED: "not-compatible",
   NC_CAN_REAPPLY: "not-compatible",
+  WITHDRAWN: "withdrawn",
 };
 
 const POLL_INTERVAL_MS = 15000;
@@ -66,6 +69,7 @@ export default function StaffCompletedTicketsPage() {
     if (activeTab === "NOT_COMPATIBLE") {
       return t.status === "NC_CANNOT_PROCEED" || t.status === "NC_CAN_REAPPLY";
     }
+    if (activeTab === "WITHDRAWN") return t.status === "WITHDRAWN";
     return true;
   }
 
@@ -83,7 +87,7 @@ export default function StaffCompletedTicketsPage() {
     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
   return (
-    <StaffLayout pageTitle="Completed Tickets" pageSubtitle="Record of tickets that have reached a final outcome">
+    <StaffLayout pageTitle="Completed Tickets" pageSubtitle="Record of tickets with no further action needed">
       {loading && <p className="stfct-loading">Loading...</p>}
       {error && <p className="stfct-error">{error}</p>}
 
@@ -115,7 +119,7 @@ export default function StaffCompletedTicketsPage() {
 
           <div className="stfct-table-card">
             {filteredTickets.length === 0 ? (
-              <p className="stfct-empty">No completed tickets in this view.</p>
+              <p className="stfct-empty">No tickets in this view.</p>
             ) : (
               <table className="stfct-table">
                 <colgroup>

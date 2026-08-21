@@ -1,10 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { Camera } from 'lucide-react';
 import apiClient from '../../../api/client';
 import { sanitizePhoneNumber } from '../../../utils/phone';
 import StaffLayout from '../components/StaffLayout';
 import '../styles/staff-settings.css';
 
-const TABS = ['My Profile', 'Security'];
+const TABS = ['My Profile', 'Notifications', 'Security'];
+
+function Toggle({ checked, onClick }) {
+  return (
+    <button className={`stset-toggle ${checked ? 'on' : ''}`} onClick={onClick}>
+      <span className="stset-toggle-dot" />
+    </button>
+  );
+}
 
 function Toast({ message, onDone }) {
   useEffect(() => {
@@ -12,18 +21,18 @@ function Toast({ message, onDone }) {
     return () => clearTimeout(timer);
   }, [onDone]);
 
-  return <div className="stfset-toast">{message}</div>;
+  return <div className="stset-toast">{message}</div>;
 }
 
 function ConfirmModal({ title, message, confirmLabel, busy, onCancel, onConfirm }) {
   return (
-    <div className="stfset-modal-overlay" onClick={onCancel}>
-      <div className="stfset-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="stset-modal-overlay" onClick={onCancel}>
+      <div className="stset-modal" onClick={(e) => e.stopPropagation()}>
         <h3>{title}</h3>
         <p>{message}</p>
-        <div className="stfset-modal-actions">
-          <button className="stfset-btn-secondary" onClick={onCancel}>Cancel</button>
-          <button className="stfset-btn" disabled={busy} onClick={onConfirm}>
+        <div className="stset-modal-actions">
+          <button className="stset-btn-secondary" onClick={onCancel}>Cancel</button>
+          <button className="stset-btn" disabled={busy} onClick={onConfirm}>
             {busy ? 'Saving...' : confirmLabel}
           </button>
         </div>
@@ -33,13 +42,13 @@ function ConfirmModal({ title, message, confirmLabel, busy, onCancel, onConfirm 
 }
 
 function ProfileTab() {
-  // ASSUMPTION TO CONFIRM: "Full Name" is mapped directly to the `username`
-  // field, same simplification used on the Customer portal, since the
-  // backend User model has no separate full_name field yet. The Staff
-  // text guide's "Username cannot be changed" note suggests these should
-  // eventually be two separate fields — flag if you want that built for real.
-  const [form, setForm] = useState({ fullName: '', email: '', phone: '' });
+  const [form, setForm] = useState({ fullName: '', email: '', phone: '', address: '' });
+  const [pictureUrl, setPictureUrl] = useState(null);
+  const [pictureFile, setPictureFile] = useState(null);
+  const [picturePreview, setPicturePreview] = useState(null);
   const [phoneWarning, setPhoneWarning] = useState('');
+  const fileInputRef = useRef(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -54,7 +63,9 @@ function ProfileTab() {
           fullName: res.data.username || '',
           email: res.data.email || '',
           phone: res.data.phone_number || '',
+          address: res.data.address || '',
         });
+        setPictureUrl(res.data.profile_picture || null);
       } catch {
         setError('Could not load your profile.');
       } finally {
@@ -74,17 +85,34 @@ function ProfileTab() {
     setPhoneWarning(hadInvalidChar ? 'Phone Number can only contain numbers.' : '');
   }
 
+  function handlePictureChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPictureFile(file);
+    setPicturePreview(URL.createObjectURL(file));
+  }
+
   async function performSave() {
     setSaving(true);
     setError('');
     try {
-      await apiClient.patch('/accounts/me/', {
-        username: form.fullName,
-        email: form.email,
-        phone_number: form.phone,
-      });
+      const formData = new FormData();
+      formData.append('username', form.fullName);
+      formData.append('email', form.email);
+      formData.append('phone_number', form.phone);
+      formData.append('address', form.address);
+      if (pictureFile) {
+        formData.append('profile_picture', pictureFile);
+      }
+
+      const res = await apiClient.patch('/accounts/me/', formData);
+
       localStorage.setItem('username', form.fullName);
+      setPictureUrl(res.data.profile_picture || null);
+      setPictureFile(null);
+      setPicturePreview(null);
       setSuccess(true);
+      window.dispatchEvent(new Event('profile-picture-updated'));
     } catch {
       setError('Something went wrong saving your changes. Please try again.');
     } finally {
@@ -93,33 +121,69 @@ function ProfileTab() {
     }
   }
 
-  if (loading) return <p className="stfset-loading">Loading...</p>;
+  const initials = (form.fullName || 'ST').slice(0, 2).toUpperCase();
+  const displayedPicture = picturePreview || pictureUrl;
+
+  if (loading) return <p className="stset-loading">Loading...</p>;
 
   return (
-    <div className="stfset-card">
+    <div className="stset-card">
       {success && <Toast message="Changes saved successfully" onDone={() => setSuccess(false)} />}
 
-      <h2>Account Information</h2>
+      <h2>Personal Information</h2>
 
-      <div className="stfset-grid">
-        <div className="stfset-field">
-          <label>Full Name</label>
-          <input value={form.fullName} onChange={(e) => updateField('fullName', e.target.value)} />
-        </div>
-        <div className="stfset-field">
-          <label>Phone Number</label>
-          <input type="tel" inputMode="numeric" value={form.phone} onChange={handlePhoneChange} />
-          {phoneWarning && <p className="stfset-field-warning">{phoneWarning}</p>}
-        </div>
-        <div className="stfset-field">
-          <label>Email Address</label>
-          <input value={form.email} onChange={(e) => updateField('email', e.target.value)} />
+      <div className="stset-photo-row">
+        <button
+          type="button"
+          className="stset-avatar-clickable"
+          onClick={() => fileInputRef.current?.click()}
+          title="Click to change your photo"
+        >
+          {displayedPicture ? (
+            <img src={displayedPicture} alt="Profile" className="stset-avatar-img" />
+          ) : (
+            <div className="stset-avatar">{initials}</div>
+          )}
+          <span className="stset-avatar-edit-badge">
+            <Camera size={12} />
+          </span>
+        </button>
+        <div>
+          <p className="stset-photo-title">Profile Photo</p>
+          <p className="stset-photo-hint">Click your photo to upload a new one</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePictureChange}
+            style={{ display: 'none' }}
+          />
         </div>
       </div>
 
-      <div className="stfset-footer">
-        {error && <p className="stfset-error">{error}</p>}
-        <button className="stfset-btn stfset-btn-right" onClick={() => setShowConfirm(true)}>
+      <div className="stset-grid">
+        <div className="stset-field">
+          <label>Full Name</label>
+          <input value={form.fullName} onChange={(e) => updateField('fullName', e.target.value)} />
+        </div>
+        <div className="stset-field">
+          <label>Email Address</label>
+          <input value={form.email} onChange={(e) => updateField('email', e.target.value)} />
+        </div>
+        <div className="stset-field">
+          <label>Phone Number</label>
+          <input type="tel" inputMode="numeric" value={form.phone} onChange={handlePhoneChange} />
+          {phoneWarning && <p className="stset-field-warning">{phoneWarning}</p>}
+        </div>
+        <div className="stset-field">
+          <label>Home Address</label>
+          <input value={form.address} onChange={(e) => updateField('address', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="stset-footer">
+        {error && <p className="stset-error">{error}</p>}
+        <button className="stset-btn stset-btn-right" onClick={() => setShowConfirm(true)}>
           Save Changes
         </button>
       </div>
@@ -129,6 +193,126 @@ function ProfileTab() {
           title="Save Profile Changes?"
           message="This will update your account information. Are you sure you want to continue?"
           confirmLabel="Save Changes"
+          busy={saving}
+          onCancel={() => setShowConfirm(false)}
+          onConfirm={performSave}
+        />
+      )}
+    </div>
+  );
+}
+
+function NotificationsTab() {
+  const [prefs, setPrefs] = useState({
+    notify_email_updates: true,
+    notify_sms_updates: true,
+    notify_request_approval: true,
+    notify_request_rejection: true,
+    notify_promotions: false,
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    async function loadMe() {
+      try {
+        const res = await apiClient.get('/accounts/me/');
+        setPrefs({
+          notify_email_updates: res.data.notify_email_updates,
+          notify_sms_updates: res.data.notify_sms_updates,
+          notify_request_approval: res.data.notify_request_approval,
+          notify_request_rejection: res.data.notify_request_rejection,
+          notify_promotions: res.data.notify_promotions,
+        });
+      } catch {
+        setError('Could not load your notification preferences.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadMe();
+  }, []);
+
+  function toggle(key) {
+    setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  async function performSave() {
+    setSaving(true);
+    setError('');
+    try {
+      await apiClient.patch('/accounts/me/', prefs);
+      setSuccess(true);
+    } catch {
+      setError('Something went wrong saving your preferences. Please try again.');
+    } finally {
+      setSaving(false);
+      setShowConfirm(false);
+    }
+  }
+
+  if (loading) return <p className="stset-loading">Loading...</p>;
+
+  return (
+    <div className="stset-card">
+      {success && <Toast message="Preferences saved successfully" onDone={() => setSuccess(false)} />}
+
+      <h2>Notification Preferences</h2>
+
+      <div className="stset-toggle-row">
+        <div>
+          <p className="stset-toggle-title">Email Updates</p>
+          <p className="stset-toggle-sub">Receive updates via email</p>
+        </div>
+        <Toggle checked={prefs.notify_email_updates} onClick={() => toggle('notify_email_updates')} />
+      </div>
+      <div className="stset-toggle-row">
+        <div>
+          <p className="stset-toggle-title">SMS Updates</p>
+          <p className="stset-toggle-sub">Receive updates via SMS</p>
+        </div>
+        <Toggle checked={prefs.notify_sms_updates} onClick={() => toggle('notify_sms_updates')} />
+      </div>
+
+      <p className="stset-section-label">Ticket Notifications</p>
+
+      <div className="stset-toggle-row">
+        <div>
+          <p className="stset-toggle-title">New Ticket Assignments</p>
+          <p className="stset-toggle-sub">Notify when a new request needs your attention</p>
+        </div>
+        <Toggle checked={prefs.notify_request_approval} onClick={() => toggle('notify_request_approval')} />
+      </div>
+      <div className="stset-toggle-row">
+        <div>
+          <p className="stset-toggle-title">Assessment Submissions</p>
+          <p className="stset-toggle-sub">Notify when a Partner Installer submits an assessment</p>
+        </div>
+        <Toggle checked={prefs.notify_request_rejection} onClick={() => toggle('notify_request_rejection')} />
+      </div>
+      <div className="stset-toggle-row">
+        <div>
+          <p className="stset-toggle-title">System Announcements</p>
+          <p className="stset-toggle-sub">Receive general updates from Glomax Solar Enterprises</p>
+        </div>
+        <Toggle checked={prefs.notify_promotions} onClick={() => toggle('notify_promotions')} />
+      </div>
+
+      <div className="stset-footer">
+        {error && <p className="stset-error">{error}</p>}
+        <button className="stset-btn stset-btn-right" onClick={() => setShowConfirm(true)}>
+          Save Preferences
+        </button>
+      </div>
+
+      {showConfirm && (
+        <ConfirmModal
+          title="Save Notification Preferences?"
+          message="Your notification settings will be updated. Are you sure you want to continue?"
+          confirmLabel="Save Preferences"
           busy={saving}
           onCancel={() => setShowConfirm(false)}
           onConfirm={performSave}
@@ -162,8 +346,8 @@ function SecurityTab() {
     setSaving(true);
     setError('');
     try {
-      // Same guessed endpoint as Customer's Security tab — verify this
-      // matches your real accounts app
+      // ⚠️ Same guessed endpoint as the Customer Settings page —
+      // verify this matches your real accounts app.
       await apiClient.post('/accounts/change-password/', {
         current_password: form.current,
         new_password: form.next,
@@ -179,12 +363,12 @@ function SecurityTab() {
   }
 
   return (
-    <div className="stfset-card">
+    <div className="stset-card">
       {success && <Toast message="Password updated successfully" onDone={() => setSuccess(false)} />}
 
       <h2>Change Password</h2>
 
-      <div className="stfset-field stfset-field-wide">
+      <div className="stset-field stset-field-wide">
         <label>Current Password</label>
         <input
           type="password"
@@ -193,7 +377,7 @@ function SecurityTab() {
           onChange={(e) => updateField('current', e.target.value)}
         />
       </div>
-      <div className="stfset-field stfset-field-wide">
+      <div className="stset-field stset-field-wide">
         <label>New Password</label>
         <input
           type="password"
@@ -202,7 +386,7 @@ function SecurityTab() {
           onChange={(e) => updateField('next', e.target.value)}
         />
       </div>
-      <div className="stfset-field stfset-field-wide">
+      <div className="stset-field stset-field-wide">
         <label>Confirm New Password</label>
         <input
           type="password"
@@ -212,9 +396,9 @@ function SecurityTab() {
         />
       </div>
 
-      <div className="stfset-footer">
-        {error && <p className="stfset-error">{error}</p>}
-        <button className="stfset-btn stfset-btn-right" onClick={handleSaveClick}>
+      <div className="stset-footer">
+        {error && <p className="stset-error">{error}</p>}
+        <button className="stset-btn stset-btn-right" onClick={handleSaveClick}>
           Update Password
         </button>
       </div>
@@ -238,12 +422,12 @@ export default function StaffSettingsPage() {
 
   return (
     <StaffLayout pageTitle="Settings" pageSubtitle="Manage your account preferences">
-      <div className="stfset-layout">
-        <div className="stfset-tabs">
+      <div className="stset-layout">
+        <div className="stset-tabs">
           {TABS.map((tab) => (
             <button
               key={tab}
-              className={`stfset-tab ${activeTab === tab ? 'active' : ''}`}
+              className={`stset-tab ${activeTab === tab ? 'active' : ''}`}
               onClick={() => setActiveTab(tab)}
             >
               {tab}
@@ -251,8 +435,9 @@ export default function StaffSettingsPage() {
           ))}
         </div>
 
-        <div className="stfset-content">
+        <div className="stset-content">
           {activeTab === 'My Profile' && <ProfileTab />}
+          {activeTab === 'Notifications' && <NotificationsTab />}
           {activeTab === 'Security' && <SecurityTab />}
         </div>
       </div>

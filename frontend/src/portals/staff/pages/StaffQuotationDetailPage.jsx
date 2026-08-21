@@ -4,7 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
 import { getStaffTickets } from "../../../api/staffTickets";
 import { getPaymentTerms, sendQuotation } from "../../../api/staffQuotations";
-import { formatCurrency } from "../../../utils/currency";
+import { formatCurrency, formatPaymentTerms, formatDateTime } from "../../../utils/currency";
+import apiClient from "../../../api/client";
 import logo from "../../../assets/images/logo.jpg";
 import "../styles/staff-quotation-detail.css";
 
@@ -99,6 +100,13 @@ export default function StaffQuotationDetailPage() {
 
   const canEditQuotation = ticket && EDITABLE_STATUSES.includes(ticket.status);
 
+  // Splits the Final Sheet's payment terms into individual segments so
+  // each renders on its own line, mirroring the PDF export's layout
+  // (one line per term, instead of a single comma-joined sentence).
+  const finalSheetTermsLines = ticket?.final_sheet?.payment_terms_summary
+    ? ticket.final_sheet.payment_terms_summary.split(",").map((p) => p.trim()).filter(Boolean)
+    : [];
+
   function resetForm() {
     setPackageDetails("");
     setEstimatedCost("");
@@ -137,354 +145,385 @@ export default function StaffQuotationDetailPage() {
     }
   }
 
-async function handleExportPdf() {
-  try {
-    const token = localStorage.getItem("access_token");
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"}/tickets/${id}/final-sheet/pdf/`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (!response.ok) throw new Error("Failed to generate PDF");
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${ticket.ticket_number}-final-sheet.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  } catch {
-    setToast({ message: "Could not export the PDF. Please try again.", type: "error" });
+  // Uses client.js's shared axios instance rather than a raw fetch()
+  // so this request benefits from the same request/response
+  // interceptors as every other page - the Authorization header is
+  // attached automatically, and if the access token has expired, the
+  // interceptor transparently refreshes it and retries before this
+  // ever surfaces as a 401.
+  async function handleExportPdf() {
+    try {
+      const response = await apiClient.get(`/tickets/${id}/final-sheet/pdf/`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${ticket.ticket_number}-final-sheet.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setToast({ message: "Could not export the PDF. Please try again.", type: "error" });
+    }
   }
-}
 
   return (
     <StaffLayout>
       {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
 
-      <div className="stfqd-top-row">
-  <button className="stfqd-back" onClick={() => navigate("/staff/quotations")}>
-    <ArrowLeft size={16} />
-    Back to Quotation Management
-  </button>
-  {ticket && (
-    <button
-      className="stfqd-ticket-link"
-      onClick={() => navigate(`/staff/manage-tickets/${ticket.id}`)}
-    >
-      View Ticket Tracking
-    </button>
-  )}
-</div>
-
       {loading && <p className="stfqd-loading">Loading...</p>}
       {error && <p className="stfqd-error">{error}</p>}
-
       {!loading && !error && !ticket && <p className="stfqd-error">Ticket not found.</p>}
 
       {!loading && !error && ticket && (
-        <div className="stfqd-detail">
-          <h1 className="stfqd-title">{ticket.ticket_number} — {ticket.customer_username}</h1>
-
-          {/* Stage 1: Initial Quotation - read only */}
-          <div className="stfqd-card">
-            <h2>Initial Quotation</h2>
-            {!initialQuotation ? (
-              <p className="stfqd-empty">No Initial Quotation linked to this ticket yet.</p>
-            ) : (
-              <div className="stfqd-readonly-grid">
-                <div>
-                  <label>Package Details</label>
-                  <p>{initialQuotation.package_details}</p>
-                </div>
-                <div>
-                  <label>Estimated Cost</label>
-                  <p>{formatCurrency(initialQuotation.estimated_cost)}</p>
-                </div>
-                <div>
-                  <label>Payment Terms</label>
-                  <p>{initialQuotation.payment_terms_description || "—"}</p>
-                </div>
-                <div>
-                  <label>Sent</label>
-                  <p>{new Date(initialQuotation.sent_at).toLocaleString()}</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Stage 2: Updated Quotation - editable only in the two allowed moments */}
-          <div className="stfqd-card">
-            <h2>Updated Quotation</h2>
-
-            {latestUpdatedQuotation && (
-              <div className="stfqd-readonly-grid stfqd-latest-updated">
-                <div>
-                  <label>Current Package Details</label>
-                  <p>{latestUpdatedQuotation.package_details}</p>
-                </div>
-                <div>
-                  <label>Current Estimated Cost</label>
-                  <p>{formatCurrency(latestUpdatedQuotation.estimated_cost)}</p>
-                </div>
-                <div>
-                  <label>Payment Terms</label>
-                  <p>{latestUpdatedQuotation.payment_terms_description || "—"}</p>
-                </div>
-                <div>
-                  <label>Last Updated</label>
-                  <p>{new Date(latestUpdatedQuotation.sent_at).toLocaleString()}</p>
-                </div>
-              </div>
-            )}
-
-            {canEditQuotation ? (
-              <div className="stfqd-form">
-                <div className="stfqd-field">
-                  <label>Package Details</label>
-                  <input
-                    value={packageDetails}
-                    onChange={(e) => setPackageDetails(e.target.value)}
-                    placeholder="e.g. 6KW On-Grid Package"
-                  />
-                </div>
-
-                <div className="stfqd-field">
-                  <label>Estimated Cost</label>
-                  <input
-                    value={estimatedCost}
-                    onChange={(e) => setEstimatedCost(e.target.value)}
-                    placeholder="e.g. 250000"
-                  />
-                </div>
-
-                <div className="stfqd-field">
-                  <label>Payment Terms</label>
-                  <select
-                    value={paymentTermsId}
-                    onChange={(e) => setPaymentTermsId(e.target.value)}
-                  >
-                    <option value="">Select payment terms...</option>
-                    {paymentTerms.map((pt) => (
-                      <option key={pt.id} value={pt.id}>
-                        {pt.description.slice(0, 60)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="stfqd-field stfqd-field-wide">
-                  <label>Notes (optional)</label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Any extra details..."
-                  />
-                </div>
-
-                <button className="stfqd-send-button" onClick={handleSendClick} disabled={sending}>
-                  Send Updated Quotation
+        <div className="stfqd-page">
+          <div className="stfqd-detail">
+            <div className="stfqd-title-row">
+              <div className="stfqd-title-left">
+                <button className="stfqd-back" onClick={() => navigate("/staff/quotations")}>
+                  <ArrowLeft size={18} />
                 </button>
+                <div>
+                  <h1>{ticket.ticket_number} — {ticket.customer_username}</h1>
+                  <p>{ticket.status_display}</p>
+                </div>
               </div>
-            ) : (
-              <p className="stfqd-locked-note">
-                The Updated Quotation can only be edited after the Partner Installer's
-                assessment has been submitted, or after Admin returns this ticket for
-                revision. This ticket's current status is{" "}
-                <strong>{ticket.status_display}</strong>.
-              </p>
-            )}
-          </div>
+              <button
+                className="stfqd-ticket-link"
+                onClick={() => navigate(`/staff/manage-tickets/${ticket.id}`)}
+              >
+                View Ticket Tracking
+              </button>
+            </div>
 
-          {/* Price Change History - read only audit trail */}
-          <div className="stfqd-card">
-            <h2>Price Change History</h2>
-            {priceChangeHistory.length === 0 ? (
-              <p className="stfqd-empty">No price changes have been made yet.</p>
-            ) : (
-              <div className="stfqd-history">
-                {priceChangeHistory.map((entry) => (
-                  <div key={entry.id} className="stfqd-history-row">
-                    <span className="stfqd-history-prev">{formatCurrency(entry.previousCost)}</span>
-                    <span className="stfqd-history-arrow">→</span>
-                    <span className="stfqd-history-new">{formatCurrency(entry.newCost)}</span>
-                    <span className="stfqd-history-date">
-                      {new Date(entry.changedAt).toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Stage 3: Final Sheet - only after Admin approval. Styled as a
-              plain official document: logo + eyebrow header, label/value
-              rows with thin dividers, no icon circles, no nested cards. */}
-          {ticket.final_sheet && (
-            <div className="stfqd-card stfqd-final-card">
-              <div className="stfqd-final-header">
-                <div className="stfqd-final-header-left">
-                  <img src={logo} alt="Glomax Solar Enterprises" className="stfqd-final-logo" />
+            {/* Stage 1: Initial Quotation - read only */}
+            <div className="stfqd-card">
+              <h2><span className="stfqd-dot initial" />Initial Quotation</h2>
+              {!initialQuotation ? (
+                <p className="stfqd-empty">No Initial Quotation linked to this ticket yet.</p>
+              ) : (
+                <div className="stfqd-readonly-grid">
                   <div>
-                    <p className="stfqd-final-eyebrow">Final Sheet</p>
-                    <h2 className="stfqd-final-title">
-                      {ticket.ticket_number} — {ticket.customer_username}
-                    </h2>
+                    <label>Package Details</label>
+                    <p>{initialQuotation.package_details}</p>
+                  </div>
+                  <div>
+                    <label>Estimated Cost</label>
+                    <p>{formatCurrency(initialQuotation.estimated_cost)}</p>
+                  </div>
+                  <div>
+                    <label>Payment Terms</label>
+                    <p>{initialQuotation.payment_terms_description || "—"}</p>
+                  </div>
+                  <div>
+                    <label>Sent</label>
+                    <p>{new Date(initialQuotation.sent_at).toLocaleString()}</p>
                   </div>
                 </div>
-                <div className="stfqd-final-badge-col">
-                  <span className="stfqd-final-badge">Approved</span>
-                  <span className="stfqd-final-badge-date">
-                    {new Date(ticket.final_sheet.approved_at).toLocaleDateString()}
-                  </span>
+              )}
+            </div>
+
+            {/* Stage 2: Updated Quotation - editable only in the two allowed moments */}
+            <div className="stfqd-card">
+              <h2><span className="stfqd-dot updated" />Updated Quotation</h2>
+
+              {latestUpdatedQuotation && (
+                <div className="stfqd-readonly-grid stfqd-latest-updated">
+                  <div>
+                    <label>Current Package Details</label>
+                    <p>{latestUpdatedQuotation.package_details}</p>
+                  </div>
+                  <div>
+                    <label>Current Estimated Cost</label>
+                    <p>{formatCurrency(latestUpdatedQuotation.estimated_cost)}</p>
+                  </div>
+                  <div>
+                    <label>Payment Terms</label>
+                    <p>{latestUpdatedQuotation.payment_terms_description || "—"}</p>
+                  </div>
+                  <div>
+                    <label>Last Updated</label>
+                    <p>{new Date(latestUpdatedQuotation.sent_at).toLocaleString()}</p>
+                  </div>
                 </div>
-              </div>
-              <hr className="stfqd-final-divider" />
+              )}
 
-              <div className="stfqd-final-cost-box">
-                <label>Final Cost</label>
-                <p>{formatCurrency(ticket.final_sheet.final_cost)}</p>
-              </div>
+              {!latestUpdatedQuotation && ticket.final_sheet && (
+                <div className="stfqd-finalized-block">
+                  <span className="stfqd-finalized-badge">Finalized</span>
+                  <div className="stfqd-finalized-cost">
+                    <label>Final Cost</label>
+                    <p>{formatCurrency(ticket.final_sheet.final_cost)}</p>
+                  </div>
+                  <div className="stfqd-finalized-meta">
+                    <div>
+                      <label>Payment Terms</label>
+                      <p>{ticket.final_sheet.payment_terms_summary ? formatPaymentTerms(ticket.final_sheet.payment_terms_summary) : "—"}</p>
+                    </div>
+                    <div>
+                      <label>Approved On</label>
+                      <p>{formatDateTime(ticket.final_sheet.approved_at)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              <div className="stfqd-final-two-col">
-                <div className="stfqd-final-section">
-                  <h3>Customer &amp; Ticket Info</h3>
-                  <dl className="stfqd-doc-list">
-                    <div className="stfqd-doc-row">
-                      <dt>Customer</dt>
-                      <dd>{ticket.customer_username}</dd>
+              {!ticket.final_sheet && canEditQuotation ? (
+                <div className="stfqd-form">
+                  <div className="stfqd-field">
+                    <label>Package Details</label>
+                    <input
+                      value={packageDetails}
+                      onChange={(e) => setPackageDetails(e.target.value)}
+                      placeholder="e.g. 6KW On-Grid Package"
+                    />
+                  </div>
+
+                  <div className="stfqd-field">
+                    <label>Estimated Cost</label>
+                    <input
+                      value={estimatedCost}
+                      onChange={(e) => setEstimatedCost(e.target.value)}
+                      placeholder="e.g. 250000"
+                    />
+                  </div>
+
+                  <div className="stfqd-field">
+                    <label>Payment Terms</label>
+                    <select
+                      value={paymentTermsId}
+                      onChange={(e) => setPaymentTermsId(e.target.value)}
+                    >
+                      <option value="">Select payment terms...</option>
+                      {paymentTerms.map((pt) => (
+                        <option key={pt.id} value={pt.id}>
+                          {pt.description.slice(0, 60)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="stfqd-field stfqd-field-wide">
+                    <label>Notes (optional)</label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Any extra details..."
+                    />
+                  </div>
+
+                  <button className="stfqd-send-button" onClick={handleSendClick} disabled={sending}>
+                    Send Updated Quotation
+                  </button>
+                </div>
+              ) : (
+                !ticket.final_sheet && (
+                  <p className="stfqd-locked-note">
+                    The Updated Quotation can only be edited after the Partner Installer's
+                    assessment has been submitted, or after Admin returns this ticket for
+                    revision. This ticket's current status is{" "}
+                    <strong>{ticket.status_display}</strong>.
+                  </p>
+                )
+              )}
+            </div>
+
+            {/* Price Change History - read only audit trail */}
+            <div className="stfqd-card">
+              <h2><span className="stfqd-dot history" />Price Change History</h2>
+              {priceChangeHistory.length === 0 ? (
+                <p className="stfqd-empty">No price changes have been made yet.</p>
+              ) : (
+                <div className="stfqd-history">
+                  {priceChangeHistory.map((entry) => (
+                    <div key={entry.id} className="stfqd-history-row">
+                      <span className="stfqd-history-prev">{formatCurrency(entry.previousCost)}</span>
+                      <span className="stfqd-history-arrow">→</span>
+                      <span className="stfqd-history-new">{formatCurrency(entry.newCost)}</span>
+                      <span className="stfqd-history-date">
+                        {new Date(entry.changedAt).toLocaleString()}
+                      </span>
                     </div>
-                    <div className="stfqd-doc-row">
-                      <dt>Property Address</dt>
-                      <dd>{ticket.property_address}</dd>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Stage 3: Final Sheet - only after Admin approval. Matches the
+                PDF export's visual language: plain bold green "Approved"
+                text (no pill), navy divider beside the logo, a bordered
+                Final Cost box with an internal gold divider, and payment
+                terms stacked one segment per line. */}
+            {ticket.final_sheet && (
+              <div className="stfqd-card stfqd-final-card">
+                <div className="stfqd-final-header">
+                  <div className="stfqd-final-header-left">
+                    <img src={logo} alt="Glomax Solar Enterprises" className="stfqd-final-logo" />
+                    <div className="stfqd-final-divider-line" />
+                    <div>
+                      <p className="stfqd-final-eyebrow">
+                        Final Sheet <span className="stfqd-final-eyebrow-date">- {new Date(ticket.final_sheet.approved_at).toLocaleDateString(undefined, { month: "numeric", day: "numeric", year: "numeric" })}</span>
+                      </p>
+                      <h2 className="stfqd-final-title">
+                        {ticket.ticket_number} — {ticket.customer_username}
+                      </h2>
                     </div>
-                    <div className="stfqd-doc-row">
-                      <dt>Partner Installer</dt>
-                      <dd>{ticket.partner_installer_username || "—"}</dd>
-                    </div>
-                    <div className="stfqd-doc-row">
-                      <dt>Contact Number</dt>
-                      <dd>{ticket.contact_number}</dd>
-                    </div>
-                  </dl>
+                  </div>
+                  <span className="stfqd-final-status">Approved</span>
+                </div>
+                <hr className="stfqd-final-divider" />
+
+                <div className="stfqd-final-cost-box">
+                  <div className="stfqd-final-cost-label-cell">
+                    <label>FINAL COST:</label>
+                  </div>
+                  <div className="stfqd-final-cost-value-cell">
+                    <p>{formatCurrency(ticket.final_sheet.final_cost)}</p>
+                  </div>
                 </div>
 
-                {ticket.assessment && (
+                <div className="stfqd-final-two-col">
                   <div className="stfqd-final-section">
-                    <h3>Roof Assessment</h3>
+                    <h3>Customer &amp; Ticket Info</h3>
                     <dl className="stfqd-doc-list">
                       <div className="stfqd-doc-row">
-                        <dt>Estimated Roof Area</dt>
-                        <dd>{ticket.assessment.estimated_roof_area_sqm} sqm</dd>
+                        <dt>Customer</dt>
+                        <dd>{ticket.customer_username}</dd>
                       </div>
                       <div className="stfqd-doc-row">
-                        <dt>Roof Type</dt>
-                        <dd>{ticket.assessment.roof_type_display}</dd>
+                        <dt>Property Address</dt>
+                        <dd>{ticket.property_address}</dd>
                       </div>
                       <div className="stfqd-doc-row">
-                        <dt>Roof Condition</dt>
-                        <dd>{ticket.assessment.roof_condition_display}</dd>
+                        <dt>Partner Installer</dt>
+                        <dd>{ticket.partner_installer_username || "—"}</dd>
                       </div>
                       <div className="stfqd-doc-row">
-                        <dt>Recommended Package</dt>
-                        <dd>{ticket.assessment.recommended_package}</dd>
-                      </div>
-                      <div className="stfqd-doc-row">
-                        <dt>Recommended System Type</dt>
-                        <dd>{ticket.assessment.recommended_system_type_display}</dd>
-                      </div>
-                      <div className="stfqd-doc-row">
-                        <dt>Rated Capacity</dt>
-                        <dd>{ticket.assessment.rated_capacity_kw} kW</dd>
-                      </div>
-                      <div className="stfqd-doc-row">
-                        <dt>Number of Solar Panels</dt>
-                        <dd>{ticket.assessment.number_of_solar_panels}</dd>
-                      </div>
-                      <div className="stfqd-doc-row">
-                        <dt>Inverter Size</dt>
-                        <dd>{ticket.assessment.inverter_size_kw} kW</dd>
+                        <dt>Contact Number</dt>
+                        <dd>{ticket.contact_number}</dd>
                       </div>
                     </dl>
                   </div>
-                )}
-              </div>
 
-              <div className="stfqd-final-section">
-                <h3>Proof of Visit Photos</h3>
-                {ticket.assessment?.photos?.length > 0 ? (
-                  <div className="stfqd-photo-grid">
-                    {ticket.assessment.photos.map((photo) => (
-                      <img key={photo.id} src={photo.image} alt="Proof of visit" />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="stfqd-empty">No photos uploaded.</p>
-                )}
-              </div>
+                  {ticket.assessment && (
+                    <div className="stfqd-final-section">
+                      <h3>Roof Assessment</h3>
+                      <dl className="stfqd-doc-list">
+                        <div className="stfqd-doc-row">
+                          <dt>Estimated Roof Area</dt>
+                          <dd>{ticket.assessment.estimated_roof_area_sqm} sqm</dd>
+                        </div>
+                        <div className="stfqd-doc-row">
+                          <dt>Roof Type</dt>
+                          <dd>{ticket.assessment.roof_type_display}</dd>
+                        </div>
+                        <div className="stfqd-doc-row">
+                          <dt>Roof Condition</dt>
+                          <dd>{ticket.assessment.roof_condition_display}</dd>
+                        </div>
+                        <div className="stfqd-doc-row">
+                          <dt>Recommended Package</dt>
+                          <dd>{ticket.assessment.recommended_package}</dd>
+                        </div>
+                        <div className="stfqd-doc-row">
+                          <dt>Recommended System Type</dt>
+                          <dd>{ticket.assessment.recommended_system_type_display}</dd>
+                        </div>
+                        <div className="stfqd-doc-row">
+                          <dt>Rated Capacity</dt>
+                          <dd>{ticket.assessment.rated_capacity_kw} kW</dd>
+                        </div>
+                        <div className="stfqd-doc-row">
+                          <dt>Number of Solar Panels</dt>
+                          <dd>{ticket.assessment.number_of_solar_panels}</dd>
+                        </div>
+                        <div className="stfqd-doc-row">
+                          <dt>Inverter Size</dt>
+                          <dd>{ticket.assessment.inverter_size_kw} kW</dd>
+                        </div>
+                      </dl>
+                    </div>
+                  )}
+                </div>
 
-              <div className="stfqd-final-section">
-                <h3>Quotation Summary</h3>
-                {!initialQuotation && !latestUpdatedQuotation ? (
-                  <p className="stfqd-empty">
-                    No quotation history is on record for this ticket. Only the Final
-                    Cost is available below.
-                  </p>
-                ) : (
-                  <div className="stfqd-quote-flow">
-                    <div className="stfqd-quote-step">
-                      <span className="stfqd-quote-label">Initial Quotation</span>
-                      <span className="stfqd-quote-value">
-                        {initialQuotation ? formatCurrency(initialQuotation.estimated_cost) : "Not recorded"}
-                      </span>
+                <div className="stfqd-final-section">
+                  <h3>Proof of Visit Photos</h3>
+                  {ticket.assessment?.photos?.length > 0 ? (
+                    <div className="stfqd-photo-grid">
+                      {ticket.assessment.photos.map((photo) => (
+                        <img key={photo.id} src={photo.image} alt="Proof of visit" />
+                      ))}
                     </div>
-                    <span className="stfqd-quote-arrow">→</span>
-                    <div className="stfqd-quote-step">
-                      <span className="stfqd-quote-label">Updated Quotation</span>
-                      <span className="stfqd-quote-value">
-                        {latestUpdatedQuotation ? formatCurrency(latestUpdatedQuotation.estimated_cost) : "Not recorded"}
-                      </span>
-                    </div>
-                    <span className="stfqd-quote-arrow">→</span>
-                    <div className="stfqd-quote-step">
-                      <span className="stfqd-quote-label">Final Cost</span>
-                      <span className="stfqd-quote-value stfqd-quote-value-final">
-                        {formatCurrency(ticket.final_sheet.final_cost)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <p className="stfqd-empty">No photos uploaded.</p>
+                  )}
+                </div>
 
-              <div className="stfqd-final-section">
-                <h3>Payment &amp; Approval</h3>
-                <div className="stfqd-approval-row">
-                  <div className="stfqd-approval-item">
-                    <label>Payment Terms</label>
-                    <p>{ticket.final_sheet.payment_terms_summary}</p>
-                  </div>
-                  <div className="stfqd-approval-item">
-                    <label>Approved By</label>
-                    <p>{ticket.final_sheet.approved_by_username || "—"}</p>
-                  </div>
-                  <div className="stfqd-approval-item">
-                    <label>Approved On</label>
-                    <p>{new Date(ticket.final_sheet.approved_at).toLocaleString()}</p>
+                <div className="stfqd-final-section">
+                  <h3>Quotation Summary</h3>
+                  {!initialQuotation && !latestUpdatedQuotation ? (
+                    <p className="stfqd-empty">
+                      No quotation history is on record for this ticket. Only the Final
+                      Cost is available below.
+                    </p>
+                  ) : (
+                    <div className="stfqd-quote-flow">
+                      <div className="stfqd-quote-step">
+                        <span className="stfqd-quote-label">Initial Quotation</span>
+                        <span className="stfqd-quote-value">
+                          {initialQuotation ? formatCurrency(initialQuotation.estimated_cost) : "Not Recorded"}
+                        </span>
+                      </div>
+                      <div className="stfqd-quote-step">
+                        <span className="stfqd-quote-label">Updated Quotation</span>
+                        <span className="stfqd-quote-value">
+                          {latestUpdatedQuotation ? formatCurrency(latestUpdatedQuotation.estimated_cost) : "Not Recorded"}
+                        </span>
+                      </div>
+                      <div className="stfqd-quote-step">
+                        <span className="stfqd-quote-label">Final Cost</span>
+                        <span className="stfqd-quote-value stfqd-quote-value-final">
+                          {formatCurrency(ticket.final_sheet.final_cost)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="stfqd-final-section">
+                  <h3>Payment &amp; Approval</h3>
+                  <div className="stfqd-approval-row">
+                    <div className="stfqd-approval-item">
+                      <label>Payment Terms</label>
+                      <div className="stfqd-approval-terms">
+                        {finalSheetTermsLines.map((line, i) => (
+                          <span key={i} className="stfqd-terms-line">{line}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="stfqd-approval-item">
+                      <label>Approved By</label>
+                      <p>{ticket.final_sheet.approved_by_username || "—"}</p>
+                    </div>
+                    <div className="stfqd-approval-item">
+                      <label>Approved On</label>
+                      <p>{formatDateTime(ticket.final_sheet.approved_at)}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="stfqd-final-footer">
-                Glomax Solar Enterprises · Generated {new Date().toLocaleDateString()}
-              </div>
+                <div className="stfqd-final-footer">
+                  Glomax Solar Enterprises · Generated {new Date().toLocaleDateString()}
+                </div>
 
-              <button className="stfqd-export-button" onClick={handleExportPdf}>
-                Export Final Sheet as PDF
-              </button>
-            </div>
-          )}
+                <button className="stfqd-export-button" onClick={handleExportPdf}>
+                  Export Final Sheet as PDF
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

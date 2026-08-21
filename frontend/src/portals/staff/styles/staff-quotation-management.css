@@ -149,16 +149,25 @@
   white-space: nowrap;
 }
 
-.stfqm-status-badge.approved {
-  background: #dcfce7;
-  color: #166534;
+.stfqm-status-badge.none {
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
-.stfqm-status-badge.in-progress {
+.stfqm-status-badge.awaiting {
+  background: #fef9c3;
+  color: #92400e;
+}
+
+.stfqm-status-badge.initial {
   background: #dbeafe;
   color: #1e40af;
 }
 
+.stfqm-status-badge.current {
+  background: #dcfce7;
+  color: #166534;
+}
 .stfqm-action-button {
   background: #0d1f3c;
   color: #ffffff;
@@ -183,4 +192,14 @@
   .stfqm-search {
     min-width: 0;
   }
+}
+
+.stfqm-final-tag {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #eab308;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }

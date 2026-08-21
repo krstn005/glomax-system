@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
 import { getStaffTickets } from "../../../api/staffTickets";
-import { formatCurrency } from "../../../utils/currency";
+import { formatCurrency, formatPaymentTerms } from "../../../utils/currency";
 import "../styles/staff-completed-ticket-detail.css";
 
 const STATUS_TAG_CLASS = {
@@ -52,9 +52,8 @@ export default function StaffCompletedTicketDetailPage() {
 
   return (
     <StaffLayout>
-      <div className="stfcd-wrapper">
-        <div className="stfcd-page">
-          {loading && <p className="stfcd-loading">Loading...</p>}
+            <div className="stfcd-page">
+        {loading && <p className="stfcd-loading">Loading...</p>}
           {error && <p className="stfcd-error">{error}</p>}
           {!loading && !error && !ticket && <p className="stfcd-error">Ticket not found.</p>}
 
@@ -124,9 +123,9 @@ export default function StaffCompletedTicketDetailPage() {
                         <label>Final Price</label>
                         <p>{formatCurrency(finalSheet.final_cost)}</p>
                       </div>
-                      <div className="stfcd-payment-box">
+                        <div className="stfcd-payment-box">
                         <label>Payment Terms</label>
-                        <p>{finalSheet.payment_terms_summary}</p>
+                        <p>{finalSheet.payment_terms_summary ? formatPaymentTerms(finalSheet.payment_terms_summary) : "—"}</p>
                       </div>
                     </div>
                   </section>
@@ -134,7 +133,6 @@ export default function StaffCompletedTicketDetailPage() {
                            </div>
             </div>
           )}
-        </div>
       </div>
     </StaffLayout>
   );

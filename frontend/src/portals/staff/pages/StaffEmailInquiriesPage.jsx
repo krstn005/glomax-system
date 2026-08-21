@@ -3,18 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
 import { getInquiries } from "../../../api/inquiries";
-import { getStaffTickets } from "../../../api/staffTickets";
 import "../styles/staff-email-inquiries.css";
 
-const TABS = ["Inquiries", "Withdrawal Notifications"];
 const STATUS_FILTERS = ["All", "Pending", "Replied"];
 const POLL_INTERVAL_MS = 15000;
 
 export default function StaffEmailInquiriesPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("Inquiries");
   const [inquiries, setInquiries] = useState([]);
-  const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,13 +21,9 @@ export default function StaffEmailInquiriesPage() {
 
     async function load(isInitial) {
       try {
-        const [inquiryData, ticketData] = await Promise.all([
-          getInquiries(),
-          getStaffTickets(),
-        ]);
+        const data = await getInquiries();
         if (cancelled) return;
-        setInquiries(inquiryData);
-        setTickets(ticketData);
+        setInquiries(data);
         if (isInitial) setError("");
       } catch {
         if (isInitial) setError("Could not load inquiries. Please try again.");
@@ -48,8 +40,6 @@ export default function StaffEmailInquiriesPage() {
       clearInterval(interval);
     };
   }, []);
-
-  const withdrawnTickets = tickets.filter((t) => t.status === "WITHDRAWN");
 
   const filteredInquiries = inquiries.filter((inq) => {
     const rawTerm = searchTerm.trim().toLowerCase();
@@ -78,49 +68,35 @@ export default function StaffEmailInquiriesPage() {
   return (
     <StaffLayout pageTitle="Email Inquiries" pageSubtitle="Manage incoming customer inquiries">
       <div className="stfinq-toolbar">
-        <div className="stfinq-tabs">
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              className={`stfinq-tab ${activeTab === tab ? "active" : ""}`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === "Inquiries" && (
-          <div className="stfinq-filters">
-            <div className="stfinq-search">
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="Search by name, email, or inquiry #..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <select
-              className="stfinq-status-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              {STATUS_FILTERS.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+        <div className="stfinq-filters">
+          <div className="stfinq-search">
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="Search by name, email, or inquiry #..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-        )}
+
+          <select
+            className="stfinq-status-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            {STATUS_FILTERS.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loading && <p>Loading...</p>}
       {error && <p className="stfinq-error">{error}</p>}
 
-      {!loading && !error && activeTab === "Inquiries" && (
+      {!loading && !error && (
         <div className="stfinq-table-card">
           {filteredInquiries.length === 0 ? (
             <p className="stfinq-empty">
@@ -152,38 +128,12 @@ export default function StaffEmailInquiriesPage() {
                     <td>{inq.email}</td>
                     <td>{inq.subject_display}</td>
                     <td>{new Date(inq.received_at).toLocaleDateString()}</td>
-                    <td>
-                      <span className={`stfinq-badge ${inq.quotation_sent ? "replied" : "pending"}`}>
+                                        <td>
+                      <span className={`stfinq-status ${inq.quotation_sent ? "replied" : "pending"}`}>
+                        <span className="stfinq-status-dot" />
                         {inq.quotation_sent ? "Replied" : "Pending"}
                       </span>
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-
-      {!loading && !error && activeTab === "Withdrawal Notifications" && (
-        <div className="stfinq-table-card">
-          {withdrawnTickets.length === 0 ? (
-            <p className="stfinq-empty">No withdrawn requests.</p>
-          ) : (
-            <table className="stfinq-table">
-              <thead>
-                <tr>
-                  <th>Customer</th>
-                  <th>Ticket #</th>
-                  <th>Date Withdrawn</th>
-                </tr>
-              </thead>
-              <tbody>
-                {withdrawnTickets.map((t) => (
-                  <tr key={t.id}>
-                    <td className="stfinq-td-strong">{t.customer_username}</td>
-                    <td>{t.ticket_number}</td>
-                    <td>{t.withdrawn_at ? new Date(t.withdrawn_at).toLocaleDateString() : "—"}</td>
                   </tr>
                 ))}
               </tbody>

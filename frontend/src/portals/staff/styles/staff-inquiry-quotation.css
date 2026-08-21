@@ -1,140 +1,153 @@
-.stfquote-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 80vh;
-  margin-top: 28px;
-}
-
 .stfquote-page {
-  position: relative;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.stfquote-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 24px;
-  border-bottom: 1px solid #f3f4f6;
-  flex-wrap: nowrap;
-  min-height: 76px;
-  box-sizing: border-box;
-}
-
-.stfquote-back {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #0d1f3c;
-  padding: 6px;
-  border-radius: 6px;
-  flex-shrink: 0;
-}
-
-.stfquote-back:hover {
-  background: #f3f4f6;
-}
-
-.stfquote-header-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.stfquote-header-info h1 {
-  font-size: 19px;
-  font-weight: 700;
-  color: #0d1f3c;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stfquote-header-info p {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 4px 0 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .stfquote-loading,
 .stfquote-error {
-  padding: 20px;
-  font-size: 14px;
+  font-size: 15px;
+  color: #6b7280;
 }
 
 .stfquote-error {
   color: #dc2626;
 }
 
-.stfquote-body {
-  padding: 32px;
+.stfquote-stack {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  box-sizing: border-box;
+  gap: 18px;
+}
+
+.stfquote-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #0d1f3c;
+  border-radius: 12px;
+  padding: 18px 22px;
+}
+
+.stfquote-title-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.stfquote-back {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #ffffff;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.stfquote-back:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.stfquote-title-row h1 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stfquote-title-row p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 3px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stfquote-inquiry-number {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  white-space: nowrap;
 }
 
 .stfquote-card {
-  background: #f9fafb;
-  border-radius: 10px;
-  padding: 32px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.stfquote-section + .stfquote-section {
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 22px 24px;
 }
 
 .stfquote-card h2 {
-  font-size: 17px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
   font-weight: 700;
   color: #0d1f3c;
   margin: 0 0 16px;
 }
 
+.stfquote-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stfquote-dot.message {
+  background: #2563eb;
+}
+
+.stfquote-dot.sent {
+  background: #16a34a;
+}
+
+.stfquote-dot.compose {
+  background: #eab308;
+}
+
 .stfquote-original-message {
-  background: #ffffff;
+  background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 16px 18px;
-  font-size: 15px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.6;
   color: #374151;
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: break-word;
-  width: 100%;
   max-height: 180px;
   overflow-y: auto;
   box-sizing: border-box;
 }
 
 .stfquote-sent-note {
-  font-size: 13px;
-  color: #6b7280;
+  font-size: 12.5px;
+  color: #9ca3af;
   margin: -8px 0 16px;
 }
 
 .stfquote-readonly-value {
-  background: #ffffff;
+  background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-  padding: 12px 16px;
-  font-size: 15px;
+  padding: 11px 14px;
+  font-size: 14px;
   color: #374151;
   margin: 0;
   white-space: pre-wrap;
@@ -148,7 +161,7 @@
 
 .stfquote-form {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px 24px;
   width: 100%;
 }
@@ -164,19 +177,19 @@
 
 .stfquote-field label {
   display: block;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: #374151;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .stfquote-field input,
 .stfquote-field textarea {
   width: 100%;
-  padding: 12px 16px;
+  padding: 10px 14px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  font-size: 15px;
+  font-size: 14px;
   font-family: inherit;
   box-sizing: border-box;
   outline: none;
@@ -189,21 +202,21 @@
 }
 
 .stfquote-field textarea {
-  min-height: 120px;
+  min-height: 110px;
   max-height: 200px;
   resize: vertical;
 }
 
 .stfquote-send-button {
-  margin-top: 32px;
+  margin-top: 20px;
   grid-column: 1 / -1;
   justify-self: end;
   background: #0d1f3c;
   color: #ffffff;
   border: none;
-  padding: 12px 28px;
+  padding: 11px 24px;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -217,7 +230,6 @@
   cursor: not-allowed;
 }
 
-/* Confirmation modal */
 .stfquote-modal-overlay {
   position: fixed;
   inset: 0;
@@ -287,7 +299,6 @@
   cursor: not-allowed;
 }
 
-/* Toast, top of page - success and error variants */
 .stfquote-toast {
   position: fixed;
   top: 24px;
@@ -314,43 +325,24 @@
   color: #991b1b;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .stfquote-form {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 640px) {
-  .stfquote-wrapper {
-    min-height: auto;
-    margin-top: 16px;
+@media (max-width: 700px) {
+  .stfquote-form {
+    grid-template-columns: 1fr;
   }
 
-  .stfquote-header {
+  .stfquote-title-row {
     flex-wrap: wrap;
-    min-height: auto;
   }
 
-  .stfquote-header-info h1,
-  .stfquote-header-info p {
+  .stfquote-title-row h1,
+  .stfquote-title-row p {
     white-space: normal;
-  }
-
-  .stfquote-body {
-    padding: 20px 16px;
-  }
-
-  .stfquote-card {
-    padding: 20px;
-  }
-
-  .stfquote-section + .stfquote-section {
-    margin-top: 20px;
-    padding-top: 20px;
-  }
-
-  .stfquote-field {
-    margin-top: 14px;
   }
 
   .stfquote-send-button {
@@ -358,29 +350,10 @@
     justify-self: stretch;
     text-align: center;
   }
-
-  .stfquote-modal {
-    padding: 24px;
-  }
 }
 
-@media (max-width: 400px) {
-  .stfquote-body {
-    padding: 16px 12px;
-  }
-
+@media (max-width: 480px) {
   .stfquote-card {
-    padding: 16px;
+    padding: 18px;
   }
-}
-
-.stfquote-inquiry-number {
-  flex-shrink: 0;
-  background: #0d1f3c;
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 700;
-  padding: 8px 16px;
-  border-radius: 8px;
-  white-space: nowrap;
 }

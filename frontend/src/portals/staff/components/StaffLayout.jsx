@@ -54,14 +54,26 @@ function AvatarCircle({ initials, className = '' }) {
   return <div className={`stf-avatar ${className}`}>{initials}</div>;
 }
 
+// Exact match keeps a link like /staff/manage-tickets highlighted
+// only on that page itself - navigating to a detail sub-route like
+// /staff/manage-tickets/42 no longer matches exactly, so the sidebar
+// highlight disappears even though the user is still in that section.
+// This matches by path prefix instead, with a boundary check (the
+// next character must be "/" or the string must end there) so
+// /staff/manage-tickets doesn't also light up for some unrelated
+// route that happens to start with the same characters.
+function isActive(pathname, to) {
+  if (pathname === to) return true;
+  return pathname.startsWith(to + '/');
+}
+
 export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [username, setUsername] = useState(localStorage.getItem('username') || 'Staff');
   const menuRef = useRef(null);
-
-  const username = localStorage.getItem('username') || 'Staff';
   const initials = username.slice(0, 2).toUpperCase();
 
   function handleSignOutClick() {
@@ -84,6 +96,19 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Settings' ProfileTab writes the new name to localStorage and
+  // dispatches this event on save - without this listener the header
+  // keeps showing the old name until a full page reload, since
+  // `username` was previously read from localStorage only once at
+  // mount instead of being kept in state.
+  useEffect(() => {
+    function handleProfileUpdate() {
+      setUsername(localStorage.getItem('username') || 'Staff');
+    }
+    window.addEventListener('profile-picture-updated', handleProfileUpdate);
+    return () => window.removeEventListener('profile-picture-updated', handleProfileUpdate);
+  }, []);
+
   return (
     <div className="stf-layout">
       <aside className="stf-sidebar">
@@ -91,18 +116,17 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
           <img src={logo} alt="Glomax Solar Enterprises" className="stf-sidebar-logo" />
           <span>Glomax Solar<br />Enterprises</span>
         </div>
-
         <nav className="stf-nav">
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="stf-nav-group">
               <p className="stf-nav-label">{group.label}</p>
               <hr className="stf-nav-divider" />
-              {group.items.map(({ to, label, icon: Icon, enabled }) =>
+                            {group.items.map(({ to, label, icon: Icon, enabled }) =>
                 enabled ? (
                   <Link
                     key={to}
                     to={to}
-                    className={`stf-nav-link ${location.pathname === to ? 'active' : ''}`}
+                    className={`stf-nav-link ${isActive(location.pathname, to) ? 'active' : ''}`}
                   >
                     <Icon size={16} />
                     <span>{label}</span>
@@ -118,19 +142,16 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
           ))}
         </nav>
       </aside>
-
       <div className="stf-main">
         <header className="stf-header">
           <span className="stf-portal-pill">Staff Portal</span>
           <div className="stf-header-right" ref={menuRef}>
             <button className="stf-bell"><Bell size={16} /></button>
-
             <button className="stf-profile-btn" onClick={() => setMenuOpen((v) => !v)}>
               <AvatarCircle initials={initials} />
               <span className="stf-username">{username}</span>
               <ChevronDown size={14} className={`stf-chevron ${menuOpen ? 'open' : ''}`} />
             </button>
-
             {menuOpen && (
               <div className="stf-profile-menu">
                 <div className="stf-profile-menu-header">
@@ -153,7 +174,6 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
             )}
           </div>
         </header>
-
         <main className="stf-content">
           {pageTitle && (
             <div className="stf-page-heading">
@@ -164,7 +184,6 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
           <div className="stf-page-body">{children}</div>
         </main>
       </div>
-
       {showSignOutConfirm && (
         <div className="stf-modal-overlay" onClick={() => setShowSignOutConfirm(false)}>
           <div className="stf-modal" onClick={(e) => e.stopPropagation()}>

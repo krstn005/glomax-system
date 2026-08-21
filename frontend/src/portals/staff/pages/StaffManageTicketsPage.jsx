@@ -12,13 +12,11 @@ const TABS = [
   { key: "ASSESSMENT_SUBMITTED", label: "Under Assessment" },
   { key: "STAFF_REVIEW", label: "Staff Review" },
   { key: "ADMIN_REVIEW", label: "Admin Review" },
-  { key: "WITHDRAWN", label: "Withdrawn" },
 ];
 
 const STATUS_BADGE_CLASS = {
   APPROVED: "approved",
   COMPLETED: "approved",
-  WITHDRAWN: "withdrawn",
   NC_CANNOT_PROCEED: "not-compatible",
   NC_CAN_REAPPLY: "not-compatible",
   REQUEST_SUBMITTED: "in-progress",
@@ -62,15 +60,17 @@ export default function StaffManageTicketsPage() {
     };
   }, []);
 
-  // "All" is the default working view - Withdrawn tickets are kept out
-  // of it since they no longer need monitoring or action, but stay
-  // reachable via their own tab rather than a separate page.
+  // "All" is the default working view - Withdrawn tickets are excluded
+  // from this entire page now, since a withdrawn ticket has nothing
+  // left to monitor or act on. That view now lives on Completed
+  // Tickets' own Withdrawn tab instead.
   function matchesTab(t) {
     if (activeTab === "ALL") return t.status !== "WITHDRAWN";
     return t.status === activeTab;
   }
 
   const filteredTickets = tickets
+    .filter((t) => t.status !== "WITHDRAWN")
     .filter(matchesTab)
     .filter((t) => {
       const term = searchTerm.trim().toLowerCase();

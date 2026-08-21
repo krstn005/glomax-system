@@ -6,10 +6,6 @@ import { getStaffTickets } from "../../../api/staffTickets";
 import { formatCurrency } from "../../../utils/currency";
 import "../styles/staff-quotation-management.css";
 
-// Quotation Management shows every active ticket, Request Submitted
-// through Approved - only closed tickets (Not Compatible in either
-// form, or Withdrawn) are excluded, since those need no further
-// price management.
 const EXCLUDED_STATUSES = ["NC_CANNOT_PROCEED", "NC_CAN_REAPPLY", "WITHDRAWN"];
 
 const TABS = [
@@ -19,22 +15,30 @@ const TABS = [
   { key: "APPROVED", label: "Approved" },
 ];
 
-// Statuses where Staff can (or soon will need to) send an Updated
-// Quotation - matches the same two moments the detail page's form
-// is unlocked for.
 const NEEDS_QUOTATION_STATUSES = ["ASSESSMENT_SUBMITTED", "STAFF_REVIEW"];
 
-const STATUS_BADGE_CLASS = {
-  APPROVED: "approved",
-  COMPLETED: "approved",
-  REQUEST_SUBMITTED: "in-progress",
-  PI_ASSIGNED: "in-progress",
-  ASSESSMENT_SUBMITTED: "in-progress",
-  STAFF_REVIEW: "in-progress",
-  ADMIN_REVIEW: "in-progress",
-};
-
 const POLL_INTERVAL_MS = 15000;
+
+// Derives a quotation-specific status. A ticket with a Final Sheet is
+// "Finalized" regardless of whether Quotation records exist for it -
+// the Final Sheet's final_cost is the real, authoritative price once
+// Admin has approved, even if Initial/Updated Quotation records were
+// never created for this ticket (e.g. older test data).
+function getQuotationStatus(ticket, initial, updated) {
+  if (ticket.final_sheet) {
+    return { label: "Finalized", className: "current" };
+  }
+  if (!initial) {
+    return { label: "No Quotation Yet", className: "none" };
+  }
+  if (NEEDS_QUOTATION_STATUSES.includes(ticket.status) && !updated) {
+    return { label: "Awaiting Update", className: "awaiting" };
+  }
+  if (!updated) {
+    return { label: "Initial Sent", className: "initial" };
+  }
+  return { label: "Up to Date", className: "current" };
+}
 
 export default function StaffQuotationManagementPage() {
   const navigate = useNavigate();
@@ -124,7 +128,7 @@ export default function StaffQuotationManagementPage() {
                   <tr>
                     <th>Ticket #</th>
                     <th>Customer</th>
-                    <th>Status</th>
+                    <th>Quotation Status</th>
                     <th>Initial Quotation</th>
                     <th>Latest Updated Quotation</th>
                     <th>Action</th>
@@ -132,12 +136,22 @@ export default function StaffQuotationManagementPage() {
                 </thead>
                 <tbody>
                   {filteredTickets.map((t) => {
-                    const badgeClass = STATUS_BADGE_CLASS[t.status] || "in-progress";
                     const initials = t.customer_username.slice(0, 2).toUpperCase();
                     const initial = t.quotations?.find((q) => q.quotation_type === "INITIAL");
                     const updated = [...(t.quotations || [])]
                       .filter((q) => q.quotation_type === "UPDATED")
                       .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))[0];
+                    const qStatus = getQuotationStatus(t, initial, updated);
+
+                    // Prefer the actual Updated Quotation record; if
+                    // none exists but the ticket has a Final Sheet,
+                    // show its final_cost instead - it's real, stored
+                    // pricing data, not something invented for display.
+                    const latestAmountSource = updated
+                      ? { value: formatCurrency(updated.estimated_cost), isFinal: false }
+                      : t.final_sheet
+                      ? { value: formatCurrency(t.final_sheet.final_cost), isFinal: true }
+                      : null;
 
                     return (
                       <tr key={t.id}>
@@ -149,12 +163,23 @@ export default function StaffQuotationManagementPage() {
                           </div>
                         </td>
                         <td>
-                          <span className={`stfqm-status-badge ${badgeClass}`}>
-                            {t.status_display}
+                          <span className={`stfqm-status-badge ${qStatus.className}`}>
+                            {qStatus.label}
                           </span>
                         </td>
                         <td>{initial ? formatCurrency(initial.estimated_cost) : "—"}</td>
-                        <td>{updated ? formatCurrency(updated.estimated_cost) : "—"}</td>
+                        <td>
+                          {latestAmountSource ? (
+                            <>
+                              {latestAmountSource.value}
+                              {latestAmountSource.isFinal && (
+                                <span className="stfqm-final-tag">Final</span>
+                              )}
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                         <td>
                           <button
                             className="stfqm-action-button"
