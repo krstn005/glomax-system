@@ -9,10 +9,8 @@ import RequestStatusPage from './portals/customer/pages/RequestStatusPage';
 import PastRequestsPage from './portals/customer/pages/PastRequestsPage';
 import FeedbackPage from './portals/customer/pages/FeedbackPage';
 import SettingsPage from './portals/customer/pages/SettingsPage';
-
 import PortalLoginPage from './portals/shared/pages/PortalLoginPage';
 import ProtectedRoute from './portals/shared/components/ProtectedRoute';
-
 import StaffDashboardPage from './portals/staff/pages/StaffDashboardPage';
 import StaffSettingsPage from './portals/staff/pages/StaffSettingsPage';
 import StaffEmailInquiriesPage from './portals/staff/pages/StaffEmailInquiriesPage';
@@ -30,7 +28,7 @@ import StaffCompletedTicketDetailPage from './portals/staff/pages/StaffCompleted
 import StaffActivePricesPage from './portals/staff/pages/StaffActivePricesPage';
 import StaffPriceHistoryPage from './portals/staff/pages/StaffPriceHistoryPage';
 import StaffPaymentTermsHistoryPage from './portals/staff/pages/StaffPaymentTermsHistoryPage';
-
+import InquiryReplyPage from './portals/shared/pages/InquiryReplyPage';
 function isLoggedIn() {
   return Boolean(localStorage.getItem('access_token'));
 }
@@ -98,6 +96,12 @@ export default function App() {
           </RequireAuth>
         }
       />
+
+      {/* Public, no-login page - opened from the Reply Link inside
+          Staff's quotation/reply emails. Not part of any portal, not
+          protected - anyone with a valid access_token link can view
+          and reply to their own inquiry's conversation thread here. */}
+      <Route path="/inquiry-reply/:token" element={<InquiryReplyPage />} />
 
       {/* Per-role login pages for Staff, Admin, and Partner Installer */}
       <Route path="/staff-login" element={<PortalLoginPage role="STAFF" />} />
@@ -170,7 +174,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
       {/* Manage Tickets (list + detail) */}
       <Route
         path="/staff/manage-tickets"
@@ -188,77 +191,70 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
       <Route
-      path="/staff/quotations/:id"
-      element={
-    <ProtectedRoute allowedRole="STAFF">
-      <StaffQuotationDetailPage />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/staff/assessment-review"
-  element={
-    <ProtectedRoute allowedRole="STAFF">
-      <StaffAssessmentReviewPage />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/staff/assessment-review/:id"
-  element={
-    <ProtectedRoute allowedRole="STAFF">
-      <StaffAssessmentDetailPage />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/staff/completed-tickets"
-  element={
-    <ProtectedRoute allowedRole="STAFF">
-      <StaffCompletedTicketsPage />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/staff/completed-tickets/:id"
-  element={
-    <ProtectedRoute allowedRole="STAFF">
-      <StaffCompletedTicketDetailPage />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/staff/active-prices"
-  element={
-    <ProtectedRoute allowedRole="STAFF">
-      <StaffActivePricesPage />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/staff/price-history"
-  element={
-    <ProtectedRoute allowedRole="STAFF">
-      <StaffPriceHistoryPage />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/staff/payment-terms-history"
-  element={
-    <ProtectedRoute allowedRole="STAFF">
-      <StaffPaymentTermsHistoryPage />
-    </ProtectedRoute>
-  }
-/>
+        path="/staff/quotations/:id"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffQuotationDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/assessment-review"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffAssessmentReviewPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/assessment-review/:id"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffAssessmentDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/completed-tickets"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffCompletedTicketsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/completed-tickets/:id"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffCompletedTicketDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/active-prices"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffActivePricesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/price-history"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffPriceHistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/payment-terms-history"
+        element={
+          <ProtectedRoute allowedRole="STAFF">
+            <StaffPaymentTermsHistoryPage />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }

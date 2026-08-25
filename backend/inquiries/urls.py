@@ -5,6 +5,8 @@ from .views import (
     InquiryDetailView,
     InquiryMarkRepliedView,
     InquirySendQuotationView,
+    StaffInquiryMessagesView,
+    PublicInquiryThreadView,
 )
 
 urlpatterns = [
@@ -20,5 +22,15 @@ urlpatterns = [
         'staff/<int:pk>/send-quotation/',
         InquirySendQuotationView.as_view(),
         name='inquiry-send-quotation',
+    ),
+    path(
+        'staff/<int:pk>/messages/',
+        StaffInquiryMessagesView.as_view(),
+        name='inquiry-staff-messages',
+    ),
+    path(
+        'public/<uuid:token>/',
+        PublicInquiryThreadView.as_view(),
+        name='inquiry-public-thread',
     ),
 ]

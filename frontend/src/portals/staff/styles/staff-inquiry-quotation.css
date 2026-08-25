@@ -15,7 +15,7 @@
 .stfquote-stack {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
 }
 
 .stfquote-title-row {
@@ -87,7 +87,7 @@
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  padding: 22px 24px;
+  padding: 24px 26px;
 }
 
 .stfquote-card h2 {
@@ -97,7 +97,7 @@
   font-size: 14px;
   font-weight: 700;
   color: #0d1f3c;
-  margin: 0 0 16px;
+  margin: 0 0 18px;
 }
 
 .stfquote-dot {
@@ -107,8 +107,8 @@
   flex-shrink: 0;
 }
 
-.stfquote-dot.message {
-  background: #2563eb;
+.stfquote-dot.conversation {
+  background: #06b6d4;
 }
 
 .stfquote-dot.sent {
@@ -119,27 +119,10 @@
   background: #eab308;
 }
 
-.stfquote-original-message {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px 18px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #374151;
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  max-height: 180px;
-  overflow-y: auto;
-  box-sizing: border-box;
-}
-
 .stfquote-sent-note {
   font-size: 12.5px;
   color: #9ca3af;
-  margin: -8px 0 16px;
+  margin: -10px 0 18px;
 }
 
 .stfquote-readonly-value {
@@ -229,6 +212,127 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.stfquote-compose-hint {
+  font-size: 13px;
+  color: #6b7280;
+  margin: -10px 0 20px;
+  line-height: 1.5;
+}
+
+/* --- Conversation thread --- */
+
+.stfquote-thread-loading {
+  color: #6b7280;
+  font-size: 13.5px;
+  margin: 12px 0 0;
+}
+
+.stfquote-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  padding-right: 4px;
+}
+
+.stfquote-thread-msg {
+  max-width: 72%;
+  padding: 11px 15px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.stfquote-thread-msg.staff {
+  align-self: flex-end;
+  background: #0d1f3c;
+  color: #ffffff;
+  border-bottom-right-radius: 3px;
+}
+
+.stfquote-thread-msg.customer {
+  align-self: flex-start;
+  background: #f3f4f6;
+  color: #111827;
+  border-bottom-left-radius: 3px;
+}
+
+.stfquote-thread-msg-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.stfquote-thread-msg-sender {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.stfquote-thread-msg-time {
+  font-size: 10.5px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.stfquote-thread-msg-content {
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.stfquote-thread-reply {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.stfquote-thread-reply textarea {
+  flex: 1;
+  min-height: 44px;
+  max-height: 120px;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.stfquote-thread-reply textarea:focus {
+  border-color: #eab308;
+}
+
+.stfquote-thread-send-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #0d1f3c;
+  color: #ffffff;
+  border: none;
+  padding: 11px 18px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.stfquote-thread-send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Modal --- */
 
 .stfquote-modal-overlay {
   position: fixed;
@@ -349,6 +453,10 @@
     width: 100%;
     justify-self: stretch;
     text-align: center;
+  }
+
+  .stfquote-thread-msg {
+    max-width: 88%;
   }
 }
 

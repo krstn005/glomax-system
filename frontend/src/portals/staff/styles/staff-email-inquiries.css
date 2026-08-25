@@ -76,18 +76,19 @@
 
 .stfinq-table {
   width: 100%;
-  min-width: 700px;
+  min-width: 680px;
   border-collapse: collapse;
-  font-size: 15px;
+  font-size: 14.5px;
   flex-shrink: 0;
+  table-layout: fixed;
 }
 
 .stfinq-table th {
-  text-align: center;
-  padding: 14px 16px;
+  text-align: left;
+  padding: 14px 18px;
   background: #0d1f3c;
   color: rgba(255, 255, 255, 0.75);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -98,20 +99,12 @@
 }
 
 .stfinq-table td {
-  padding: 14px 16px;
+  padding: 14px 18px;
   border-bottom: 1px solid #f3f4f6;
   color: #374151;
   vertical-align: middle;
-  text-align: center;
-}
-
-.stfinq-table th:nth-child(2),
-.stfinq-table td:nth-child(2),
-.stfinq-table th:nth-child(3),
-.stfinq-table td:nth-child(3),
-.stfinq-table th:nth-child(4),
-.stfinq-table td:nth-child(4) {
   text-align: left;
+  overflow: hidden;
 }
 
 .stfinq-table tbody tr:last-child td {
@@ -129,6 +122,40 @@
 .stfinq-td-strong {
   font-weight: 700;
   color: #2563eb;
+}
+
+/* Customer cell: name + email grouped together, replacing what used
+   to be two separate table columns - reduces the table to 5 columns
+   instead of 6 and keeps related info visually together. */
+.stfinq-customer-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.stfinq-customer-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stfinq-customer-name {
+  font-weight: 700;
+  color: #111827;
+  font-size: 14.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stfinq-customer-email {
+  font-size: 12.5px;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Status shown as a colored dot + text, matching the Price History
@@ -193,5 +220,37 @@
   .stfinq-filters {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+/* Unread reply indicator - a small red dot next to the customer's
+   name, plus a subtle row tint, for inquiries where the customer has
+   sent a new follow-up message via the public reply page that Staff
+   hasn't viewed yet (has_unread_reply). Clears automatically once
+   Staff opens that inquiry's Conversation section. */
+.stfinq-row-clickable.unread {
+  background: #fef9f5;
+}
+
+.stfinq-row-clickable.unread:hover {
+  background: #fdf2ea;
+}
+
+.stfinq-unread-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #dc2626;
+  flex-shrink: 0;
+  margin-top: 5px;
+  animation: stfinq-pulse 2s ease-in-out infinite;
+}
+
+@keyframes stfinq-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
   }
 }

@@ -34,7 +34,6 @@ export default function StaffEmailInquiriesPage() {
 
     load(true);
     const interval = setInterval(() => load(false), POLL_INTERVAL_MS);
-
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -106,11 +105,17 @@ export default function StaffEmailInquiriesPage() {
             </p>
           ) : (
             <table className="stfinq-table">
+              <colgroup>
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "27%" }} />
+                <col style={{ width: "24%" }} />
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "13%" }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Inquiry #</th>
-                  <th>Name</th>
-                  <th>Email</th>
+                  <th>Customer</th>
                   <th>Subject</th>
                   <th>Date Received</th>
                   <th>Status</th>
@@ -120,15 +125,24 @@ export default function StaffEmailInquiriesPage() {
                 {filteredInquiries.map((inq) => (
                   <tr
                     key={inq.id}
-                    className="stfinq-row-clickable"
+                    className={`stfinq-row-clickable ${inq.has_unread_reply ? "unread" : ""}`}
                     onClick={() => navigate(`/staff/email-inquiries/${inq.id}/quotation`)}
                   >
                     <td className="stfinq-td-strong">#{inq.id}</td>
-                    <td className="stfinq-td-strong">{inq.full_name}</td>
-                    <td>{inq.email}</td>
+                    <td>
+                      <div className="stfinq-customer-cell">
+                        {inq.has_unread_reply && (
+                          <span className="stfinq-unread-dot" title="New customer reply" />
+                        )}
+                        <div className="stfinq-customer-text">
+                          <span className="stfinq-customer-name">{inq.full_name}</span>
+                          <span className="stfinq-customer-email">{inq.email}</span>
+                        </div>
+                      </div>
+                    </td>
                     <td>{inq.subject_display}</td>
                     <td>{new Date(inq.received_at).toLocaleDateString()}</td>
-                                        <td>
+                    <td>
                       <span className={`stfinq-status ${inq.quotation_sent ? "replied" : "pending"}`}>
                         <span className="stfinq-status-dot" />
                         {inq.quotation_sent ? "Replied" : "Pending"}

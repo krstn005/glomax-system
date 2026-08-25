@@ -1,0 +1,237 @@
+.inqreply-page {
+  min-height: 100vh;
+  background: #f3f4f6;
+  display: flex;
+  justify-content: center;
+  padding: 40px 24px;
+  box-sizing: border-box;
+}
+
+.inqreply-card {
+  width: 100%;
+  max-width: 900px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 36px 44px;
+  height: fit-content;
+}
+
+.inqreply-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #0d1f3c;
+  margin-bottom: 24px;
+}
+
+.inqreply-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.inqreply-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  color: #eab308;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin: 0 0 4px;
+}
+
+.inqreply-header h1 {
+  font-size: 19px;
+  font-weight: 700;
+  color: #0d1f3c;
+  margin: 0;
+}
+
+.inqreply-loading,
+.inqreply-error {
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.inqreply-error {
+  color: #dc2626;
+}
+
+.inqreply-summary {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.inqreply-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin: 0 0 3px;
+}
+
+.inqreply-summary-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0d1f3c;
+  margin: 0;
+}
+
+.inqreply-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-bottom: 24px;
+}
+
+.inqreply-msg {
+  max-width: 72%;
+  padding: 13px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.inqreply-msg.customer {
+  align-self: flex-end;
+  background: #0d1f3c;
+  color: #ffffff;
+  border-bottom-right-radius: 3px;
+}
+
+.inqreply-msg.staff {
+  align-self: flex-start;
+  background: #f3f4f6;
+  color: #111827;
+  border-bottom-left-radius: 3px;
+}
+
+.inqreply-msg p {
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.inqreply-msg-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.inqreply-quotation {
+  max-width: 78%;
+}
+
+.inqreply-quotation-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #eab308;
+  margin: 0 0 8px !important;
+}
+
+.inqreply-quotation p {
+  margin: 0 0 6px !important;
+}
+
+.inqreply-quotation p:last-child {
+  margin: 0 !important;
+}
+
+.inqreply-composer {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.inqreply-composer textarea {
+  flex: 1;
+  min-height: 46px;
+  max-height: 140px;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.inqreply-composer textarea:focus {
+  border-color: #eab308;
+}
+
+.inqreply-composer button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #0d1f3c;
+  color: #ffffff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.inqreply-composer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inqreply-send-error {
+  color: #dc2626;
+  font-size: 13px;
+  margin: 10px 0 0;
+}
+
+.inqreply-footnote {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+  margin: 24px 0 0;
+}
+
+@media (max-width: 700px) {
+  .inqreply-card {
+    padding: 28px 24px;
+  }
+
+  .inqreply-msg,
+  .inqreply-quotation {
+    max-width: 88%;
+  }
+}
+
+@media (max-width: 480px) {
+  .inqreply-page {
+    padding: 20px 12px;
+  }
+
+  .inqreply-card {
+    padding: 22px 18px;
+  }
+
+  .inqreply-msg {
+    max-width: 92%;
+  }
+}

@@ -30,7 +30,7 @@ GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.1.6"]
 
 
 # Application definition
@@ -132,6 +132,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'inquiry_public_read': '300/hour',
+        'inquiry_public_write': '20/hour',
+    },
 }
 
 # How long tokens stay valid. ACCESS_TOKEN_LIFETIME is what's used on every
@@ -175,7 +179,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # to make requests to this Django backend
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://192.168.1.6:5173",
 ]
+
+# The public reply-link email points back to this frontend URL. Update
+# this to the real deployed domain before going live - localhost is only
+# correct for local development.
+FRONTEND_BASE_URL = "http://192.168.1.6:5173"
 
 # Email settings - sends real emails (e.g. Initial Quotation from the
 # Staff Email Inquiries page) through Resend instead of Django's default
