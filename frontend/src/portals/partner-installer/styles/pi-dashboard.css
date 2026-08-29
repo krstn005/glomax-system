@@ -1,0 +1,180 @@
+.pi-dashboard-loading,
+.pi-dashboard-error {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.pi-dashboard-error {
+  color: #dc2626;
+}
+
+/* ---- Stat cards ---- */
+.pi-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pi-stat-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.pi-stat-label {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.pi-stat-value {
+  color: #0d1f3c;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.pi-stat-note {
+  color: #9ca3af;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* ---- Incoming Requests ---- */
+.pi-incoming {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.pi-incoming-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.pi-incoming-header h2 {
+  color: #0d1f3c;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.pi-view-all-button {
+  background: #0d1f3c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pi-incoming-empty {
+  padding: 24px 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.pi-incoming-table {
+  width: 100%;
+}
+
+.pi-incoming-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.6fr 1.2fr 1.2fr 0.8fr;
+  align-items: center;
+  padding: 14px 20px;
+  border-top: 1px solid #f3f4f6;
+  gap: 12px;
+}
+
+.pi-incoming-head {
+  background: #0d1f3c;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-top: none;
+}
+
+.pi-incoming-ticket {
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pi-incoming-row:not(.pi-incoming-head) span {
+  font-size: 14px;
+  color: #374151;
+}
+
+.pi-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pi-status-badge.assigned,
+.pi-status-badge.compatible {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.pi-status-badge.in-progress {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.pi-status-badge.not-compatible {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.pi-status-badge.withdrawn {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+.pi-action-button {
+  background: #0d1f3c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .pi-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pi-incoming-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      'ticket customer'
+      'visit status'
+      'action action';
+  }
+
+  .pi-incoming-head {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .pi-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}

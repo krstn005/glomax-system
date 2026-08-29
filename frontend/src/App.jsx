@@ -29,6 +29,9 @@ import StaffActivePricesPage from './portals/staff/pages/StaffActivePricesPage';
 import StaffPriceHistoryPage from './portals/staff/pages/StaffPriceHistoryPage';
 import StaffPaymentTermsHistoryPage from './portals/staff/pages/StaffPaymentTermsHistoryPage';
 import InquiryReplyPage from './portals/shared/pages/InquiryReplyPage';
+import PIIncomingTicketsPage from './portals/partner-installer/pages/PIIncomingTicketsPage';
+import PIAssessmentSheetPage from './portals/partner-installer/pages/PIAssessmentSheetPage';
+
 function isLoggedIn() {
   return Boolean(localStorage.getItem('access_token'));
 }
@@ -228,6 +231,32 @@ export default function App() {
         element={
           <ProtectedRoute allowedRole="STAFF">
             <StaffCompletedTicketDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+          {/* Partner Installer portal */}
+      <Route
+        path="/partner-installer/dashboard"
+        element={
+          <ProtectedRoute allowedRole="PARTNER_INSTALLER">
+            <PIDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/partner-installer/incoming-tickets"
+        element={
+          <ProtectedRoute allowedRole="PARTNER_INSTALLER">
+            <PIIncomingTicketsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/partner-installer/incoming-tickets/:id"
+        element={
+          <ProtectedRoute allowedRole="PARTNER_INSTALLER">
+            <PIAssessmentSheetPage />
           </ProtectedRoute>
         }
       />

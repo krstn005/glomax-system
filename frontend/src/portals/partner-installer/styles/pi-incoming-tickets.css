@@ -1,0 +1,101 @@
+.pi-it-loading,
+.pi-it-error {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.pi-it-error {
+  color: #dc2626;
+}
+
+.pi-it-card {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.pi-it-empty {
+  padding: 24px 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.pi-it-table {
+  width: 100%;
+}
+
+.pi-it-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1.6fr 1fr 1.1fr 0.8fr;
+  align-items: center;
+  padding: 14px 20px;
+  border-top: 1px solid #f3f4f6;
+  gap: 12px;
+}
+
+.pi-it-head {
+  background: #0d1f3c;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-top: none;
+}
+
+.pi-it-ticket {
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pi-it-row:not(.pi-it-head) span {
+  font-size: 14px;
+  color: #374151;
+}
+
+/* Status badge classes are shared with the Dashboard's styling -
+   duplicated here since each PI page loads its own CSS file. */
+.pi-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pi-status-badge.assigned {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.pi-status-badge.in-progress {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.pi-it-action-button {
+  background: #0d1f3c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .pi-it-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      'ticket customer'
+      'address visit'
+      'status action';
+  }
+
+  .pi-it-head {
+    display: none;
+  }
+}

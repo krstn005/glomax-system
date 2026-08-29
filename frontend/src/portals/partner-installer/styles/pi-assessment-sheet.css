@@ -1,0 +1,207 @@
+.pi-as-loading,
+.pi-as-error {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.pi-as-error {
+  color: #dc2626;
+}
+
+.pi-as-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.pi-as-back {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  color: #0d1f3c;
+  flex-shrink: 0;
+}
+
+.pi-as-header-text {
+  flex: 1;
+}
+
+.pi-as-header-text h1 {
+  color: #0d1f3c;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.pi-as-header-text p {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0;
+}
+
+.pi-as-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.pi-as-section-title {
+  color: #0d1f3c;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.pi-as-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 20px;
+}
+
+.pi-as-label {
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin: 0 0 4px;
+}
+
+.pi-as-value {
+  color: #0d1f3c;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.pi-as-notes-block {
+  margin-top: 16px;
+}
+
+.pi-as-photos {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.pi-as-photos img {
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+/* ---- Form (editable Roof Assessment Data) ---- */
+.pi-as-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 20px;
+}
+
+.pi-as-form-grid label,
+.pi-as-notes-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pi-as-notes-label {
+  margin-top: 16px;
+}
+
+.pi-as-form-grid input,
+.pi-as-form-grid select,
+.pi-as-notes-label textarea,
+.pi-as-notes-label input[type='file'] {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 9px 10px;
+  font-size: 14px;
+  color: #111827;
+  font-family: inherit;
+}
+
+.pi-as-notes-label textarea {
+  resize: vertical;
+}
+
+.pi-as-submit-error {
+  color: #dc2626;
+  font-size: 13px;
+  margin: 16px 0 0;
+}
+
+.pi-as-submit-row {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pi-as-submit-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0d1f3c;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pi-as-submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Status badge classes, duplicated per-page since each PI page loads
+   its own CSS file (same pattern as the Incoming Tickets page). */
+.pi-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pi-status-badge.assigned,
+.pi-status-badge.compatible {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.pi-status-badge.in-progress {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.pi-status-badge.not-compatible {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.pi-status-badge.withdrawn {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+@media (max-width: 700px) {
+  .pi-as-grid,
+  .pi-as-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
