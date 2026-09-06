@@ -7,9 +7,12 @@ from .views import (
     TicketAssignView,
     TicketDecisionView,
     InstallerTicketListView,
+    TicketCompleteView,
     AdminTicketListView,
     TicketApproveView,
     TicketReturnForRevisionView,
+    TicketRescheduleRequestView,
+    TicketRescheduleDecisionView,
 )
 
 urlpatterns = [
@@ -21,10 +24,17 @@ urlpatterns = [
     path('<int:pk>/withdraw/', TicketWithdrawView.as_view(), name='ticket-withdraw'),
     path('<int:pk>/assign/', TicketAssignView.as_view(), name='ticket-assign'),
     path('<int:pk>/decision/', TicketDecisionView.as_view(), name='ticket-decision'),
+    path('<int:pk>/complete/', TicketCompleteView.as_view(), name='ticket-complete'),
     path('<int:pk>/approve/', TicketApproveView.as_view(), name='ticket-approve'),
     path(
         '<int:pk>/return-for-revision/',
         TicketReturnForRevisionView.as_view(),
         name='ticket-return-for-revision',
+    ),
+    path('<int:pk>/reschedule/', TicketRescheduleRequestView.as_view(), name='ticket-reschedule-request'),
+    path(
+        '<int:pk>/reschedule/<int:reschedule_id>/',
+        TicketRescheduleDecisionView.as_view(),
+        name='ticket-reschedule-decision',
     ),
 ]

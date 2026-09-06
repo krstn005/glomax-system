@@ -23,6 +23,7 @@ class User(AbstractUser):
     # Extra fields based on your Figma screens (phone number appears
     # on Register, Settings, and Manage Staff/Partner Installer pages)
     phone_number = models.CharField(max_length=20, blank=True)
+    full_name = models.CharField(max_length=150, blank=True)
 
     # From the Customer Register Page — property address
     address = models.CharField(max_length=255, blank=True)

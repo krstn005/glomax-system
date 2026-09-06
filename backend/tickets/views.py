@@ -1,13 +1,13 @@
-import re
-from decimal import Decimal, InvalidOperation
-
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, permissions, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import Ticket
+from .models import Ticket, CompletionPhoto, RescheduleRequest
+from .quotation_linking import link_initial_quotation_to_ticket
 from .serializers import (
     TicketCreateSerializer,
     TicketSerializer,
@@ -15,6 +15,7 @@ from .serializers import (
     TicketDecisionSerializer,
     TicketApproveSerializer,
     TicketReturnForRevisionSerializer,
+    RescheduleRequestCreateSerializer,
 )
 from accounts.permissions import (
     IsCustomer,
@@ -24,25 +25,8 @@ from accounts.permissions import (
     IsPartnerInstaller,
     IsAdmin,
 )
-
-
-def _parse_cost_text(raw_text):
-    """
-    Converts a free-text cost string (e.g. "P250,000", "250000.50")
-    into a Decimal, or returns None if it can't be parsed. Used when
-    auto-linking an Inquiry's Initial Quotation to a new Ticket, since
-    Inquiry.quotation_estimated_cost is free text but
-    pricing.Quotation.estimated_cost is a strict DecimalField.
-    """
-    if not raw_text:
-        return None
-    cleaned = re.sub(r'[^\d.]', '', raw_text)
-    if not cleaned:
-        return None
-    try:
-        return Decimal(cleaned)
-    except InvalidOperation:
-        return None
+from accounts.models import User
+from notifications.models import Notification
 
 
 # --- Stage 1 views (Customer) ---
@@ -50,9 +34,19 @@ def _parse_cost_text(raw_text):
 class TicketListCreateView(generics.ListCreateAPIView):
     """
     GET  /api/tickets/  - list the logged-in Customer's own tickets
-    POST /api/tickets/  - submit a new Schedule Request
+    POST /api/tickets/  - submit a new Schedule Request. Blocked while
+         the Customer already has an active (still in-progress)
+         ticket.
     """
     permission_classes = [permissions.IsAuthenticated, IsCustomer]
+
+    RESOLVED_STATUSES = [
+        Ticket.Status.APPROVED,
+        Ticket.Status.COMPLETED,
+        Ticket.Status.WITHDRAWN,
+        Ticket.Status.NOT_COMPATIBLE_CANNOT_PROCEED,
+        Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY,
+    ]
 
     def get_queryset(self):
         return Ticket.objects.filter(customer=self.request.user).order_by('-created_at')
@@ -66,6 +60,24 @@ class TicketListCreateView(generics.ListCreateAPIView):
         serializer.save(customer=self.request.user)
 
     def create(self, request, *args, **kwargs):
+        active_ticket = (
+            Ticket.objects.filter(customer=request.user)
+            .exclude(status__in=self.RESOLVED_STATUSES)
+            .order_by('-created_at')
+            .first()
+        )
+        if active_ticket:
+            return Response(
+                {
+                    "detail": (
+                        f"You already have an active request ({active_ticket.ticket_number}). "
+                        "You can submit a new one once it's completed, withdrawn, or marked "
+                        "Not Compatible."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -82,24 +94,10 @@ class TicketListCreateView(generics.ListCreateAPIView):
         """
         If this ticket's Customer previously submitted a public
         Inquiry (same email) that already had an Initial Quotation
-        sent via the Email Inquiries page, copy that quotation into a
-        real pricing.Quotation record now that a ticket exists to
-        attach it to. Matches the Quotation Management spec: the
-        system automatically links the Initial Quotation to the ticket
-        once the customer registers/applies with the same email used
-        in their inquiry.
-
-        Silently does nothing if there's no matching inquiry, if this
-        ticket already has an Initial Quotation, or if the stored cost
-        text can't be parsed - a failed auto-link should never block
-        the customer's ticket from being created.
+        sent via the Email Inquiries page, copy it onto this ticket
+        now that it exists.
         """
-        # Local imports avoid circular imports at module load time.
         from inquiries.models import Inquiry
-        from pricing.models import Quotation, PaymentTerms
-
-        if Quotation.objects.filter(ticket=ticket, quotation_type='INITIAL').exists():
-            return
 
         inquiry = (
             Inquiry.objects.filter(
@@ -110,35 +108,13 @@ class TicketListCreateView(generics.ListCreateAPIView):
             .order_by('-quotation_sent_at')
             .first()
         )
-        if not inquiry:
-            return
-
-        cost = _parse_cost_text(inquiry.quotation_estimated_cost)
-        if cost is None:
-            return
-
-        payment_terms = None
-        if inquiry.quotation_payment_terms:
-            payment_terms, _ = PaymentTerms.objects.get_or_create(
-                description=inquiry.quotation_payment_terms
-            )
-
-        Quotation.objects.create(
-            ticket=ticket,
-            quotation_type='INITIAL',
-            package_details=inquiry.quotation_package_details or '',
-            estimated_cost=cost,
-            payment_terms=payment_terms,
-            notes=inquiry.quotation_message_to_customer or '',
-        )
+        if inquiry:
+            link_initial_quotation_to_ticket(ticket, inquiry)
 
 
 class TicketDetailView(generics.RetrieveAPIView):
     """
     GET /api/tickets/<id>/  - view one ticket's full details.
-    IsAccountOwner blocks a Customer from viewing a ticket that isn't
-    theirs. Staff/Admin/Partner Installer use the role-scoped list
-    views below instead of this Customer-facing one.
     """
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
@@ -148,8 +124,7 @@ class TicketDetailView(generics.RetrieveAPIView):
 class TicketWithdrawView(APIView):
     """
     PATCH /api/tickets/<id>/withdraw/  - Withdraw button action.
-    Only allowed while status is REQUEST_SUBMITTED (before a Partner
-    Installer is assigned).
+    Only allowed while status is REQUEST_SUBMITTED.
     """
     permission_classes = [permissions.IsAuthenticated, IsCustomer]
 
@@ -172,21 +147,146 @@ class TicketWithdrawView(APIView):
         return Response(TicketSerializer(ticket).data)
 
 
+class TicketRescheduleRequestView(APIView):
+    """
+    POST /api/tickets/<id>/reschedule/  - Customer's "Request
+    Reschedule" button on the Request Status page. Only works on the
+    Customer's own ticket, only while PI_ASSIGNED, and only if no
+    PENDING request already exists. Notifies Staff so it shows up for
+    them to Approve or Decline.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsCustomer]
+
+    def post(self, request, pk):
+        try:
+            ticket = Ticket.objects.get(pk=pk, customer=request.user)
+        except Ticket.DoesNotExist:
+            return Response({"detail": "Ticket not found."}, status=404)
+
+        serializer = RescheduleRequestCreateSerializer(data=request.data, context={'ticket': ticket})
+        serializer.is_valid(raise_exception=True)
+
+        reschedule = RescheduleRequest.objects.create(
+            ticket=ticket,
+            requested_date=serializer.validated_data['requested_date'],
+            reason=serializer.validated_data.get('reason', ''),
+        )
+
+        for staff_user in User.objects.filter(role='STAFF'):
+            Notification.objects.create(
+                recipient=staff_user,
+                kind=Notification.Kind.RESCHEDULE_REQUESTED,
+                message=f"{ticket.ticket_number}'s customer requested a new visit date.",
+                link=f"/staff/manage-tickets/{ticket.id}",
+            )
+
+        return Response(TicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
+
+
+class TicketRescheduleDecisionView(APIView):
+    """
+    PATCH /api/tickets/<id>/reschedule/<reschedule_id>/  - Staff's
+    Approve/Decline action on a pending reschedule request.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsStaff]
+
+    def patch(self, request, pk, reschedule_id):
+        try:
+            ticket = Ticket.objects.get(pk=pk)
+        except Ticket.DoesNotExist:
+            return Response({"detail": "Ticket not found."}, status=404)
+
+        try:
+            reschedule = RescheduleRequest.objects.get(pk=reschedule_id, ticket=ticket)
+        except RescheduleRequest.DoesNotExist:
+            return Response({"detail": "Reschedule request not found."}, status=404)
+
+        if reschedule.status != RescheduleRequest.Status.PENDING:
+            return Response(
+                {"detail": "This reschedule request has already been resolved."},
+                status=400,
+            )
+
+        decision = request.data.get('decision')
+        if decision not in ('APPROVE', 'DECLINE'):
+            return Response({"detail": "decision must be APPROVE or DECLINE."}, status=400)
+
+        reschedule.staff_response_note = request.data.get('staff_response_note', '')
+        reschedule.resolved_at = timezone.now()
+
+        if decision == 'APPROVE':
+            reschedule.status = RescheduleRequest.Status.APPROVED
+            ticket.visit_date = reschedule.requested_date
+            ticket.save()
+            message = (
+                f"Your reschedule request for {ticket.ticket_number} was approved. "
+                f"New visit date: {reschedule.requested_date.strftime('%B %d, %Y')}."
+            )
+        else:
+            reschedule.status = RescheduleRequest.Status.DECLINED
+            message = f"Your reschedule request for {ticket.ticket_number} was declined."
+
+        reschedule.save()
+
+        Notification.objects.create(
+            recipient=ticket.customer,
+            kind=Notification.Kind.RESCHEDULE_DECISION,
+            message=message,
+            link="/request-status",
+        )
+
+        return Response(TicketSerializer(ticket).data)
+
+
 # --- Stage 2 views (Staff) ---
+
+class OptionalPageNumberPagination(PageNumberPagination):
+    """
+    Only paginates when the request explicitly asks for a page (via
+    ?page=N).
+    """
+    page_size = 20
+    page_query_param = 'page'
+
+    def paginate_queryset(self, queryset, request, view=None):
+        if request.query_params.get(self.page_query_param) is None:
+            return None
+        return super().paginate_queryset(queryset, request, view)
+
 
 class StaffTicketListView(generics.ListAPIView):
     """
     GET /api/tickets/staff/  - Staff/Admin view of ALL tickets.
-    Optional ?status=STATUS_VALUE filter.
+    Supports ?status=, ?search=, ?has_assessment=, ?ordering=, ?page=
+    all together.
     """
     serializer_class = TicketSerializer
     permission_classes = [permissions.IsAuthenticated, IsStaffOrAdmin]
+    pagination_class = OptionalPageNumberPagination
 
     def get_queryset(self):
         queryset = Ticket.objects.all().order_by('-created_at')
+
         status_filter = self.request.query_params.get('status')
         if status_filter:
-            queryset = queryset.filter(status=status_filter)
+            status_list = [s.strip() for s in status_filter.split(',') if s.strip()]
+            queryset = queryset.filter(status__in=status_list)
+
+        has_assessment = self.request.query_params.get('has_assessment')
+        if has_assessment == 'true':
+            queryset = queryset.filter(assessment__isnull=False)
+
+        search_term = self.request.query_params.get('search')
+        if search_term:
+            queryset = queryset.filter(
+                Q(ticket_number__icontains=search_term) |
+                Q(customer__username__icontains=search_term)
+            )
+
+        ordering = self.request.query_params.get('ordering')
+        if ordering == 'oldest_assessment':
+            queryset = queryset.order_by('assessment__submitted_at')
+
         return queryset
 
 
@@ -215,16 +315,19 @@ class TicketAssignView(APIView):
 
         send_assignment_email(ticket)
 
+        Notification.objects.create(
+            recipient=ticket.partner_installer,
+            kind=Notification.Kind.TICKET_ASSIGNED,
+            message=f"You've been assigned to {ticket.ticket_number}.",
+            link=f"/partner-installer/incoming-tickets/{ticket.id}",
+        )
+
         return Response(TicketSerializer(ticket).data)
 
 
 class TicketDecisionView(APIView):
     """
     PATCH /api/tickets/<id>/decision/  - Assessment Review page.
-    Staff's decision: Forward to Admin, Not Compatible (Cannot
-    Proceed), or Not Compatible (Can Reapply). Also handles
-    resubmission after an Admin Return for Revision (ticket comes
-    back in STAFF_REVIEW status).
     """
     permission_classes = [permissions.IsAuthenticated, IsStaff]
 
@@ -240,17 +343,40 @@ class TicketDecisionView(APIView):
 
         if decision == 'FORWARD_TO_ADMIN':
             ticket.status = Ticket.Status.ADMIN_REVIEW
-            # Clear old revision notes once resubmitted so the
-            # Admin isn't looking at stale feedback on the next review.
             ticket.admin_revision_notes = None
+            ticket.save()
+
+            for admin_user in User.objects.filter(role='ADMIN'):
+                Notification.objects.create(
+                    recipient=admin_user,
+                    kind=Notification.Kind.ADMIN_REVIEW_READY,
+                    message=f"{ticket.ticket_number} is ready for your review.",
+                    link=f"/admin/requests/{ticket.id}",
+                )
         elif decision == 'NOT_COMPATIBLE_CANNOT':
             ticket.status = Ticket.Status.NOT_COMPATIBLE_CANNOT_PROCEED
             ticket.completed_at = timezone.now()
+            ticket.save()
+
+            Notification.objects.create(
+                recipient=ticket.customer,
+                kind=Notification.Kind.TICKET_DECISION,
+                message=f"Your request {ticket.ticket_number} was marked as Not Compatible.",
+                link="/request-status",
+            )
         elif decision == 'NOT_COMPATIBLE_CAN_REAPPLY':
             ticket.status = Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY
             ticket.completed_at = timezone.now()
+            ticket.save()
 
-        ticket.save()
+            Notification.objects.create(
+                recipient=ticket.customer,
+                kind=Notification.Kind.TICKET_DECISION,
+                message=f"Your request {ticket.ticket_number} was marked as Not Compatible, but you can reapply.",
+                link="/request-status",
+            )
+        else:
+            ticket.save()
 
         return Response(TicketSerializer(ticket).data)
 
@@ -260,7 +386,7 @@ class TicketDecisionView(APIView):
 class InstallerTicketListView(generics.ListAPIView):
     """
     GET /api/tickets/installer/  - tickets assigned to the logged-in
-    Partner Installer. Optional ?status=STATUS_VALUE filter.
+    Partner Installer.
     """
     serializer_class = TicketSerializer
     permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller]
@@ -273,13 +399,59 @@ class InstallerTicketListView(generics.ListAPIView):
         return queryset
 
 
+class TicketCompleteView(APIView):
+    """
+    PATCH /api/tickets/<id>/complete/  - Partner Installer's "Mark
+    Installation Complete" action.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def patch(self, request, pk):
+        from .utils import send_completion_email
+
+        try:
+            ticket = Ticket.objects.get(pk=pk, partner_installer=request.user)
+        except Ticket.DoesNotExist:
+            return Response({"detail": "Ticket not found, or not assigned to you."}, status=404)
+
+        if ticket.status != Ticket.Status.APPROVED:
+            return Response(
+                {"detail": "This ticket can only be marked complete while it's Approved."},
+                status=400,
+            )
+
+        photos = request.FILES.getlist('photos')
+        if not photos:
+            return Response(
+                {"detail": "Please attach at least one completion photo."},
+                status=400,
+            )
+
+        for photo in photos:
+            CompletionPhoto.objects.create(ticket=ticket, image=photo)
+
+        ticket.status = Ticket.Status.COMPLETED
+        ticket.completed_at = timezone.now()
+        ticket.save()
+
+        Notification.objects.create(
+            recipient=ticket.customer,
+            kind=Notification.Kind.INSTALLATION_COMPLETED,
+            message=f"Your installation for {ticket.ticket_number} is complete!",
+            link="/request-status",
+        )
+
+        send_completion_email(ticket)
+
+        return Response(TicketSerializer(ticket).data)
+
+
 # --- Stage 4 views (Admin) ---
 
 class AdminTicketListView(generics.ListAPIView):
     """
-    GET /api/tickets/admin/  - Admin's Pending Approval queue (and
-    general ticket visibility). Optional ?status=STATUS_VALUE filter,
-    e.g. /api/tickets/admin/?status=ADMIN_REVIEW
+    GET /api/tickets/admin/  - Admin's Pending Approval queue.
     """
     serializer_class = TicketSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
@@ -295,14 +467,11 @@ class AdminTicketListView(generics.ListAPIView):
 class TicketApproveView(APIView):
     """
     PATCH /api/tickets/<id>/approve/  - Pending Approval page's
-    Approve action. Creates the FinalSheet snapshot and moves the
-    ticket to APPROVED + COMPLETED.
+    Approve action.
     """
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
     def patch(self, request, pk):
-        # Local import avoids a circular import at module load time
-        # (finalsheet.models imports Ticket already).
         from finalsheet.models import FinalSheet
 
         try:
@@ -321,12 +490,14 @@ class TicketApproveView(APIView):
         )
 
         ticket.status = Ticket.Status.APPROVED
-        ticket.completed_at = timezone.now()
         ticket.save()
 
-        # NOTE: SMS + email to the Customer with the Final Sheet
-        # attached is intentionally not implemented yet (Semaphore
-        # not purchased, email notifications not yet built).
+        Notification.objects.create(
+            recipient=ticket.customer,
+            kind=Notification.Kind.TICKET_APPROVED,
+            message=f"Your request {ticket.ticket_number} has been approved!",
+            link="/request-status",
+        )
 
         return Response(TicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
 
@@ -334,9 +505,7 @@ class TicketApproveView(APIView):
 class TicketReturnForRevisionView(APIView):
     """
     PATCH /api/tickets/<id>/return-for-revision/  - Pending Approval
-    page's Return for Revision action. Sends the ticket back to Staff
-    with notes, moving status to STAFF_REVIEW so it reappears on
-    Staff's Assessment Review page for adjustment + resubmission.
+    page's Return for Revision action.
     """
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
@@ -352,5 +521,13 @@ class TicketReturnForRevisionView(APIView):
         ticket.status = Ticket.Status.STAFF_REVIEW
         ticket.admin_revision_notes = serializer.validated_data['notes']
         ticket.save()
+
+        for staff_user in User.objects.filter(role='STAFF'):
+            Notification.objects.create(
+                recipient=staff_user,
+                kind=Notification.Kind.TICKET_RETURNED,
+                message=f"{ticket.ticket_number} was returned for revision by Admin.",
+                link=f"/staff/manage-tickets/{ticket.id}",
+            )
 
         return Response(TicketSerializer(ticket).data)

@@ -1,13 +1,13 @@
 from rest_framework import serializers
 from tickets.models import Ticket
-from .models import Quotation, PaymentTerms
 from .models import Quotation, PaymentTerms, PriceHistory
+
 
 class PriceHistorySerializer(serializers.ModelSerializer):
     """
     Read-only representation of a PriceHistory entry - used by both
     Staff's Active Prices page (filtered to is_active=True) and the
-    future Admin/Staff Price History page (full log).
+    Admin/Staff Price History page (full log).
     """
 
     system_type_display = serializers.CharField(source='get_system_type_display', read_only=True)
@@ -26,6 +26,21 @@ class PriceHistorySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+
+class PriceHistoryCreateSerializer(serializers.ModelSerializer):
+    """
+    Used by Admin's "+ Add New Price" form on the Price History page.
+    Only package_name, price, rated_capacity_kw, and system_type are
+    accepted - is_active is always left at its default (True), which
+    triggers PriceHistory.save()'s existing logic to automatically
+    deactivate the previous entry for the same package_name.
+    """
+
+    class Meta:
+        model = PriceHistory
+        fields = ['package_name', 'price', 'rated_capacity_kw', 'system_type']
+
+
 class PaymentTermsSerializer(serializers.ModelSerializer):
     """
     Read-only list of existing Payment Terms, used to populate the
@@ -38,6 +53,17 @@ class PaymentTermsSerializer(serializers.ModelSerializer):
         model = PaymentTerms
         fields = ['id', 'description', 'date_added']
         read_only_fields = fields
+
+
+class PaymentTermsCreateSerializer(serializers.ModelSerializer):
+    """
+    Used by Admin's "+ Add New Term" form on the Payment Terms
+    History page.
+    """
+
+    class Meta:
+        model = PaymentTerms
+        fields = ['description']
 
 
 class QuotationSerializer(serializers.ModelSerializer):

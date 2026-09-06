@@ -35,6 +35,7 @@ class FeedbackSerializer(serializers.ModelSerializer):
     """
 
     rating_display = serializers.CharField(source='get_rating_display', read_only=True)
+    highlights_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Feedback
@@ -43,16 +44,22 @@ class FeedbackSerializer(serializers.ModelSerializer):
             'rating',
             'rating_display',
             'comments',
+            'highlights',
+            'highlights_display',
             'submitted_at',
         ]
         read_only_fields = fields
 
+    def get_highlights_display(self, obj):
+        choices = dict(Feedback.Highlight.choices)
+        return [choices.get(h, h) for h in obj.highlights]
+
 
 class FeedbackCreateSerializer(serializers.ModelSerializer):
     """
-    Used by the Customer to submit their rating and comment on the
-    Feedback page. `ticket` is set in the view from the URL, not
-    accepted here.
+    Used by the Customer to submit their rating, comment, and optional
+    highlight tags on the Feedback page. `ticket` is set in the view
+    from the URL, not accepted here.
     """
 
     class Meta:
@@ -60,4 +67,5 @@ class FeedbackCreateSerializer(serializers.ModelSerializer):
         fields = [
             'rating',
             'comments',
+            'highlights',
         ]

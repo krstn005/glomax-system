@@ -6,11 +6,11 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, NotFound
 from xhtml2pdf import pisa
 
+from django.utils import timezone
 from tickets.models import Ticket
 from .models import Feedback
 from .serializers import FeedbackSerializer, FeedbackCreateSerializer
-from accounts.permissions import IsCustomer
-
+from accounts.permissions import IsCustomer, IsAdmin
 
 class TicketFeedbackView(APIView):
     """
@@ -19,11 +19,18 @@ class TicketFeedbackView(APIView):
          the assigned Partner Installer (My Ratings page), or
          Staff/Admin (Customer Feedback page).
     POST /api/tickets/<id>/feedback/  - Customer submits their rating
-         and comment. Only allowed once the ticket is APPROVED.
-         Matches the spec: "Feedback page is only accessible after
-         ticket reaches Approved and Completed status."
+         and comment. Allowed once the ticket is APPROVED or
+         COMPLETED - originally this only allowed APPROVED, but once
+         the real COMPLETED status was introduced, an installation
+         that actually finished would silently fall OUT of the
+         eligible window instead of staying eligible, since COMPLETED
+         comes after APPROVED chronologically. Notifies the assigned
+         Partner Installer once feedback comes in, since it's their
+         work being rated.
     """
     permission_classes = [permissions.IsAuthenticated]
+
+    ELIGIBLE_STATUSES = (Ticket.Status.APPROVED, Ticket.Status.COMPLETED)
 
     def get_ticket(self):
         try:
@@ -56,7 +63,7 @@ class TicketFeedbackView(APIView):
         if ticket.customer_id != request.user.id:
             raise PermissionDenied("You can only submit feedback for your own ticket.")
 
-        if ticket.status != Ticket.Status.APPROVED:
+        if ticket.status not in self.ELIGIBLE_STATUSES:
             return Response(
                 {"detail": "Feedback will be available once your request is completed."},
                 status=400,
@@ -71,6 +78,15 @@ class TicketFeedbackView(APIView):
         serializer = FeedbackCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         feedback = serializer.save(ticket=ticket)
+
+        if ticket.partner_installer_id:
+            from notifications.models import Notification
+            Notification.objects.create(
+                recipient=ticket.partner_installer,
+                kind=Notification.Kind.FEEDBACK_SUBMITTED,
+                message=f"You received a {feedback.rating}-star review for {ticket.ticket_number}.",
+                link="/partner-installer/my-ratings",
+            )
 
         return Response(
             FeedbackSerializer(feedback).data,
@@ -170,6 +186,124 @@ class FinalSheetPDFView(APIView):
         response['Content-Disposition'] = f'attachment; filename="{ticket.ticket_number}-final-sheet.pdf"'
 
         result = pisa.CreatePDF(html, dest=response, link_callback=_pdf_link_callback)
+        if result.err:
+            return HttpResponse("Could not generate PDF.", status=500)
+
+        return response
+
+
+class CompletionCertificatePDFView(APIView):
+    """
+    GET /api/tickets/<id>/completion-certificate/pdf/  - generates and
+    returns a PDF "certificate" confirming the installation was
+    completed, using xhtml2pdf to render the
+    finalsheet/completion_certificate_pdf.html template. Allowed for
+    the ticket's own Customer, or Staff/Admin - same access rule as
+    the Final Sheet PDF. 404 if the ticket hasn't actually reached
+    COMPLETED status yet.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            ticket = Ticket.objects.get(pk=pk)
+        except Ticket.DoesNotExist:
+            return HttpResponse("Ticket not found.", status=404)
+
+        user = request.user
+        is_owner = ticket.customer_id == user.id
+        is_staff_or_admin = user.role in ('STAFF', 'ADMIN')
+        if not (is_owner or is_staff_or_admin):
+            return HttpResponse("You do not have permission to view this document.", status=403)
+
+        if ticket.status != Ticket.Status.COMPLETED:
+            return HttpResponse("This ticket has not been marked complete yet.", status=404)
+
+        final_sheet = getattr(ticket, 'final_sheet', None)
+        completion_photos = ticket.completion_photos.all()
+
+        html = render_to_string('finalsheet/completion_certificate_pdf.html', {
+            'ticket': ticket,
+            'final_sheet': final_sheet,
+            'completion_photos': completion_photos,
+            'installer_name': ticket.partner_installer.username if ticket.partner_installer else None,
+        })
+
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{ticket.ticket_number}-completion-certificate.pdf"'
+
+        result = pisa.CreatePDF(html, dest=response, link_callback=_pdf_link_callback)
+        if result.err:
+            return HttpResponse("Could not generate PDF.", status=500)
+
+        return response
+
+
+class AdminReportsPDFView(APIView):
+    """
+    GET /api/tickets/reports/pdf/  - generates a PDF export of the
+    Reports & Analytics page's stats (Admin only). Computes the same
+    numbers the frontend page already shows, server-side, so the PDF
+    and the on-screen page never disagree.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        from accounts.models import User
+
+        tickets = Ticket.objects.all()
+
+        total_requests = tickets.count()
+        completed_installations = tickets.filter(status='COMPLETED').count()
+
+        total_revenue = sum(
+            (t.final_sheet.final_cost for t in tickets if hasattr(t, 'final_sheet')),
+            start=0,
+        )
+
+        rated_tickets = [t for t in tickets if hasattr(t, 'feedback')]
+        avg_rating = (
+            round(sum(t.feedback.rating for t in rated_tickets) / len(rated_tickets), 1)
+            if rated_tickets else 0.0
+        )
+
+        status_groups = [
+            ('Pending', ['REQUEST_SUBMITTED']),
+            ('Under Assessment', ['PI_ASSIGNED', 'ASSESSMENT_SUBMITTED', 'STAFF_REVIEW', 'ADMIN_REVIEW']),
+            ('Approved', ['APPROVED']),
+            ('Rejected', ['NC_CANNOT_PROCEED', 'NC_CAN_REAPPLY']),
+            ('Completed', ['COMPLETED']),
+            ('Withdrawn', ['WITHDRAWN']),
+        ]
+        status_breakdown = [
+            {'label': label, 'count': tickets.filter(status__in=statuses).count()}
+            for label, statuses in status_groups
+        ]
+
+        workers = User.objects.filter(role='PARTNER_INSTALLER')
+        worker_performance = [
+            {
+                'username': w.username,
+                'completed': tickets.filter(partner_installer=w, status='COMPLETED').count(),
+                'is_active': w.is_active,
+            }
+            for w in workers
+        ]
+
+        html = render_to_string('finalsheet/reports_pdf.html', {
+            'generated_on': timezone.now().strftime('%B %d, %Y'),
+            'total_requests': total_requests,
+            'completed_installations': completed_installations,
+            'total_revenue': f'{total_revenue:,.2f}',
+            'avg_rating': avg_rating,
+            'status_breakdown': status_breakdown,
+            'worker_performance': worker_performance,
+        })
+
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="glomax-reports.pdf"'
+
+        result = pisa.CreatePDF(html, dest=response)
         if result.err:
             return HttpResponse("Could not generate PDF.", status=500)
 

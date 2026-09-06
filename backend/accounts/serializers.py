@@ -119,12 +119,13 @@ class StaffPartnerInstallerCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone_number', 'password']
+        fields = ['username', 'full_name', 'email', 'phone_number', 'password']
 
     def create(self, validated_data):
         role = self.context['role']
         return User.objects.create_user(
             username=validated_data['username'],
+            full_name=validated_data.get('full_name', ''),
             email=validated_data.get('email', ''),
             phone_number=validated_data.get('phone_number', ''),
             password=validated_data['password'],
@@ -136,19 +137,41 @@ class ManagedUserSerializer(serializers.ModelSerializer):
     """
     Read-only representation of a Staff/Partner Installer account for
     the Manage Staff / Manage Partner Installers table listing.
+    active_tickets_count and completed_tickets_count are computed
+    directly from the Ticket model (not stored fields) - only
+    meaningful for PARTNER_INSTALLER accounts, since only tickets
+    have a partner_installer FK. Always 0 for a STAFF account.
     """
+
+    active_tickets_count = serializers.SerializerMethodField()
+    completed_tickets_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             'id',
             'username',
+            'full_name',
             'email',
             'phone_number',
             'address',
             'is_active',
+            'active_tickets_count',
+            'completed_tickets_count',
         ]
         read_only_fields = fields
+
+    def get_active_tickets_count(self, obj):
+        # Local import avoids a circular import between the accounts
+        # and tickets apps.
+        from tickets.models import Ticket
+        active_statuses = ['PI_ASSIGNED', 'ASSESSMENT_SUBMITTED', 'STAFF_REVIEW', 'ADMIN_REVIEW']
+        return Ticket.objects.filter(partner_installer=obj, status__in=active_statuses).count()
+
+    def get_completed_tickets_count(self, obj):
+        from tickets.models import Ticket
+        completed_statuses = ['APPROVED', 'COMPLETED']
+        return Ticket.objects.filter(partner_installer=obj, status__in=completed_statuses).count()
 
 
 class GoogleLoginSerializer(serializers.Serializer):
@@ -161,3 +184,31 @@ class GoogleLoginSerializer(serializers.Serializer):
     step).
     """
     id_token = serializers.CharField()
+
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """
+    Used by the Security & Password card on every role's Settings page
+    (Customer, Staff, Partner Installer) - POST /api/accounts/change-password/.
+    Checks the current password against the logged-in user before
+    allowing the change, and runs the new password through Django's
+    normal validators (matches the same validation used at registration).
+    """
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value
+
+class AdminSetPasswordSerializer(serializers.Serializer):
+    """
+    Used by Admin's "Credentials" modal on the Workers page - lets
+    Admin set a new password for a Staff or Partner Installer account
+    directly, without knowing the current password (unlike
+    ChangePasswordSerializer, which is self-service only).
+    """
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])

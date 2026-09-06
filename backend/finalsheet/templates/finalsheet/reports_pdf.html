@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 2cm; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #0d1f3c; font-size: 11pt; }
+  h1 { font-size: 18pt; margin-bottom: 2px; }
+  .subtitle { color: #6b7280; font-size: 10pt; margin-bottom: 20px; }
+  .stats-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .stats-table td {
+    width: 25%;
+    border: 1px solid #d1d5db;
+    padding: 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .stat-value { font-size: 16pt; font-weight: bold; margin: 0; }
+  .stat-label { font-size: 9pt; color: #6b7280; margin: 4px 0 0; }
+  h2 { font-size: 13pt; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; }
+  table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  table.data-table th {
+    background-color: #0d1f3c;
+    color: #ffffff;
+    padding: 6px 8px;
+    text-align: left;
+    font-size: 9pt;
+  }
+  table.data-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 10pt;
+  }
+  .footer { margin-top: 30px; font-size: 8pt; color: #9ca3af; }
+</style>
+</head>
+<body>
+
+  <h1>Glomax Solar Enterprises</h1>
+  <p class="subtitle">Reports &amp; Analytics &mdash; Generated {{ generated_on }}</p>
+
+  <table class="stats-table">
+    <tr>
+      <td>
+        <p class="stat-value">{{ total_requests }}</p>
+        <p class="stat-label">Total Requests</p>
+      </td>
+      <td>
+        <p class="stat-value">{{ completed_installations }}</p>
+        <p class="stat-label">Completed Installations</p>
+      </td>
+      <td>
+        <p class="stat-value">&#8369;{{ total_revenue }}</p>
+        <p class="stat-label">Total Revenue</p>
+      </td>
+      <td>
+        <p class="stat-value">{{ avg_rating }} / 5.0</p>
+        <p class="stat-label">Avg. Customer Rating</p>
+      </td>
+    </tr>
+  </table>
+
+  <h2>Request Status Breakdown</h2>
+  <table class="data-table">
+    <tr><th>Status</th><th>Count</th></tr>
+    {% for row in status_breakdown %}
+    <tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Worker Performance</h2>
+  <table class="data-table">
+    <tr><th>Worker</th><th>Completed</th><th>Status</th></tr>
+    {% for w in worker_performance %}
+    <tr>
+      <td>{{ w.username }}</td>
+      <td>{{ w.completed }}</td>
+      <td>{% if w.is_active %}Active{% else %}Inactive{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <p class="footer">Glomax Solar Enterprises &middot; Confidential &middot; Generated {{ generated_on }}</p>
+
+</body>
+</html>

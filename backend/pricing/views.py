@@ -3,36 +3,64 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, NotFound
 
 from tickets.models import Ticket
+from accounts.permissions import IsAdmin
 from .models import Quotation, PaymentTerms, PriceHistory
 from .serializers import (
     QuotationSerializer,
     QuotationCreateSerializer,
     PaymentTermsSerializer,
+    PaymentTermsCreateSerializer,
     PriceHistorySerializer,
+    PriceHistoryCreateSerializer,
 )
 
 
-class PaymentTermsListView(generics.ListAPIView):
+class PaymentTermsListView(generics.ListCreateAPIView):
     """
-    GET /api/pricing/payment-terms/  - read-only list of all existing
-    Payment Terms, newest first. Used to populate the dropdown on
-    Staff's Updated Quotation form.
+    GET  /api/pricing/payment-terms/  - read-only list of all existing
+         Payment Terms, newest first. Used to populate the dropdown on
+         Staff's Updated Quotation form, and Admin's Payment Terms
+         History page.
+    POST /api/pricing/payment-terms/  - Admin's "+ Add New Term" form.
+         Admin only.
     """
     queryset = PaymentTerms.objects.all()
-    serializer_class = PaymentTermsSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return PaymentTermsCreateSerializer
+        return PaymentTermsSerializer
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.IsAuthenticated(), IsAdmin()]
+        return [permissions.IsAuthenticated()]
 
 
-class PriceHistoryListView(generics.ListAPIView):
+class PriceHistoryListView(generics.ListCreateAPIView):
     """
-    GET /api/pricing/price-history/  - read-only list of all Price
-    History entries, newest first (model's default ordering). Staff's
-    Active Prices page filters this down to is_active=True on the
-    frontend; a future Price History page would show the full list.
+    GET  /api/pricing/price-history/  - read-only list of all Price
+         History entries, newest first (model's default ordering).
+         Staff's Active Prices page filters this down to
+         is_active=True on the frontend; Admin's Price History page
+         shows the full list.
+    POST /api/pricing/price-history/  - Admin's "+ Add New Price"
+         form. Admin only. Creating a new entry with is_active left
+         at its default (True) automatically deactivates the previous
+         entry for the same package_name (see PriceHistory.save()) -
+         no extra logic needed here.
     """
     queryset = PriceHistory.objects.all()
-    serializer_class = PriceHistorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return PriceHistoryCreateSerializer
+        return PriceHistorySerializer
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.IsAuthenticated(), IsAdmin()]
+        return [permissions.IsAuthenticated()]
 
 
 class TicketQuotationListCreateView(generics.ListCreateAPIView):

@@ -30,7 +30,7 @@ GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.1.6"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.1.17"]
 
 
 # Application definition
@@ -51,7 +51,9 @@ INSTALLED_APPS = [
     'assessments',
     'pricing',
     'finalsheet',
-    'inquiries'
+    'inquiries',
+    'notifications',
+    'adminconfig',
 ]
 
 MIDDLEWARE = [
@@ -179,13 +181,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # to make requests to this Django backend
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "http://192.168.1.6:5173",
+    "http://192.168.1.17:5173",
 ]
 
 # The public reply-link email points back to this frontend URL. Update
 # this to the real deployed domain before going live - localhost is only
 # correct for local development.
-FRONTEND_BASE_URL = "http://192.168.1.6:5173"
+FRONTEND_BASE_URL = "http://192.168.1.17:5173"
 
 # Email settings - sends real emails (e.g. Initial Quotation from the
 # Staff Email Inquiries page) through Resend instead of Django's default

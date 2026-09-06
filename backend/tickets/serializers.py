@@ -1,8 +1,48 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Ticket
+from .models import Ticket, CompletionPhoto, RescheduleRequest
 
 User = get_user_model()
+
+
+class CompletionPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompletionPhoto
+        fields = ['id', 'image', 'uploaded_at']
+
+
+class RescheduleRequestSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = RescheduleRequest
+        fields = [
+            'id', 'requested_date', 'reason', 'status', 'status_display',
+            'staff_response_note', 'created_at', 'resolved_at',
+        ]
+        read_only_fields = fields
+
+
+class RescheduleRequestCreateSerializer(serializers.Serializer):
+    """
+    Customer's "Request Reschedule" form. Only allowed while the
+    ticket is PI_ASSIGNED, and only if there isn't already a PENDING
+    request for it.
+    """
+    requested_date = serializers.DateField()
+    reason = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        ticket = self.context['ticket']
+        if ticket.status != Ticket.Status.PARTNER_INSTALLER_ASSIGNED:
+            raise serializers.ValidationError(
+                "A reschedule can only be requested before your assessment visit takes place."
+            )
+        if ticket.reschedule_requests.filter(status=RescheduleRequest.Status.PENDING).exists():
+            raise serializers.ValidationError(
+                "You already have a pending reschedule request for this ticket."
+            )
+        return attrs
 
 
 class TicketCreateSerializer(serializers.ModelSerializer):
@@ -24,10 +64,11 @@ class TicketCreateSerializer(serializers.ModelSerializer):
 class TicketSerializer(serializers.ModelSerializer):
     """
     Used for reading ticket data back - list view, detail view, and
-    responses after create/withdraw/assign/decision/approve actions.
-    Includes the nested assessment (Stage 3), final_sheet (Stage 4),
-    quotations (Stage A), and feedback (Stage B) when they exist, so
-    the frontend gets the full picture in one call.
+    responses after create/withdraw/assign/decision/approve/complete
+    actions. Includes the nested assessment (Stage 3), final_sheet
+    (Stage 4), quotations (Stage A), feedback (Stage B),
+    completion_photos, and reschedule_requests when they exist, so the
+    frontend gets the full picture in one call.
     """
     ticket_number = serializers.ReadOnlyField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -39,6 +80,8 @@ class TicketSerializer(serializers.ModelSerializer):
     final_sheet = serializers.SerializerMethodField()
     quotations = serializers.SerializerMethodField()
     feedback = serializers.SerializerMethodField()
+    completion_photos = serializers.SerializerMethodField()
+    reschedule_requests = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
@@ -61,6 +104,8 @@ class TicketSerializer(serializers.ModelSerializer):
             'final_sheet',
             'quotations',
             'feedback',
+            'completion_photos',
+            'reschedule_requests',
             'created_at',
             'updated_at',
             'assigned_at',
@@ -70,8 +115,6 @@ class TicketSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_assessment(self, obj):
-        # Local import avoids a circular import between the tickets and
-        # assessments apps (assessments imports Ticket already).
         from assessments.serializers import AssessmentSerializer
         assessment = getattr(obj, 'assessment', None)
         return AssessmentSerializer(assessment).data if assessment else None
@@ -90,14 +133,16 @@ class TicketSerializer(serializers.ModelSerializer):
         feedback = getattr(obj, 'feedback', None)
         return FeedbackSerializer(feedback).data if feedback else None
 
+    def get_completion_photos(self, obj):
+        return CompletionPhotoSerializer(obj.completion_photos.all(), many=True).data
+
+    def get_reschedule_requests(self, obj):
+        return RescheduleRequestSerializer(obj.reschedule_requests.all(), many=True).data
+
 
 class TicketAssignSerializer(serializers.Serializer):
-    """
-    Assign Partner Installer page - Staff picks a Partner Installer
-    and sets the Visit Date.
-    """
     partner_installer_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(role='PARTNER_INSTALLER'),
+        queryset=User.objects.filter(role='PARTNER_INSTALLER', is_active=True),
         source='partner_installer',
     )
     visit_date = serializers.DateField()
@@ -113,10 +158,6 @@ class TicketAssignSerializer(serializers.Serializer):
 
 
 class TicketDecisionSerializer(serializers.Serializer):
-    """
-    Assessment Review page - Staff's decision after reviewing the
-    Partner Installer's submitted assessment.
-    """
     DECISION_CHOICES = (
         ('FORWARD_TO_ADMIN', 'Forward to Admin'),
         ('NOT_COMPATIBLE_CANNOT', 'Not Compatible - Cannot Proceed'),
@@ -126,9 +167,6 @@ class TicketDecisionSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         ticket = self.context['ticket']
-        # Allow from ASSESSMENT_SUBMITTED (first pass) or STAFF_REVIEW
-        # (after Staff adjusts the quotation following an Admin
-        # Return for Revision, then resubmits).
         if ticket.status not in (Ticket.Status.ASSESSMENT_SUBMITTED, Ticket.Status.STAFF_REVIEW):
             raise serializers.ValidationError(
                 "A decision can only be made once the assessment has been submitted."
@@ -137,12 +175,6 @@ class TicketDecisionSerializer(serializers.Serializer):
 
 
 class TicketApproveSerializer(serializers.Serializer):
-    """
-    Pending Approval page - Admin's Approve action. Creates the
-    FinalSheet snapshot. final_cost and payment_terms_summary are
-    provided directly for now, since the Quotation workflow (pricing
-    app) isn't wired into Tickets yet.
-    """
     final_cost = serializers.DecimalField(max_digits=10, decimal_places=2)
     payment_terms_summary = serializers.CharField()
 
@@ -156,10 +188,6 @@ class TicketApproveSerializer(serializers.Serializer):
 
 
 class TicketReturnForRevisionSerializer(serializers.Serializer):
-    """
-    Pending Approval page - Admin's Return for Revision action. Sends
-    the ticket back to Staff with notes explaining what needs fixing.
-    """
     notes = serializers.CharField()
 
     def validate(self, attrs):

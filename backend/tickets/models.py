@@ -44,11 +44,6 @@ class Ticket(models.Model):
     )
 
     # --- Fields from the Submit Schedule Request Page (Figma: CST - NR) ---
-    # Full Name as typed by the Customer on the form - separate from
-    # customer.username, since the account's username may be an
-    # auto-generated string (e.g. from Google login) rather than a
-    # real name. blank/default='' so existing tickets created before
-    # this field existed don't break.
     full_name = models.CharField(max_length=150, blank=True, default='')
     property_address = models.CharField(max_length=255)
     contact_number = models.CharField(max_length=20)
@@ -95,3 +90,64 @@ class Ticket(models.Model):
     def ticket_number(self):
         """Displays as GLX-0001, GLX-0002, etc. for a friendlier ticket number."""
         return f"GLX-{self.id:04d}"
+
+
+class CompletionPhoto(models.Model):
+    """
+    One photo the Partner Installer uploads as proof the installation
+    is physically finished, via the "Mark Installation Complete"
+    action (TicketCompleteView).
+    """
+
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name='completion_photos',
+    )
+    image = models.ImageField(upload_to='completion_photos/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Completion photo for {self.ticket.ticket_number}"
+
+
+class RescheduleRequest(models.Model):
+    """
+    A Customer's request to move their scheduled visit_date to a
+    different date. Only allowed while the ticket is still
+    PI_ASSIGNED (before the actual visit/assessment happens) - once
+    an assessment is submitted, the visit already occurred, so there's
+    nothing left to reschedule.
+
+    Staff either Approves it (which updates the ticket's real
+    visit_date to match) or Declines it (visit_date stays as-is) -
+    the request record itself is kept either way as a small audit
+    trail rather than deleted, and a new request can't be submitted
+    while a PENDING one already exists for the same ticket.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        APPROVED = 'APPROVED', 'Approved'
+        DECLINED = 'DECLINED', 'Declined'
+
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name='reschedule_requests',
+    )
+    requested_date = models.DateField()
+    reason = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+
+    # Staff's optional note when declining (e.g. why the new date doesn't work)
+    staff_response_note = models.CharField(max_length=255, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Reschedule request for {self.ticket.ticket_number} ({self.status})"

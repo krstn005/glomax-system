@@ -1,0 +1,1 @@
+path('api/notifications/', include('notifications.urls')),

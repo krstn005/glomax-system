@@ -1,7 +1,12 @@
+import logging
+
 from django.utils import timezone
 from rest_framework import generics, permissions, status, throttling
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
+
+from anymail.exceptions import AnymailError
 
 from .models import Inquiry, Message
 from .serializers import (
@@ -15,6 +20,8 @@ from .serializers import (
 from accounts.permissions import IsStaff
 from .utils import send_quotation_email, send_reply_email
 
+logger = logging.getLogger(__name__)
+
 
 class InquiryCreateView(generics.CreateAPIView):
     """
@@ -26,16 +33,40 @@ class InquiryCreateView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
 
 
+class OptionalPageNumberPagination(PageNumberPagination):
+    """
+    Only paginates when the request explicitly asks for a page (via
+    ?page=N). If no ?page param is sent, returns the full unpaginated
+    list exactly as before - keeps every existing caller working with
+    zero changes needed on their end. Same pattern already used by
+    tickets/views.py's StaffTicketListView.
+    """
+    page_size = 20
+    page_query_param = 'page'
+
+    def paginate_queryset(self, queryset, request, view=None):
+        if request.query_params.get(self.page_query_param) is None:
+            return None
+        return super().paginate_queryset(queryset, request, view)
+
+
 class InquiryListView(generics.ListAPIView):
     """
     GET /api/inquiries/staff/  - Staff's Email Inquiries page listing.
     Optional ?is_replied=false filter to show only unanswered ones.
+    Optional ?page=N for pagination (20 per page) - omit ?page
+    entirely to get the full list, same as before this was added.
+    Always sorted with unread customer replies first (has_unread_reply
+    descending), then newest-received first, so Staff sees inquiries
+    needing attention at the top of the list rather than buried
+    wherever they happen to fall by date.
     """
     serializer_class = InquirySerializer
     permission_classes = [permissions.IsAuthenticated, IsStaff]
+    pagination_class = OptionalPageNumberPagination
 
     def get_queryset(self):
-        queryset = Inquiry.objects.all()
+        queryset = Inquiry.objects.all().order_by('-has_unread_reply', '-received_at')
         is_replied = self.request.query_params.get('is_replied')
         if is_replied is not None:
             queryset = queryset.filter(is_replied=(is_replied.lower() == 'true'))
@@ -78,6 +109,12 @@ class InquirySendQuotationView(APIView):
     AND saves the quotation content onto the Inquiry so it can be
     viewed again later. Can only be sent once per inquiry - a second
     attempt is blocked with a 400 error.
+
+    If the email fails to send (e.g. Resend sandbox restriction, rate
+    limit, or any API error), this now returns a clear 502 error
+    instead of an unhandled 500 - and deliberately does NOT save the
+    quotation fields or set quotation_sent=True in that case, so Staff
+    can safely retry without it being silently marked as already sent.
     """
     permission_classes = [permissions.IsAuthenticated, IsStaff]
 
@@ -97,13 +134,20 @@ class InquirySendQuotationView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        send_quotation_email(
-            inquiry=inquiry,
-            package_details=data["package_details"],
-            estimated_cost=data["estimated_cost"],
-            payment_terms=data["payment_terms"],
-            notes=data.get("notes", ""),
-        )
+        try:
+            send_quotation_email(
+                inquiry=inquiry,
+                package_details=data["package_details"],
+                estimated_cost=data["estimated_cost"],
+                payment_terms=data["payment_terms"],
+                notes=data.get("notes", ""),
+            )
+        except AnymailError as e:
+            logger.error(f"Failed to send quotation email for inquiry {pk}: {e}")
+            return Response(
+                {"detail": "Could not send the quotation email. Please check the email service and try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
         inquiry.quotation_package_details = data["package_details"]
         inquiry.quotation_estimated_cost = data["estimated_cost"]
@@ -125,9 +169,13 @@ class StaffInquiryMessagesView(APIView):
          follow-up conversation thread for one inquiry (Staff view).
          Also clears has_unread_reply, since Staff is now viewing it.
     POST /api/inquiries/staff/<id>/messages/  - Staff sends a reply.
-         Saves the message, emails the customer with the reply
-         (including the Reply Link again), and marks the inquiry
-         is_replied = True.
+         Saves the message FIRST (so it's never lost even if the
+         email fails), then tries to email the customer. If the email
+         fails (Resend sandbox restriction, rate limit, API error,
+         etc.), the saved message and a 201 response are still
+         returned, but with an "email_sent": false flag and a
+         "warning" message, so the frontend can show Staff a clear
+         heads-up instead of a broken page.
     """
     permission_classes = [permissions.IsAuthenticated, IsStaff]
 
@@ -165,12 +213,24 @@ class StaffInquiryMessagesView(APIView):
             content=content,
         )
 
-        send_reply_email(inquiry=inquiry, staff_message_content=content)
+        email_sent = True
+        warning = None
+        try:
+            send_reply_email(inquiry=inquiry, staff_message_content=content)
+        except AnymailError as e:
+            logger.error(f"Failed to send reply email for inquiry {pk}: {e}")
+            email_sent = False
+            warning = "Your reply was saved, but the email to the customer could not be sent. Please check the email service."
 
         inquiry.is_replied = True
         inquiry.save(update_fields=["is_replied"])
 
-        return Response(MessageSerializer(message).data, status=status.HTTP_201_CREATED)
+        response_data = MessageSerializer(message).data
+        response_data["email_sent"] = email_sent
+        if warning:
+            response_data["warning"] = warning
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 # --- Public, no-login reply-link thread (customer side) ---
@@ -267,3 +327,63 @@ class PublicInquiryThreadView(APIView):
         inquiry.save(update_fields=["has_unread_reply"])
 
         return Response(PublicInquiryThreadSerializer(inquiry).data, status=status.HTTP_201_CREATED)
+
+
+    def post(self, request, pk):
+        try:
+            inquiry = Inquiry.objects.get(pk=pk)
+        except Inquiry.DoesNotExist:
+            return Response({"detail": "Inquiry not found."}, status=404)
+
+        if inquiry.quotation_sent:
+            return Response(
+                {"detail": "An Initial Quotation has already been sent for this inquiry."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = InquirySendQuotationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            send_quotation_email(
+                inquiry=inquiry,
+                package_details=data["package_details"],
+                estimated_cost=data["estimated_cost"],
+                payment_terms=data["payment_terms"],
+                notes=data.get("notes", ""),
+            )
+        except AnymailError as e:
+            logger.error(f"Failed to send quotation email for inquiry {pk}: {e}")
+            return Response(
+                {"detail": "Could not send the quotation email. Please check the email service and try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        inquiry.quotation_package_details = data["package_details"]
+        inquiry.quotation_estimated_cost = data["estimated_cost"]
+        inquiry.quotation_payment_terms = data["payment_terms"]
+        inquiry.quotation_message_to_customer = data.get("notes", "")
+        inquiry.quotation_sent = True
+        inquiry.quotation_sent_at = timezone.now()
+        inquiry.is_replied = True
+        inquiry.save()
+
+        # If the Customer already has an account and a ticket (they
+        # submitted their Schedule Request before Staff got around to
+        # replying to their inquiry), link this Initial Quotation onto
+        # that ticket right now instead of waiting for a ticket that
+        # already exists and never will trigger the other direction's
+        # auto-link logic.
+        from tickets.models import Ticket
+        from tickets.quotation_linking import link_initial_quotation_to_ticket
+
+        matching_ticket = (
+            Ticket.objects.filter(customer__email__iexact=inquiry.email)
+            .order_by('-created_at')
+            .first()
+        )
+        if matching_ticket:
+            link_initial_quotation_to_ticket(matching_ticket, inquiry)
+
+        return Response(InquirySerializer(inquiry).data, status=status.HTTP_200_OK)

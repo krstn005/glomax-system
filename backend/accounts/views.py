@@ -14,6 +14,8 @@ from .serializers import (
     StaffPartnerInstallerCreateSerializer,
     ManagedUserSerializer,
     GoogleLoginSerializer,
+    ChangePasswordSerializer,
+    AdminSetPasswordSerializer,
 )
 from .models import User
 from accounts.permissions import IsAdmin, IsStaff
@@ -56,6 +58,24 @@ class MeView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class ChangePasswordView(APIView):
+    """
+    POST /api/accounts/change-password/  - Security & Password card's
+    "Update Password" button, used by every role's Settings page.
+    Requires the current password to match before setting the new one.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        request.user.set_password(serializer.validated_data['new_password'])
+        request.user.save()
+
+        return Response({"detail": "Password updated successfully."})
 
 
 # --- Google login (Customer only) ---
@@ -198,6 +218,30 @@ class ManagedUserToggleActiveView(APIView):
 
         return Response(ManagedUserSerializer(user).data)
 
+class AdminSetWorkerPasswordView(APIView):
+    """
+    PATCH /api/accounts/manage/<id>/set-password/  - Admin's
+    "Credentials" modal on the Workers page. Lets Admin set a new
+    password for a Staff or Partner Installer account directly.
+    Only works on STAFF or PARTNER_INSTALLER accounts, same
+    restriction as ManagedUserToggleActiveView.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def patch(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk, role__in=['STAFF', 'PARTNER_INSTALLER'])
+        except User.DoesNotExist:
+            return Response({"detail": "Account not found."}, status=404)
+
+        serializer = AdminSetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+
+        return Response({"detail": "Password updated successfully."})
+
 
 class StaffPartnerInstallerListView(generics.ListAPIView):
     """
@@ -211,3 +255,40 @@ class StaffPartnerInstallerListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsStaff]
     queryset = User.objects.filter(role='PARTNER_INSTALLER', is_active=True).order_by('username')
     serializer_class = ManagedUserSerializer
+
+
+    def post(self, request, pk):
+        ticket = self.get_ticket()
+
+        if ticket.customer_id != request.user.id:
+            raise PermissionDenied("You can only submit feedback for your own ticket.")
+
+        if ticket.status != Ticket.Status.APPROVED:
+            return Response(
+                {"detail": "Feedback will be available once your request is completed."},
+                status=400,
+            )
+
+        if hasattr(ticket, 'feedback'):
+            return Response(
+                {"detail": "Feedback has already been submitted for this ticket."},
+                status=400,
+            )
+
+        serializer = FeedbackCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        feedback = serializer.save(ticket=ticket)
+
+        if ticket.partner_installer_id:
+            from notifications.models import Notification
+            Notification.objects.create(
+                recipient=ticket.partner_installer,
+                kind=Notification.Kind.FEEDBACK_SUBMITTED,
+                message=f"You received a {feedback.rating}-star review for {ticket.ticket_number}.",
+                link="/partner-installer/my-ratings",
+            )
+
+        return Response(
+            FeedbackSerializer(feedback).data,
+            status=status.HTTP_201_CREATED,
+        )

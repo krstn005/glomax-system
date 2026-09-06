@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from tickets.models import Ticket
 
@@ -54,6 +55,14 @@ class Feedback(models.Model):
         FOUR_STARS = 4, '4 Stars'
         FIVE_STARS = 5, '5 Stars'
 
+    class Highlight(models.TextChoices):
+        PROFESSIONAL_TEAM = 'PROFESSIONAL_TEAM', 'Professional Team'
+        ON_TIME = 'ON_TIME', 'On-Time'
+        CLEAN_INSTALLATION = 'CLEAN_INSTALLATION', 'Clean Installation'
+        QUALITY_MATERIALS = 'QUALITY_MATERIALS', 'Quality Materials'
+        FRIENDLY_STAFF = 'FRIENDLY_STAFF', 'Friendly Staff'
+        FAST_INSTALLATION = 'FAST_INSTALLATION', 'Fast Installation'
+
     # One feedback per ticket, since each completed ticket gets exactly
     # one rating from the customer
     ticket = models.OneToOneField(
@@ -64,6 +73,15 @@ class Feedback(models.Model):
 
     rating = models.IntegerField(choices=Rating.choices)
     comments = models.TextField(blank=True)
+    # Fixed list of positive highlights the Customer can optionally
+    # tick when submitting feedback (matches the Highlight choices
+    # above) - stored as a Postgres array since the list is fixed and
+    # doesn't need its own table.
+    highlights = ArrayField(
+        models.CharField(max_length=30, choices=Highlight.choices),
+        blank=True,
+        default=list,
+    )
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
