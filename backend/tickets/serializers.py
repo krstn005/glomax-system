@@ -140,6 +140,36 @@ class TicketSerializer(serializers.ModelSerializer):
         return RescheduleRequestSerializer(obj.reschedule_requests.all(), many=True).data
 
 
+class TicketCalendarSerializer(serializers.ModelSerializer):
+    """
+    A lighter version of TicketSerializer, used only by the Staff
+    Calendar page. Only includes what a calendar chip needs to show
+    and link to a ticket - not the full nested assessment/final
+    sheet/etc, since the calendar can load many tickets at once for
+    a whole month.
+    """
+    ticket_number = serializers.ReadOnlyField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    customer_username = serializers.CharField(source='customer.username', read_only=True)
+    partner_installer_username = serializers.CharField(
+        source='partner_installer.username', read_only=True, default=None
+    )
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'id',
+            'ticket_number',
+            'customer_username',
+            'partner_installer_username',
+            'property_address',
+            'visit_date',
+            'status',
+            'status_display',
+        ]
+        read_only_fields = fields
+
+
 class TicketAssignSerializer(serializers.Serializer):
     partner_installer_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.filter(role='PARTNER_INSTALLER', is_active=True),

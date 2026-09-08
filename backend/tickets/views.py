@@ -11,6 +11,7 @@ from .quotation_linking import link_initial_quotation_to_ticket
 from .serializers import (
     TicketCreateSerializer,
     TicketSerializer,
+    TicketCalendarSerializer,
     TicketAssignSerializer,
     TicketDecisionSerializer,
     TicketApproveSerializer,
@@ -288,6 +289,41 @@ class StaffTicketListView(generics.ListAPIView):
             queryset = queryset.order_by('assessment__submitted_at')
 
         return queryset
+
+
+class StaffTicketCalendarView(generics.ListAPIView):
+    """
+    GET /api/tickets/staff/calendar/?month=9&year=2026  - Staff
+    Calendar page. Returns every ticket that has a scheduled
+    visit_date landing in the given month, so Staff can see all
+    Partner Installer visits at a glance instead of scrolling a
+    table. Withdrawn and Not Compatible tickets are left out, since
+    there's no real visit left to show for them.
+
+    Always returns a plain list (no pagination), since a calendar
+    needs the whole month's tickets at once, not one page at a time.
+    """
+    serializer_class = TicketCalendarSerializer
+    permission_classes = [permissions.IsAuthenticated, IsStaffOrAdmin]
+    pagination_class = None
+
+    EXCLUDED_STATUSES = [
+        Ticket.Status.WITHDRAWN,
+        Ticket.Status.NOT_COMPATIBLE_CANNOT_PROCEED,
+        Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY,
+    ]
+
+    def get_queryset(self):
+        queryset = Ticket.objects.filter(visit_date__isnull=False).exclude(
+            status__in=self.EXCLUDED_STATUSES
+        )
+
+        month = self.request.query_params.get('month')
+        year = self.request.query_params.get('year')
+        if month and year:
+            queryset = queryset.filter(visit_date__year=year, visit_date__month=month)
+
+        return queryset.order_by('visit_date')
 
 
 class TicketAssignView(APIView):

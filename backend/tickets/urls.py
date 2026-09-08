@@ -4,6 +4,7 @@ from .views import (
     TicketDetailView,
     TicketWithdrawView,
     StaffTicketListView,
+    StaffTicketCalendarView,
     TicketAssignView,
     TicketDecisionView,
     InstallerTicketListView,
@@ -18,6 +19,7 @@ from .views import (
 urlpatterns = [
     path('', TicketListCreateView.as_view(), name='ticket-list-create'),
     path('staff/', StaffTicketListView.as_view(), name='ticket-staff-list'),
+    path('staff/calendar/', StaffTicketCalendarView.as_view(), name='ticket-staff-calendar'),
     path('installer/', InstallerTicketListView.as_view(), name='ticket-installer-list'),
     path('admin/', AdminTicketListView.as_view(), name='ticket-admin-list'),
     path('<int:pk>/', TicketDetailView.as_view(), name='ticket-detail'),
