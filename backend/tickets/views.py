@@ -567,3 +567,35 @@ class TicketReturnForRevisionView(APIView):
             )
 
         return Response(TicketSerializer(ticket).data)
+
+
+class InstallerTicketCalendarView(generics.ListAPIView):
+    """
+    GET /api/tickets/installer/calendar/?month=9&year=2026  - PI
+    Calendar page. Same idea as StaffTicketCalendarView, but scoped
+    to only the logged-in Partner Installer's own assigned tickets,
+    since a PI should only ever see their own schedule, not everyone
+    else's.
+    """
+    serializer_class = TicketCalendarSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller]
+    pagination_class = None
+
+    EXCLUDED_STATUSES = [
+        Ticket.Status.WITHDRAWN,
+        Ticket.Status.NOT_COMPATIBLE_CANNOT_PROCEED,
+        Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY,
+    ]
+
+    def get_queryset(self):
+        queryset = Ticket.objects.filter(
+            partner_installer=self.request.user,
+            visit_date__isnull=False,
+        ).exclude(status__in=self.EXCLUDED_STATUSES)
+
+        month = self.request.query_params.get('month')
+        year = self.request.query_params.get('year')
+        if month and year:
+            queryset = queryset.filter(visit_date__year=year, visit_date__month=month)
+
+        return queryset.order_by('visit_date')

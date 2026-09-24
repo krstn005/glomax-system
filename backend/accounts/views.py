@@ -1,5 +1,10 @@
 import uuid
+import os
+from email.mime.image import MIMEImage
+
 from django.conf import settings
+from django.contrib.auth.hashers import make_password
+from django.core.mail import send_mail, EmailMultiAlternatives
 from rest_framework import generics, permissions, status, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -7,6 +12,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
+
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
@@ -16,9 +22,147 @@ from .serializers import (
     GoogleLoginSerializer,
     ChangePasswordSerializer,
     AdminSetPasswordSerializer,
+    RequestPasswordChangeOtpSerializer,
+    VerifyPasswordChangeOtpSerializer,
 )
-from .models import User
+from .models import User, PasswordChangeOTP
 from accounts.permissions import IsAdmin, IsStaff
+
+
+class RequestChangePasswordOtpView(APIView):
+    """
+    POST /api/accounts/change-password/request-otp/  - Step 1 of the
+    2FA password change flow. Confirms the current password and new
+    password's validity, stages the (hashed) new password, emails a
+    6-digit code to the user's registered email, and returns success -
+    the password itself is NOT changed until verify-otp confirms the
+    code.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = RequestPasswordChangeOtpSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        # Clear out any old unused codes for this user first, so only
+        # the most recently requested code ever works.
+        PasswordChangeOTP.objects.filter(user=request.user, is_used=False).delete()
+
+        code = PasswordChangeOTP.generate_code()
+        PasswordChangeOTP.objects.create(
+            user=request.user,
+            code=code,
+            new_password=make_password(serializer.validated_data['new_password']),
+        )
+
+        plain_message = (
+            f'Your verification code is {code}. It expires in 10 minutes. '
+            f"If you didn't request this, you can safely ignore this email."
+        )
+
+        html_message = f"""
+        <div style="background-color:#f3f4f6;padding:32px 16px;font-family:Arial, Helvetica, sans-serif;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+            <tr>
+              <td style="background-color:#0d1f3c;padding:20px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="vertical-align:middle;padding-right:10px;">
+                      <img src="cid:glomax_logo" width="32" height="32" style="display:block;border-radius:6px;" />
+                    </td>
+                    <td style="vertical-align:middle;">
+                      <span style="color:#ffffff;font-size:17px;font-weight:bold;">Glomax Solar Enterprises</span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <h2 style="margin:0 0 12px;color:#0d1f3c;font-size:20px;">Password Change Verification</h2>
+                <p style="margin:0 0 24px;color:#374151;font-size:14px;line-height:1.6;">
+                  We received a request to change your account password. Use the code below to confirm this change.
+                </p>
+                <div style="text-align:center;margin:0 0 24px;">
+                  <span style="display:inline-block;background-color:#fef9c3;border:1.5px solid #eab308;border-radius:10px;padding:16px 32px;font-size:32px;font-weight:bold;letter-spacing:8px;color:#0d1f3c;">
+                    {code}
+                  </span>
+                </div>
+                <p style="margin:0 0 8px;color:#6b7280;font-size:13px;line-height:1.6;">
+                  This code will expire in <strong>10 minutes</strong>.
+                </p>
+                <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;">
+                  If you didn't request this change, you can safely ignore this email.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background-color:#f9fafb;padding:16px 32px;border-top:1px solid #f1f3f6;">
+                <p style="margin:0;color:#9ca3af;font-size:11.5px;">
+                  This is an automated message from Glomax Solar Enterprises. Please do not reply to this email.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </div>
+        """
+
+        email = EmailMultiAlternatives(
+            subject='Your Glomax password change code',
+            body=plain_message,
+            from_email=None,  # uses DEFAULT_FROM_EMAIL
+            to=[request.user.email],
+        )
+        email.attach_alternative(html_message, "text/html")
+
+        logo_path = os.path.join(settings.BASE_DIR, 'finalsheet', 'static', 'finalsheet', 'logo.jpg')
+        try:
+            with open(logo_path, 'rb') as f:
+                logo_image = MIMEImage(f.read())
+                logo_image.add_header('Content-ID', '<glomax_logo>')
+                logo_image.add_header('Content-Disposition', 'inline', filename='logo.jpg')
+                email.attach(logo_image)
+        except FileNotFoundError:
+            pass  # email still sends fine without the logo if the file isn't found
+
+        email.send()
+
+        return Response({"detail": "A verification code has been sent to your email."})
+
+
+class VerifyChangePasswordOtpView(APIView):
+    """
+    POST /api/accounts/change-password/verify-otp/  - Step 2. Checks
+    the submitted code against the most recent unused, unexpired code
+    for this user, and if it matches, applies the password that was
+    staged in step 1.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = VerifyPasswordChangeOtpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        code = serializer.validated_data['code']
+
+        try:
+            otp = PasswordChangeOTP.objects.filter(
+                user=request.user, is_used=False
+            ).latest('created_at')
+        except PasswordChangeOTP.DoesNotExist:
+            return Response({"detail": "No pending password change. Please start again."}, status=400)
+
+        if otp.is_expired():
+            return Response({"detail": "This code has expired. Please request a new one."}, status=400)
+
+        if otp.code != code:
+            return Response({"detail": "Incorrect code. Please try again."}, status=400)
+
+        request.user.password = otp.new_password  # already hashed in step 1
+        request.user.save()
+        otp.is_used = True
+        otp.save()
+
+        return Response({"detail": "Password updated successfully."})
 
 
 class RegisterView(generics.CreateAPIView):
@@ -218,6 +362,7 @@ class ManagedUserToggleActiveView(APIView):
 
         return Response(ManagedUserSerializer(user).data)
 
+
 class AdminSetWorkerPasswordView(APIView):
     """
     PATCH /api/accounts/manage/<id>/set-password/  - Admin's
@@ -255,40 +400,3 @@ class StaffPartnerInstallerListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsStaff]
     queryset = User.objects.filter(role='PARTNER_INSTALLER', is_active=True).order_by('username')
     serializer_class = ManagedUserSerializer
-
-
-    def post(self, request, pk):
-        ticket = self.get_ticket()
-
-        if ticket.customer_id != request.user.id:
-            raise PermissionDenied("You can only submit feedback for your own ticket.")
-
-        if ticket.status != Ticket.Status.APPROVED:
-            return Response(
-                {"detail": "Feedback will be available once your request is completed."},
-                status=400,
-            )
-
-        if hasattr(ticket, 'feedback'):
-            return Response(
-                {"detail": "Feedback has already been submitted for this ticket."},
-                status=400,
-            )
-
-        serializer = FeedbackCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        feedback = serializer.save(ticket=ticket)
-
-        if ticket.partner_installer_id:
-            from notifications.models import Notification
-            Notification.objects.create(
-                recipient=ticket.partner_installer,
-                kind=Notification.Kind.FEEDBACK_SUBMITTED,
-                message=f"You received a {feedback.rating}-star review for {ticket.ticket_number}.",
-                link="/partner-installer/my-ratings",
-            )
-
-        return Response(
-            FeedbackSerializer(feedback).data,
-            status=status.HTTP_201_CREATED,
-        )

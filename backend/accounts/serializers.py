@@ -1,6 +1,37 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from .models import User
+from django.contrib.auth.hashers import check_password
+
+class RequestPasswordChangeOtpSerializer(serializers.Serializer):
+    """
+    Step 1 of the 2FA password change flow: POST
+    /api/accounts/change-password/request-otp/. Verifies the current
+    password up front (same check ChangePasswordSerializer does) and
+    validates the new password's strength, but does NOT change
+    anything yet - it only emails a 6-digit code. The actual change
+    happens in step 2 (VerifyPasswordChangeOtpSerializer) once that
+    code is confirmed.
+    """
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value
+
+
+class VerifyPasswordChangeOtpSerializer(serializers.Serializer):
+    """
+    Step 2: POST /api/accounts/change-password/verify-otp/. Takes the
+    6-digit code the user just received by email and, if it matches
+    an unused, unexpired code for this user, actually applies the
+    password change that was staged in step 1.
+    """
+    code = serializers.CharField(max_length=6, min_length=6)
+
 
 
 class RegisterSerializer(serializers.ModelSerializer):
