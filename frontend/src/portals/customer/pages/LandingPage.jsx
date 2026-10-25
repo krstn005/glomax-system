@@ -1,12 +1,86 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Home, Building2, Zap, Wrench, ChevronDown } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  Home,
+  Building2,
+  Zap,
+  Wrench,
+  ChevronDown,
+  Menu,
+  X,
+  ArrowRight,
+  ArrowDown,
+  Sun,
+  ShieldCheck,
+  CheckCircle2,
+  Check,
+  ClipboardCheck,
+  FileText,
+  Hammer,
+  Send,
+  Mail,
+  Phone,
+  User,
+  MapPin,
+  Clock,
+  Package,
+  MessageCircle,
+  HelpCircle,
+  Loader2,
+  AlertCircle,
+  Info,
+} from 'lucide-react';
 import { submitInquiry } from '../../../api/inquiries';
 import { sanitizePhoneNumber } from '../../../utils/phone';
 import heroImage from '../assets/images/landing_hero.jpg';
 import aboutImage from '../assets/images/landing_section.jpg';
 import logo from '../../../assets/images/logo.jpg';
 import '../styles/landing.css';
+
+const NAV_ITEMS = [
+  { id: 'hero', label: 'Home' },
+  { id: 'about', label: 'About Us' },
+  { id: 'services', label: 'Services' },
+  { id: 'packages', label: 'Solar Packages' },
+  { id: 'faqs', label: 'FAQs' },
+  { id: 'contact', label: 'Contact Us' },
+];
+
+const HERO_STATS = [
+  { value: '10+ Years', label: 'in the solar industry' },
+  { value: '1 Year', label: 'panel warranty' },
+  { value: '3KW - 10KW', label: 'systems for homes and businesses' },
+];
+
+const ABOUT_POINTS = [
+  'Our own team checks your roof before any work starts',
+  'Your quotation is sent straight to your email',
+  'Track your request anytime from your account',
+  '1-year warranty on every solar panel',
+];
+
+const STEPS = [
+  {
+    icon: Send,
+    title: 'Send an inquiry',
+    text: 'Fill out the short form below. No account needed yet.',
+  },
+  {
+    icon: FileText,
+    title: 'Get a quotation',
+    text: 'We reply through your email with a quotation for your home.',
+  },
+  {
+    icon: ClipboardCheck,
+    title: 'Roof assessment',
+    text: 'Our team visits your property to check if your roof is ready for solar.',
+  },
+  {
+    icon: Hammer,
+    title: 'Installation',
+    text: 'Once approved, our installers set up your system and turn it on.',
+  },
+];
 
 const SERVICES = [
   {
@@ -104,388 +178,881 @@ const FAQS = [
   },
 ];
 
+// Same values as before, so the backend does not need any changes.
 const SUBJECT_OPTIONS = [
-  { value: 'ROOF_ASSESSMENT', label: 'I want to request a roof assessment' },
-  { value: 'PACKAGE_QUESTION', label: 'I have a question about solar packages' },
-  { value: 'OTHER', label: 'Other concern' },
+  {
+    value: 'ROOF_ASSESSMENT',
+    label: 'I want to request a roof assessment',
+    short: 'Roof assessment',
+    hint: 'Have my roof checked',
+    icon: ClipboardCheck,
+  },
+  {
+    value: 'PACKAGE_QUESTION',
+    label: 'I have a question about solar packages',
+    short: 'Solar packages',
+    hint: 'Prices, sizes, quotation',
+    icon: Package,
+  },
+  {
+    value: 'OTHER',
+    label: 'Other concern',
+    short: 'Other concern',
+    hint: 'Anything else',
+    icon: MessageCircle,
+  },
 ];
+
+const NEXT_STEPS = [
+  { icon: Mail, text: 'We read every inquiry and reply through your email.' },
+  { icon: FileText, text: 'If you are asking about a package, we send you a quotation.' },
+  { icon: Clock, text: 'Most inquiries get a reply as soon as possible on working days.' },
+];
+
+const MESSAGE_LIMIT = 1000;
+
+const EMPTY_FORM = {
+  full_name: '',
+  email: '',
+  phone_number: '',
+  subject: 'ROOF_ASSESSMENT',
+  message: '',
+};
+
+function formatPeso(amount) {
+  return `\u20b1${amount.toLocaleString()}`;
+}
+
+// Turns an API error into one short readable sentence.
+function getErrorText(err) {
+  const data = err?.response?.data;
+  if (!data) return 'We could not reach the server. Please check your internet and try again.';
+  if (typeof data === 'string') return 'Something went wrong sending your inquiry. Please try again.';
+  if (data.detail) return data.detail;
+  const firstKey = Object.keys(data)[0];
+  if (firstKey) {
+    const value = Array.isArray(data[firstKey]) ? data[firstKey][0] : data[firstKey];
+    const field = firstKey.replace(/_/g, ' ');
+    if (firstKey === 'non_field_errors') return String(value);
+    return `${field.charAt(0).toUpperCase() + field.slice(1)}: ${value}`;
+  }
+  return 'Something went wrong sending your inquiry. Please try again.';
+}
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const contactRef = useRef(null);
-  const [openFaqIndex, setOpenFaqIndex] = useState(null);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [packageType, setPackageType] = useState('onGrid');
-  const [selectedCapacity, setSelectedCapacity] = useState(
-    () => PACKAGE_TIERS.find((t) => t.mostPopular)?.capacity || PACKAGE_TIERS[0].capacity
-  );
+  const nameInputRef = useRef(null);
 
-  const [form, setForm] = useState({
-    full_name: '',
-    email: '',
-    phone_number: '',
-    subject: 'ROOF_ASSESSMENT',
-    message: '',
-  });
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('hero');
+  const [openFaqIndex, setOpenFaqIndex] = useState(0);
+  const [packageType, setPackageType] = useState('onGrid');
+
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [chosenPackage, setChosenPackage] = useState(null);
   const [phoneWarning, setPhoneWarning] = useState('');
   const [status, setStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Solid nav bar after scrolling a bit
   useEffect(() => {
     function handleScroll() {
       setIsScrolled(window.scrollY > 40);
     }
-    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Highlight the nav link of the section on screen
+  useEffect(() => {
+    const sections = NAV_ITEMS.map((item) => document.getElementById(item.id)).filter(Boolean);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection(entry.target.id);
+        });
+      },
+      { rootMargin: '-45% 0px -50% 0px' }
+    );
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
+
+  // Fade sections in while scrolling
+  useEffect(() => {
+    const items = document.querySelectorAll('[data-reveal]');
+    if (!('IntersectionObserver' in window)) {
+      items.forEach((el) => el.classList.add('lnd-visible'));
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('lnd-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+    items.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  // Close the mobile menu with Esc or when the screen gets wide again
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    function handleKey(e) {
+      if (e.key === 'Escape') setMenuOpen(false);
+    }
+    function handleResize() {
+      if (window.innerWidth > 960) setMenuOpen(false);
+    }
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [menuOpen]);
+
   function scrollToElement(el) {
     if (!el) return;
-    const navbarHeight = 88; // matches scroll-margin-top in landing.css
-    const topPosition = el.getBoundingClientRect().top + window.scrollY - navbarHeight;
-    window.scrollTo({ top: topPosition, behavior: 'smooth' });
-  }
-
-  function scrollToContact() {
-    scrollToElement(contactRef.current);
+    const navbarHeight = 76;
+    const top = el.getBoundingClientRect().top + window.scrollY - navbarHeight;
+    window.scrollTo({ top, behavior: 'smooth' });
   }
 
   function scrollToSection(sectionId) {
-    scrollToElement(document.getElementById(sectionId));
+    setMenuOpen(false);
+    if (sectionId === 'contact') {
+      scrollToElement(contactRef.current);
+    } else {
+      scrollToElement(document.getElementById(sectionId));
+    }
+  }
+
+  function goToContact(subject) {
+    if (subject) setForm((f) => ({ ...f, subject }));
+    if (status !== 'submitting') setStatus('idle');
+    scrollToSection('contact');
+    setTimeout(() => nameInputRef.current?.focus({ preventScroll: true }), 700);
+  }
+
+  // "Get This Package" fills in the form for the customer
+  function inquireAboutPackage(tier) {
+    const typeLabel = packageType === 'onGrid' ? 'On-Grid' : 'Hybrid';
+    const price = formatPeso(tier[packageType].price);
+    setChosenPackage(`${tier.capacity} ${typeLabel}`);
+    setForm((f) => ({
+      ...f,
+      subject: 'PACKAGE_QUESTION',
+      message: `Hi! I'm interested in the ${tier.capacity} ${typeLabel} package (${tier.tierLabel}, ${price}). Can you send me a quotation?`,
+    }));
+    setStatus('idle');
+    setErrorMessage('');
+    scrollToSection('contact');
+    setTimeout(() => nameInputRef.current?.focus({ preventScroll: true }), 700);
+  }
+
+  function clearChosenPackage() {
+    setChosenPackage(null);
+    setForm((f) => ({ ...f, message: '' }));
   }
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+    if (status === 'error') setStatus('idle');
+  }
+
+  function handleSubjectChange(value) {
+    setForm((f) => ({ ...f, subject: value }));
+    if (value !== 'PACKAGE_QUESTION') setChosenPackage(null);
   }
 
   function handlePhoneChange(e) {
     const { value, hadInvalidChar } = sanitizePhoneNumber(e.target.value);
-    setForm({ ...form, phone_number: value });
-    setPhoneWarning(hadInvalidChar ? 'Phone Number can only contain numbers.' : '');
+    setForm((f) => ({ ...f, phone_number: value }));
+    setPhoneWarning(hadInvalidChar ? 'Phone number can only contain numbers.' : '');
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (status === 'submitting') return;
     setStatus('submitting');
     setErrorMessage('');
     try {
-      await submitInquiry(form);
+      await submitInquiry({ ...form, message: form.message.trim() });
       setStatus('success');
-      setForm({ full_name: '', email: '', phone_number: '', subject: 'ROOF_ASSESSMENT', message: '' });
+      setForm(EMPTY_FORM);
+      setChosenPackage(null);
+      setPhoneWarning('');
     } catch (err) {
-      setStatus('error');
       console.error('Inquiry submission failed:', err);
-      setErrorMessage('Something went wrong sending your inquiry. Please try again.');
+      setStatus('error');
+      setErrorMessage(getErrorText(err));
     }
   }
 
+  const selectedSubject = SUBJECT_OPTIONS.find((o) => o.value === form.subject) || SUBJECT_OPTIONS[0];
+  const messageLength = form.message.length;
+  const year = new Date().getFullYear();
+
   return (
-    <div className="landing-page">
-      {/* Nav bar */}
-      <nav className={`landing-navbar ${isScrolled ? 'landing-navbar-solid' : 'landing-navbar-transparent'}`}>
-        <div className="landing-navbar-brand">
-          <img src={logo} alt="Glomax Solar Enterprises" className="landing-navbar-logo" />
-          <span>Glomax Solar Enterprises</span>
-        </div>
-        <div className="landing-navbar-links">
-          <a onClick={() => scrollToSection('hero')}>Home</a>
-          <a onClick={() => scrollToSection('about')}>About Us</a>
-          <a onClick={() => scrollToSection('services')}>Services</a>
-          <a onClick={() => scrollToSection('packages')}>Solar Packages</a>
-          <a onClick={() => scrollToSection('faqs')}>FAQs</a>
-          <a onClick={scrollToContact}>Contact Us</a>
-        </div>
-        <div className="landing-navbar-actions">
-          <button className="landing-signin-link" onClick={() => navigate('/login')}>
-            Sign In
+    <div className="lnd-page">
+      {/* ---------- Nav bar ---------- */}
+      <header className={`lnd-nav ${isScrolled || menuOpen ? 'lnd-nav-solid' : ''}`}>
+        <div className="lnd-nav-inner">
+          <button type="button" className="lnd-brand" onClick={() => scrollToSection('hero')}>
+            <span className="lnd-brand-logo">
+              <img src={logo} alt="" />
+            </span>
+            <span className="lnd-brand-text">
+              <strong>Glomax Solar</strong>
+              <small>Enterprises</small>
+            </span>
           </button>
-          <button className="landing-login-btn" onClick={() => navigate('/login')}>
-            Login
-          </button>
-        </div>
-      </nav>
 
-      {/* Hero */}
-      <section
-        id="hero"
-        className="landing-hero"
-        style={{ backgroundImage: `linear-gradient(to right, rgba(15, 30, 53, 0.85), rgba(15, 30, 53, 0.5)), url(${heroImage})` }}
-      >
-        <div className="landing-hero-content">
-          <h1>
-            Save on Electricity
-            <br />
-            <span className="highlight">with Solar Energy</span>
-          </h1>
-          <p>
-            Switch to clean, renewable solar energy and cut your electricity bills by up to 80%.
-            Glomax Solar Enterprises provides professional installation for residential and
-            commercial properties across the Philippines.
-          </p>
-          <div className="landing-hero-buttons">
-            <button className="landing-btn-primary" onClick={scrollToContact}>
-              Inquire Now
+          <nav className="lnd-nav-links" aria-label="Main">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`lnd-nav-link ${activeSection === item.id ? 'active' : ''}`}
+                onClick={() => scrollToSection(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="lnd-nav-actions">
+            <button type="button" className="lnd-nav-signin" onClick={() => navigate('/login')}>
+              Sign In
             </button>
-            <a href="#services" style={{ textDecoration: 'none' }}>
-              <button className="landing-btn-secondary">View Our Services</button>
-            </a>
-          </div>
-          <div className="landing-hero-stats">
-            <div className="landing-hero-stat">
-              <strong>10+ Years</strong>
-              <span>in the Solar Industry</span>
-            </div>
-            <div className="landing-hero-stat">
-              <strong>98%</strong>
-              <span>Satisfaction Rate</span>
-            </div>
+            <button type="button" className="lnd-btn lnd-btn-gold lnd-btn-sm" onClick={() => goToContact('PACKAGE_QUESTION')}>
+              Get a Quote
+            </button>
+            <button
+              type="button"
+              className="lnd-menu-btn"
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((o) => !o)}
+            >
+              {menuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
           </div>
         </div>
-      </section>
 
-      {/* About */}
-      <section id="about" className="landing-section">
-        <div className="landing-about-grid">
-          <div>
-            <div className="landing-section-label">About Us</div>
-            <h2>Powering Filipino Homes Since 2014</h2>
+        <div className={`lnd-mobile-menu ${menuOpen ? 'open' : ''}`}>
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`lnd-mobile-link ${activeSection === item.id ? 'active' : ''}`}
+              onClick={() => scrollToSection(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+          <div className="lnd-mobile-actions">
+            <button type="button" className="lnd-btn lnd-btn-ghost-dark" onClick={() => navigate('/login')}>
+              Sign In
+            </button>
+            <button type="button" className="lnd-btn lnd-btn-gold" onClick={() => goToContact('PACKAGE_QUESTION')}>
+              Get a Quote
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ---------- Hero ---------- */}
+      <section id="hero" className="lnd-hero" style={{ backgroundImage: `url(${heroImage})` }}>
+        <div className="lnd-hero-overlay" />
+        <div className="lnd-container lnd-hero-inner">
+          <div className="lnd-hero-content">
+            <span className="lnd-hero-badge">
+              <Sun size={15} />
+              Solar installer based in Manila
+            </span>
+            <h1>
+              Save on Electricity
+              <br />
+              <span>with Solar Energy</span>
+            </h1>
             <p>
               Switch to clean, renewable solar energy and cut your electricity bills by up to 80%.
               Glomax Solar Enterprises provides professional installation for residential and
               commercial properties across the Philippines.
             </p>
-            <p>
-              Glomax Enterprises Solar is a solar installation company based in Manila, Philippines
+            <div className="lnd-hero-buttons">
+              <button type="button" className="lnd-btn lnd-btn-gold lnd-btn-lg" onClick={() => goToContact('ROOF_ASSESSMENT')}>
+                Inquire Now
+              </button>
+              <button type="button" className="lnd-btn lnd-btn-glass lnd-btn-lg" onClick={() => scrollToSection('packages')}>
+                View Packages
+              </button>
+            </div>
+          </div>
+
+          <div className="lnd-hero-stats">
+            {HERO_STATS.map((stat) => (
+              <div className="lnd-hero-stat" key={stat.label}>
+                <strong>{stat.value}</strong>
+                <span>{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button type="button" className="lnd-scroll-hint" onClick={() => scrollToSection('about')} aria-label="Scroll down">
+          <ArrowDown size={18} />
+        </button>
+      </section>
+
+      {/* ---------- About ---------- */}
+      <section id="about" className="lnd-section">
+        <div className="lnd-container lnd-about" data-reveal>
+          <div className="lnd-about-media">
+            <div className="lnd-about-frame">
+              <img src={aboutImage} alt="Glomax solar installation team at work" />
+            </div>
+            <div className="lnd-about-badge">
+              <strong>2014</strong>
+              <span>Powering homes since</span>
+            </div>
+          </div>
+
+          <div className="lnd-about-text">
+            <span className="lnd-eyebrow">About Us</span>
+            <h2 className="lnd-title">Powering Filipino Homes Since 2014</h2>
+            <p className="lnd-lead">
+              Glomax Solar Enterprises is a solar installation company based in Manila, Philippines
               with over 10 years of experience helping homeowners get solar panels installed at
-              their properties. We are committed to making clean and renewable energy accessible
-              and affordable for every Filipino family.
+              their properties.
+            </p>
+            <p className="lnd-body">
+              We are committed to making clean and renewable energy accessible and affordable for
+              every Filipino family.
+            </p>
+            <ul className="lnd-about-points">
+              {ABOUT_POINTS.map((point) => (
+                <li key={point}>
+                  <span className="lnd-check">
+                    <Check size={14} strokeWidth={3} />
+                  </span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- How it works ---------- */}
+      <section id="how" className="lnd-section lnd-section-tint">
+        <div className="lnd-container">
+          <div className="lnd-section-head" data-reveal>
+            <span className="lnd-eyebrow">How It Works</span>
+            <h2 className="lnd-title">From Inquiry to Installation in 4 Steps</h2>
+            <p className="lnd-subtitle">No account needed to get started. Just send us a message.</p>
+          </div>
+
+          <ol className="lnd-steps" data-reveal>
+            {STEPS.map((step, i) => {
+              const Icon = step.icon;
+              return (
+                <li className="lnd-step" key={step.title}>
+                  <div className="lnd-step-top">
+                    <span className="lnd-step-icon">
+                      <Icon size={22} />
+                    </span>
+                    <span className="lnd-step-num">0{i + 1}</span>
+                  </div>
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      </section>
+
+      {/* ---------- Services ---------- */}
+      <section id="services" className="lnd-section">
+        <div className="lnd-container">
+          <div className="lnd-section-head" data-reveal>
+            <span className="lnd-eyebrow">Our Services</span>
+            <h2 className="lnd-title">Solar Solutions for Every Need</h2>
+            <p className="lnd-subtitle">
+              From residential homes to large commercial buildings, we have the right solar package
+              for you.
             </p>
           </div>
-          <img src={aboutImage} alt="Glomax solar installation team" className="landing-about-image" />
+
+          <div className="lnd-services" data-reveal>
+            {SERVICES.map((service) => {
+              const Icon = service.icon;
+              return (
+                <article className="lnd-service" key={service.title}>
+                  <div className="lnd-service-top">
+                    <span className="lnd-service-icon">
+                      <Icon size={22} />
+                    </span>
+                    <span className="lnd-service-tag">{service.tag}</span>
+                  </div>
+                  <h3>{service.title}</h3>
+                  <p>{service.description}</p>
+                </article>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* Services */}
-      <section id="services" className="landing-section">
-        <div className="landing-section-header">
-          <div className="landing-section-label" style={{ textAlign: 'center' }}>Our Services</div>
-          <h2 style={{ textAlign: 'center' }}>Solar Solutions for Every Need</h2>
-          <p style={{ textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
-            From residential homes to large commercial buildings, we have the right solar package
-            for you.
-          </p>
-        </div>
-        <div className="landing-grid">
-          {SERVICES.map((service) => {
-            const Icon = service.icon;
-            return (
-              <div className="landing-package-card" key={service.title}>
-                <div className="landing-service-icon">
-                  <Icon size={20} />
-                </div>
-                <div className="landing-package-tag">{service.tag}</div>
-                <h3>{service.title}</h3>
-                <p className="landing-package-subtitle">{service.description}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      {/* ---------- Packages ---------- */}
+      <section id="packages" className="lnd-section lnd-section-navy">
+        <div className="lnd-container">
+          <div className="lnd-section-head lnd-section-head-light" data-reveal>
+            <span className="lnd-eyebrow">Solar Packages</span>
+            <h2 className="lnd-title">Choose the Right System for You</h2>
+            <p className="lnd-subtitle">
+              On-Grid is the budget-friendly choice. Hybrid adds a battery for power at night and
+              during brownouts.
+            </p>
+          </div>
 
-      {/* Solar Packages */}
-      <section id="packages" className="landing-section">
-        <div className="landing-section-header">
-          <div className="landing-section-label" style={{ textAlign: 'center' }}>Solar Packages</div>
-          <h2 style={{ textAlign: 'center' }}>Choose the Right System for You</h2>
-        </div>
-
-        <div className="landing-package-toggle">
-          <button
-            className={packageType === 'onGrid' ? 'active' : ''}
-            onClick={() => setPackageType('onGrid')}
-          >
-            On-Grid
-          </button>
-          <button
-            className={packageType === 'hybrid' ? 'active' : ''}
-            onClick={() => setPackageType('hybrid')}
-          >
-            Hybrid
-          </button>
-        </div>
-
-        <div className="landing-grid landing-grid-4">
-          {PACKAGE_TIERS.map((tier) => {
-            const data = tier[packageType];
-            const isSelected = tier.capacity === selectedCapacity;
-            return (
-              <div
-                className={`landing-package-card landing-package-selectable ${isSelected ? 'landing-package-featured' : ''}`}
-                key={tier.capacity}
-                onClick={() => setSelectedCapacity(tier.capacity)}
+          <div className="lnd-toggle-wrap" data-reveal>
+            <div className={`lnd-toggle ${packageType === 'hybrid' ? 'right' : ''}`} role="tablist" aria-label="Package type">
+              <span className="lnd-toggle-pill" aria-hidden="true" />
+              <button
+                type="button"
+                role="tab"
+                aria-selected={packageType === 'onGrid'}
+                className={packageType === 'onGrid' ? 'active' : ''}
+                onClick={() => setPackageType('onGrid')}
               >
-                {isSelected && (
-                  <div className="landing-package-badge">
-                    {tier.mostPopular ? 'Most Popular' : 'Selected'}
-                  </div>
-                )}
-                <h3>{tier.capacity} {packageType === 'onGrid' ? 'On-Grid' : 'Hybrid'}</h3>
-                <p className="landing-package-subtitle">{tier.tierLabel}</p>
-                <div className="landing-package-price">&#8369;{data.price.toLocaleString()}</div>
-                <ul className="landing-package-specs">
-                  <li>{tier.panels}</li>
-                  <li>{tier.inverter}</li>
-                  <li>Roof area: {tier.roofArea}</li>
-                  {packageType === 'hybrid' && <li>Battery Backup (100AH)</li>}
-                  <li>Est. savings: {data.monthlySavings}/mo</li>
-                  <li>Return on investment: {data.roi}</li>
-                  <li>25-Year Warranty</li>
-                </ul>
-                <button
-                  className={isSelected ? 'landing-btn-primary' : 'landing-btn-outline'}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedCapacity(tier.capacity);
-                    navigate('/login');
-                  }}
-                >
-                  Get This Package
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+                <Sun size={16} />
+                On-Grid
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={packageType === 'hybrid'}
+                className={packageType === 'hybrid' ? 'active' : ''}
+                onClick={() => setPackageType('hybrid')}
+              >
+                <Zap size={16} />
+                Hybrid
+              </button>
+            </div>
+          </div>
 
-      {/* FAQs */}
-      <section id="faqs" className="landing-section">
-        <div className="landing-section-header">
-          <div className="landing-section-label" style={{ textAlign: 'center' }}>FAQs</div>
-          <h2 style={{ textAlign: 'center' }}>Frequently Asked Questions</h2>
-        </div>
-        <div className="landing-faq-list">
-          {FAQS.map((faq, index) => {
-            const isOpen = openFaqIndex === index;
-            return (
-              <div className="landing-faq-item" key={faq.question}>
-                <button
-                  type="button"
-                  className="landing-faq-question"
-                  onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                >
-                  <span>{faq.question}</span>
-                  <span className={`landing-faq-chevron ${isOpen ? 'open' : ''}`}>
-                    <ChevronDown size={18} />
-                  </span>
-                </button>
-                <div className={`landing-faq-answer-wrapper ${isOpen ? 'open' : ''}`}>
-                  <div className="landing-faq-answer-inner">
-                    <div className="landing-faq-answer">{faq.answer}</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+          <div className="lnd-packages" data-reveal>
+            {PACKAGE_TIERS.map((tier) => {
+              const data = tier[packageType];
+              return (
+                <article className={`lnd-package ${tier.mostPopular ? 'featured' : ''}`} key={tier.capacity}>
+                  {tier.mostPopular && <span className="lnd-package-badge">Most Popular</span>}
+                  <p className="lnd-package-label">{tier.tierLabel}</p>
+                  <h3>
+                    {tier.capacity}
+                    <span>{packageType === 'onGrid' ? 'On-Grid' : 'Hybrid'}</span>
+                  </h3>
+                  <div className="lnd-package-price">{formatPeso(data.price)}</div>
+                  <p className="lnd-package-save">Save about {data.monthlySavings} a month</p>
 
-      {/* Contact / Inquiry form */}
-      <section className="landing-section landing-contact" ref={contactRef}>
-        <div className="landing-section-header">
-          <div className="landing-section-label" style={{ textAlign: 'center' }}>Contact Us</div>
-          <h2 style={{ textAlign: 'center' }}>Send Us an Inquiry</h2>
-          <p style={{ textAlign: 'center', maxWidth: 480, margin: '0 auto' }}>
-            Fill out the form below and we will get back to you through your email as soon as possible.
+                  <ul className="lnd-package-specs">
+                    <li><Check size={15} strokeWidth={3} />{tier.panels}</li>
+                    <li><Check size={15} strokeWidth={3} />{tier.inverter}</li>
+                    <li><Check size={15} strokeWidth={3} />Roof area: {tier.roofArea}</li>
+                    {packageType === 'hybrid' && (
+                      <li><Check size={15} strokeWidth={3} />Battery backup (100AH)</li>
+                    )}
+                    <li><Check size={15} strokeWidth={3} />Pays for itself in {data.roi}</li>
+                    <li><Check size={15} strokeWidth={3} />1-year warranty</li>
+                  </ul>
+
+                  <button
+                    type="button"
+                    className={`lnd-btn ${tier.mostPopular ? 'lnd-btn-gold' : 'lnd-btn-outline-light'} lnd-btn-block`}
+                    onClick={() => inquireAboutPackage(tier)}
+                  >
+                    Get This Package
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+
+          <p className="lnd-packages-note" data-reveal>
+            <Info size={15} />
+            Final price is confirmed after the roof assessment. Already have an account?{' '}
+            <Link to="/login">Sign in to request</Link>
           </p>
         </div>
+      </section>
 
-        <div className="landing-form-wrapper">
-          {status === 'success' && (
-            <div className="landing-form-success">
-              Thank you! Your inquiry has been received. We'll get back to you soon.
-            </div>
-          )}
-          {status === 'error' && <div className="landing-form-error">{errorMessage}</div>}
-
-          <form className="landing-form" onSubmit={handleSubmit}>
-            <div className="landing-form-row">
-              <div className="landing-form-field">
-                <label htmlFor="full_name">Full Name</label>
-                <input
-                  id="full_name"
-                  name="full_name"
-                  type="text"
-                  value={form.full_name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="landing-form-field">
-                <label htmlFor="phone_number">Phone Number</label>
-                <input
-                  id="phone_number"
-                  name="phone_number"
-                  type="tel"
-                  inputMode="numeric"
-                  value={form.phone_number}
-                  onChange={handlePhoneChange}
-                  required
-                />
-                {phoneWarning && <p className="landing-field-warning">{phoneWarning}</p>}
+      {/* ---------- FAQs ---------- */}
+      <section id="faqs" className="lnd-section">
+        <div className="lnd-container lnd-faq" data-reveal>
+          <div className="lnd-faq-side">
+            <span className="lnd-eyebrow">FAQs</span>
+            <h2 className="lnd-title">Frequently Asked Questions</h2>
+            <p className="lnd-body">
+              Quick answers to what most homeowners ask us before getting solar.
+            </p>
+            <div className="lnd-help-card">
+              <span className="lnd-help-icon">
+                <HelpCircle size={22} />
+              </span>
+              <div>
+                <h3>Still have questions?</h3>
+                <p>Send us a message and our team will get back to you.</p>
+                <button type="button" className="lnd-text-link" onClick={() => goToContact('OTHER')}>
+                  Ask us directly
+                </button>
               </div>
             </div>
+          </div>
 
-            <div className="landing-form-row">
-              <div className="landing-form-field">
-                <label htmlFor="email">Email Address</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="landing-form-field">
-                <label htmlFor="subject">Subject</label>
-                <select id="subject" name="subject" value={form.subject} onChange={handleChange}>
-                  {SUBJECT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="landing-form-field">
-              <label htmlFor="message">Message</label>
-              <textarea
-                id="message"
-                name="message"
-                placeholder="Describe your concern or inquiry here..."
-                value={form.message}
-                onChange={handleChange}
-                required
-              />
-              <p className="landing-field-hint">
-                If this is a follow-up to a previous inquiry, please mention it in your message
-                (e.g. your name and roughly when you first reached out) so our team can assist
-                you faster.
-              </p>
-            </div>
-
-            <button type="submit" className="landing-btn-primary" disabled={status === 'submitting'}>
-              {status === 'submitting' ? 'Sending...' : 'Send Inquiry'}
-            </button>
-          </form>
+          <div className="lnd-faq-list">
+            {FAQS.map((faq, index) => {
+              const isOpen = openFaqIndex === index;
+              return (
+                <div className={`lnd-faq-item ${isOpen ? 'open' : ''}`} key={faq.question}>
+                  <button
+                    type="button"
+                    className="lnd-faq-q"
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                  >
+                    <span>{faq.question}</span>
+                    <span className="lnd-faq-chevron">
+                      <ChevronDown size={18} />
+                    </span>
+                  </button>
+                  <div className="lnd-faq-a">
+                    <div className="lnd-faq-a-inner">
+                      <p>{faq.answer}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="landing-footer">
-        <p>&copy; {new Date().getFullYear()} Glomax Solar Enterprises. All rights reserved.</p>
+      {/* ---------- Contact ---------- */}
+      <section id="contact" ref={contactRef} className="lnd-section lnd-section-tint">
+        <div className="lnd-container">
+          <div className="lnd-section-head" data-reveal>
+            <span className="lnd-eyebrow">Contact Us</span>
+            <h2 className="lnd-title">Send Us an Inquiry</h2>
+            <p className="lnd-subtitle">
+              Fill out the form and we will get back to you through your email as soon as possible.
+            </p>
+          </div>
+
+          <div className="lnd-contact" data-reveal>
+            {/* Info side */}
+            <aside className="lnd-contact-info">
+              <div className="lnd-contact-glow" aria-hidden="true" />
+              <div className="lnd-contact-info-top">
+                <h3>What happens next?</h3>
+                <ol className="lnd-next-steps">
+                  {NEXT_STEPS.map((step, i) => {
+                    const Icon = step.icon;
+                    return (
+                      <li key={step.text}>
+                        <span className="lnd-next-icon">
+                          <Icon size={17} />
+                          <em>{i + 1}</em>
+                        </span>
+                        <p>{step.text}</p>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+
+              <div className="lnd-contact-facts">
+                <div className="lnd-fact">
+                  <MapPin size={17} />
+                  <span>Based in Manila, Philippines</span>
+                </div>
+                <div className="lnd-fact">
+                  <ShieldCheck size={17} />
+                  <span>No account needed to send an inquiry</span>
+                </div>
+              </div>
+
+              <div className="lnd-contact-info-bottom">
+                <span>Already a customer?</span>
+                <Link to="/login">
+                  Sign in to your account
+                </Link>
+              </div>
+            </aside>
+
+            {/* Form side */}
+            <div className="lnd-form-card">
+              {status === 'success' ? (
+                <div className="lnd-success">
+                  <span className="lnd-success-icon">
+                    <CheckCircle2 size={38} />
+                  </span>
+                  <h3>Inquiry sent!</h3>
+                  <p>
+                    Thank you for reaching out. We received your message and will reply through
+                    your email soon. Please also check your spam folder.
+                  </p>
+                  <div className="lnd-success-actions">
+                    <button type="button" className="lnd-btn lnd-btn-navy" onClick={() => setStatus('idle')}>
+                      Send another inquiry
+                    </button>
+                    <button type="button" className="lnd-btn lnd-btn-soft" onClick={() => scrollToSection('packages')}>
+                      Browse packages
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form className="lnd-form" onSubmit={handleSubmit}>
+                  {/* Subject picker (replaces the old dropdown) */}
+                  <fieldset className="lnd-fieldset">
+                    <legend className="lnd-label">What can we help you with?</legend>
+                    <div className="lnd-subjects">
+                      {SUBJECT_OPTIONS.map((opt) => {
+                        const Icon = opt.icon;
+                        const checked = form.subject === opt.value;
+                        return (
+                          <label key={opt.value} className={`lnd-subject ${checked ? 'checked' : ''}`}>
+                            <input
+                              type="radio"
+                              name="subject"
+                              value={opt.value}
+                              checked={checked}
+                              onChange={() => handleSubjectChange(opt.value)}
+                              className="lnd-sr-only"
+                            />
+                            <span className="lnd-subject-icon">
+                              <Icon size={18} />
+                            </span>
+                            <span className="lnd-subject-text">
+                              <strong>{opt.short}</strong>
+                              <small>{opt.hint}</small>
+                            </span>
+                            <span className="lnd-subject-check" aria-hidden="true">
+                              <Check size={12} strokeWidth={3.5} />
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  <div className="lnd-row">
+                    <div className="lnd-field">
+                      <label className="lnd-label" htmlFor="full_name">Full Name</label>
+                      <div className="lnd-input">
+                        <User size={17} className="lnd-input-icon" />
+                        <input
+                          ref={nameInputRef}
+                          id="full_name"
+                          name="full_name"
+                          type="text"
+                          autoComplete="name"
+                          placeholder="Juan Dela Cruz"
+                          value={form.full_name}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="lnd-field">
+                      <label className="lnd-label" htmlFor="phone_number">Phone Number</label>
+                      <div className="lnd-input">
+                        <Phone size={17} className="lnd-input-icon" />
+                        <input
+                          id="phone_number"
+                          name="phone_number"
+                          type="tel"
+                          inputMode="numeric"
+                          autoComplete="tel"
+                          placeholder="09171234567"
+                          value={form.phone_number}
+                          onChange={handlePhoneChange}
+                          required
+                        />
+                      </div>
+                      {phoneWarning && (
+                        <p className="lnd-field-warn">
+                          <AlertCircle size={13} />
+                          {phoneWarning}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="lnd-field">
+                    <label className="lnd-label" htmlFor="email">Email Address</label>
+                    <div className="lnd-input">
+                      <Mail size={17} className="lnd-input-icon" />
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder="juan@email.com"
+                        value={form.email}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+                    <p className="lnd-field-hint">We will send our reply to this email.</p>
+                  </div>
+
+                  <div className="lnd-field">
+                    <div className="lnd-label-row">
+                      <label className="lnd-label" htmlFor="message">Message</label>
+                      {chosenPackage && form.subject === 'PACKAGE_QUESTION' && (
+                        <span className="lnd-chip">
+                          <Package size={13} />
+                          {chosenPackage}
+                          <button type="button" onClick={clearChosenPackage} aria-label="Remove package">
+                            <X size={12} />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                    <textarea
+                      id="message"
+                      name="message"
+                      rows={5}
+                      maxLength={MESSAGE_LIMIT}
+                      placeholder={
+                        selectedSubject.value === 'ROOF_ASSESSMENT'
+                          ? 'Tell us your city or barangay and the type of roof you have...'
+                          : selectedSubject.value === 'PACKAGE_QUESTION'
+                          ? 'Which package are you interested in? Ask us anything about it...'
+                          : 'Describe your concern or inquiry here...'
+                      }
+                      value={form.message}
+                      onChange={handleChange}
+                      required
+                    />
+                    <div className="lnd-message-foot">
+                      <p className="lnd-field-hint">
+                        Following up on an earlier inquiry? Mention your name and roughly when you
+                        first reached out.
+                      </p>
+                      <span className={`lnd-counter ${messageLength > MESSAGE_LIMIT - 50 ? 'warn' : ''}`}>
+                        {messageLength}/{MESSAGE_LIMIT}
+                      </span>
+                    </div>
+                  </div>
+
+                  {status === 'error' && (
+                    <div className="lnd-form-error" role="alert">
+                      <AlertCircle size={17} />
+                      <span>{errorMessage}</span>
+                    </div>
+                  )}
+
+                  <button type="submit" className="lnd-btn lnd-btn-gold lnd-btn-lg lnd-btn-block" disabled={status === 'submitting'}>
+                    {status === 'submitting' ? (
+                      <>
+                        <Loader2 size={18} className="lnd-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        Send Inquiry
+                        <Send size={17} />
+                      </>
+                    )}
+                  </button>
+                  <p className="lnd-form-note">
+                    By sending this form, you agree that we may contact you about your inquiry.
+                  </p>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- CTA strip ---------- */}
+      <section className="lnd-cta">
+        <div className="lnd-container lnd-cta-inner" data-reveal>
+          <div>
+            <h2>Ready to lower your electric bill?</h2>
+            <p>Start with a free inquiry. We will help you pick the right system for your home.</p>
+          </div>
+          <div className="lnd-cta-buttons">
+            <button type="button" className="lnd-btn lnd-btn-navy lnd-btn-lg" onClick={() => goToContact('ROOF_ASSESSMENT')}>
+              Request a Roof Check
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- Footer ---------- */}
+      <footer className="lnd-footer">
+        <div className="lnd-container lnd-footer-grid">
+          <div className="lnd-footer-brand">
+            <div className="lnd-footer-logo">
+              <span className="lnd-brand-logo">
+                <img src={logo} alt="" />
+              </span>
+              <strong>Glomax Solar Enterprises</strong>
+            </div>
+            <p>
+              Clean and affordable solar energy for Filipino homes and businesses since 2014.
+            </p>
+            <span className="lnd-footer-place">
+              <MapPin size={15} />
+              Manila, Philippines
+            </span>
+          </div>
+
+          <div className="lnd-footer-col">
+            <h4>Explore</h4>
+            {NAV_ITEMS.slice(1).map((item) => (
+              <button key={item.id} type="button" onClick={() => scrollToSection(item.id)}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="lnd-footer-col">
+            <h4>Customers</h4>
+            <Link to="/login">Sign In</Link>
+            <Link to="/register">Create an Account</Link>
+            <button type="button" onClick={() => goToContact('ROOF_ASSESSMENT')}>Request a Roof Check</button>
+          </div>
+
+          <div className="lnd-footer-col">
+            <h4>Team Login</h4>
+            <Link to="/staff-login">Staff</Link>
+            <Link to="/partner-installer-login">Partner Installer</Link>
+            <Link to="/admin-login">Admin</Link>
+          </div>
+        </div>
+
+        <div className="lnd-container lnd-footer-bottom">
+          <p>&copy; {year} Glomax Solar Enterprises. All rights reserved.</p>
+          <button type="button" onClick={() => scrollToSection('hero')}>
+            Back to top <ArrowRight size={14} className="lnd-up" />
+          </button>
+        </div>
       </footer>
     </div>
   );

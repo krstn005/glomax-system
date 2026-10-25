@@ -1,101 +1,1022 @@
-.pi-it-loading,
-.pi-it-error {
-  color: #6b7280;
-  font-size: 14px;
-}
+/* ===== Partner Installer Incoming Tickets (piit-) ===== */
 
-.pi-it-error {
-  color: #dc2626;
-}
-
-.pi-it-card {
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.pi-it-empty {
-  padding: 24px 20px;
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.pi-it-table {
+.piit-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   width: 100%;
+  color: #0f172a;
+  container-type: inline-size;
+  container-name: piit-page;
 }
 
-.pi-it-row {
-  display: grid;
-  grid-template-columns: 1fr 1.4fr 1.6fr 1fr 1.1fr 0.8fr;
+.piit-page *,
+.piit-page *::before,
+.piit-page *::after {
+  box-sizing: border-box;
+}
+
+.piit-page button,
+.piit-page input {
+  font-family: inherit;
+}
+
+/* Shared colour tones */
+.piit-page .tone-navy { --tone-bg: #eef1f6; --tone-fg: #0d1f3c; --tone-solid: #0d1f3c; }
+.piit-page .tone-blue { --tone-bg: #dbeafe; --tone-fg: #1e40af; --tone-solid: #3b82f6; }
+.piit-page .tone-gold { --tone-bg: #fef3c7; --tone-fg: #b45309; --tone-solid: #eab308; }
+.piit-page .tone-green { --tone-bg: #dcfce7; --tone-fg: #166534; --tone-solid: #16a34a; }
+.piit-page .tone-red { --tone-bg: #fee2e2; --tone-fg: #991b1b; --tone-solid: #dc2626; }
+
+/* ---------- Banner ---------- */
+
+.piit-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
   align-items: center;
-  padding: 14px 20px;
-  border-top: 1px solid #f3f4f6;
-  gap: 12px;
+  gap: 18px;
+  padding: 24px 28px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #0d1f3c 0%, #16325e 70%, #1b3a6b 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 34px rgba(13, 31, 60, 0.22);
 }
 
-.pi-it-head {
+.piit-hero-glow {
+  position: absolute;
+  top: -150px;
+  right: 6%;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.24) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.piit-hero-icon {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: 16px;
+  background: rgba(250, 204, 21, 0.12);
+  color: #facc15;
+}
+
+.piit-hero-text {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.piit-hero h1 {
+  margin: 0 0 5px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+.piit-hero p {
+  margin: 0;
+  font-size: 14.5px;
+  color: #cbd5e1;
+}
+
+.piit-hero-actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.piit-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.piit-hero-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.piit-hero-btn.glass {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.piit-hero-btn.glass:hover:not(:disabled) {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.piit-page .spin {
+  animation: piitSpin 0.9s linear infinite;
+}
+
+@keyframes piitSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Overdue assessments ---------- */
+
+.piit-alert {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  border-radius: 14px;
+  background: #fef2f2;
+}
+
+.piit-alert-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.piit-alert-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.piit-alert-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #991b1b;
+}
+
+.piit-alert-sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.piit-alert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
   background: #0d1f3c;
   color: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.piit-alert-btn svg {
+  color: #facc15;
+  transition: transform 0.2s ease;
+}
+
+.piit-alert-btn:hover {
+  background: #16325e;
+}
+
+.piit-alert-btn:hover svg {
+  transform: translateX(3px);
+}
+
+/* ---------- Cards ---------- */
+
+.piit-card {
+  min-width: 0;
+  border: 1px solid #eef2f7;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(13, 31, 60, 0.04), 0 6px 16px rgba(13, 31, 60, 0.05);
+  container-type: inline-size;
+  container-name: piit-card;
+}
+
+.piit-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid #f1f4f8;
+}
+
+.piit-card-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--tone-bg);
+  color: var(--tone-fg);
+}
+
+.piit-card-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.piit-card-head-text h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.piit-card-head-text p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+/* ---------- Empty and error states ---------- */
+
+.piit-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px 52px;
+  text-align: center;
+}
+
+.piit-empty-state.small {
+  padding: 32px 20px 36px;
+}
+
+.piit-empty-badge {
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #eef1f6;
+  color: #0d1f3c;
+  box-shadow: 0 0 0 7px #f5f7fb;
+}
+
+.piit-empty-badge-red {
+  background: #fee2e2;
+  color: #dc2626;
+  box-shadow: 0 0 0 7px #fef2f2;
+}
+
+.piit-empty-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.piit-empty-hint {
+  margin: 0;
+  font-size: 13.5px;
+  color: #6b7280;
+}
+
+.piit-btn-primary,
+.piit-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.piit-btn-primary {
+  border: none;
+  background: #0d1f3c;
+  color: #ffffff;
+}
+
+.piit-btn-primary:hover {
+  background: #16294f;
+  box-shadow: 0 6px 16px rgba(13, 31, 60, 0.2);
+}
+
+.piit-btn-secondary {
+  border: 1px solid #dfe4ec;
+  background: #ffffff;
+  color: #0d1f3c;
+}
+
+.piit-btn-secondary:hover {
+  border-color: #c7d0dd;
+  background: #eef1f6;
+}
+
+/* ---------- Skeleton loading ---------- */
+
+.piit-skel {
+  display: inline-block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #eef0f3 25%, #f7f8fa 37%, #eef0f3 63%);
+  background-size: 400% 100%;
+  animation: piit-shimmer 1.4s ease infinite;
+}
+
+.piit-skel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.piit-skel-w-sm { width: 80px; }
+.piit-skel-w-md { width: 120px; }
+.piit-skel-w-lg { width: 220px; max-width: 100%; }
+.piit-skel-pill { width: 76px; height: 24px; border-radius: 999px; }
+
+@keyframes piit-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* ---------- Pagination ---------- */
+
+.piit-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 20px 14px;
+  border-top: 1px solid #f1f4f8;
+  border-radius: 0 0 18px 18px;
+  background: #fafbfd;
+}
+
+.piit-pagination-info {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.piit-pagination-info strong {
+  color: #0d1f3c;
+}
+
+.piit-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.piit-page-btn,
+.piit-page-num {
+  min-width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0 8px;
+  border: 1px solid #dfe4ec;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0d1f3c;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.piit-page-btn:hover:not(:disabled),
+.piit-page-num:hover:not(.active) {
+  border-color: #c7d0dd;
+  background: #eef1f6;
+}
+
+.piit-page-num.active {
+  border-color: #0d1f3c;
+  background: #0d1f3c;
+  color: #facc15;
+}
+
+.piit-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.piit-page-gap {
+  padding: 0 4px;
+  color: #94a3b8;
+}
+
+/* ---------- Status badge ---------- */
+
+.piit-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  border-top: none;
+  white-space: nowrap;
 }
 
-.pi-it-ticket {
-  color: #2563eb;
-  font-weight: 600;
-  font-size: 14px;
+.piit-status-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
 }
 
-.pi-it-row:not(.pi-it-head) span {
-  font-size: 14px;
-  color: #374151;
+/* More colour tones for this page */
+.piit-page .tone-amber { --tone-bg: #fef3c7; --tone-fg: #b45309; --tone-solid: #eab308; }
+.piit-page .tone-gray { --tone-bg: #f1f5f9; --tone-fg: #64748b; --tone-solid: #94a3b8; }
+.piit-page .tone-gold { --tone-bg: #0d1f3c; --tone-fg: #facc15; --tone-solid: #facc15; }
+
+/* Gold line on the left of the banner when something is overdue */
+.piit-hero.urgent {
+  box-shadow: inset 5px 0 0 #facc15, 0 14px 34px rgba(13, 31, 60, 0.22);
 }
 
-/* Status badge classes are shared with the Dashboard's styling -
-   duplicated here since each PI page loads its own CSS file. */
-.pi-status-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
+.piit-hero.urgent .piit-hero-icon {
+  border-color: #facc15;
+  background: #facc15;
+  color: #0d1f3c;
 }
 
-.pi-status-badge.assigned {
-  background: #dcfce7;
-  color: #16a34a;
+/* ---------- List card head + search ---------- */
+
+.piit-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #f1f4f8;
 }
 
-.pi-status-badge.in-progress {
-  background: #fef9c3;
-  color: #ca8a04;
+.piit-card-title {
+  min-width: 0;
 }
 
-.pi-it-action-button {
-  background: #0d1f3c;
-  color: #fff;
+.piit-card-title h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.piit-card-title h2 svg {
+  color: #eab308;
+}
+
+.piit-card-title p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+
+.piit-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 320px;
+  max-width: 100%;
+  flex-shrink: 0;
+  height: 42px;
+  padding: 0 12px 0 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.piit-search:focus-within {
+  border-color: #facc15;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.18);
+}
+
+.piit-search-icon {
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+.piit-search input {
+  flex: 1;
+  min-width: 0;
   border: none;
-  border-radius: 6px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 600;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.piit-search input::placeholder {
+  color: #94a3b8;
+}
+
+.piit-search-clear {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #475569;
   cursor: pointer;
 }
 
-@media (max-width: 900px) {
-  .pi-it-row {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      'ticket customer'
-      'address visit'
-      'status action';
+.piit-search-clear:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+/* Search and the Filter button sit together */
+.piit-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ---------- List ---------- */
+
+.piit-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.piit-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1.4fr) minmax(0, 1.3fr) 150px minmax(0, 190px) 20px;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+}
+
+/* Navy table header - same as the Dashboard tables */
+.piit-head {
+  min-height: 44px;
+  background: #0d1f3c;
+  border-bottom: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+}
+
+.piit-item,
+.piit-row-skeleton {
+  position: relative;
+  min-height: 74px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.piit-item {
+  cursor: pointer;
+  outline: none;
+  transition: background 0.15s ease;
+}
+
+.piit-item:last-child {
+  border-bottom: none;
+  border-radius: 0 0 18px 18px;
+}
+
+.piit-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.piit-item:hover {
+  background: #f8fafc;
+}
+
+.piit-item:hover::before {
+  background: #facc15;
+}
+
+.piit-item.is-action::before {
+  background: #facc15;
+}
+
+.piit-item.is-late::before {
+  background: #dc2626;
+}
+
+.piit-item:focus-visible {
+  background: #fffbeb;
+  box-shadow: inset 0 0 0 2px #facc15;
+}
+
+.piit-ticket {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0d1f3c;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Customer */
+.piit-customer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.piit-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #0d1f3c;
+  color: #facc15;
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.piit-customer-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.piit-customer-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.piit-customer-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.piit-package {
+  padding: 1px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+/* Shown under the name only on smaller screens */
+.piit-inline-date {
+  display: none;
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.piit-inline-date.late {
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.piit-inline-address {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.piit-inline-address svg {
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+.piit-inline-address span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Address */
+.piit-address {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: #475569;
+}
+
+.piit-address svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #94a3b8;
+}
+
+.piit-address span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Date */
+.piit-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.piit-date-main {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.piit-date-sub {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.piit-date-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.piit-date-flag.late {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.piit-date-flag.soon {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.piit-muted {
+  font-size: 13px;
+  font-style: italic;
+  color: #cbd5e1;
+}
+
+/* Status */
+.piit-status {
+  background: var(--tone-bg);
+  color: var(--tone-fg);
+  line-height: 1.3;
+  white-space: normal;
+}
+
+.piit-status svg {
+  flex-shrink: 0;
+}
+
+/* Outcome (Ticket History) */
+.piit-outcome {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.piit-needs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Arrow at the end of each row */
+.piit-arrow {
+  display: grid;
+  place-items: center;
+  color: #cbd5e1;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.piit-item:hover .piit-arrow {
+  color: #0d1f3c;
+  transform: translateX(3px);
+}
+
+/* Skeleton bits */
+.piit-skel-customer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.piit-skel-avatar {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+/* ---------- Smaller screens ---------- */
+
+/* List: hide the address column, show it under the name */
+@container piit-card (max-width: 900px) {
+  .piit-hide-md {
+    display: none !important;
   }
 
-  .pi-it-head {
-    display: none;
+  .piit-inline-address {
+    display: inline-flex;
+  }
+
+  .piit-row {
+    grid-template-columns: 90px minmax(0, 1.5fr) 140px minmax(0, 170px) 20px;
+  }
+}
+
+/* Search and Filter take the full width of a narrow card */
+@container piit-card (max-width: 760px) {
+  .piit-card-head {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+
+  .piit-tools {
+    width: 100%;
+  }
+
+  .piit-search {
+    flex: 1;
+    width: auto;
+  }
+}
+
+/* List rows become small cards */
+@container piit-card (max-width: 620px) {
+  .piit-hide-sm,
+  .piit-head,
+  .piit-arrow {
+    display: none !important;
+  }
+
+  .piit-inline-date {
+    display: inline;
+  }
+
+  .piit-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 8px;
+    padding: 0 16px;
+  }
+
+  .piit-item,
+  .piit-row-skeleton {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .piit-ticket {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .piit-customer {
+    grid-column: 1 / -1;
+  }
+
+
+}
+
+@media (max-width: 900px) {
+  .piit-hero {
+    flex-wrap: wrap;
+  }
+
+  .piit-hero-actions {
+    width: 100%;
+  }
+
+  .piit-alert {
+    flex-wrap: wrap;
+  }
+
+  .piit-alert-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .piit-page {
+    gap: 16px;
+  }
+
+  .piit-hero {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .piit-hero-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+  }
+
+  .piit-hero h1 {
+    font-size: 20px;
+  }
+
+  .piit-hero p {
+    font-size: 13.5px;
+  }
+
+  .piit-hero-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .piit-card-head {
+    padding: 16px;
+  }
+
+  .piit-tools {
+    flex-wrap: wrap;
+  }
+
+  .piit-search {
+    flex: 1 1 200px;
+    width: auto;
   }
 }

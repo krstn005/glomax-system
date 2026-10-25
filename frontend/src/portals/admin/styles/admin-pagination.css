@@ -1,0 +1,28 @@
+.adm-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.adm-pagination-button {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+}
+
+.adm-pagination-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.adm-pagination-info {
+  font-size: 13px;
+  color: #6b7280;
+}

@@ -4,98 +4,170 @@
   background: #eef1f6;
 }
 
-/* ---- Sidebar ---- */
+/* ---------- Sidebar ---------- */
+
+/* Stays in place while the page scrolls */
 .stf-sidebar {
-  width: 224px;
+  width: 248px;
   background: #0d1f3c;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
+  box-sizing: border-box;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .stf-sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   height: 72px;
-  padding: 0 20px;
+  padding: 0 18px;
   box-sizing: border-box;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.stf-sidebar-logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
 
-.stf-sidebar-brand span {
-  color: #fff;
+.stf-logo-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.5);
+}
+
+.stf-logo-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stf-brand-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.stf-brand-title {
+  color: #ffffff;
   font-weight: 700;
-  font-size: 14px;
-  line-height: 1.25;
+  font-size: 14.5px;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.stf-brand-subtitle {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11.5px;
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Only shows on phones, inside the sliding sidebar */
+.stf-sidebar-close {
+  display: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.stf-sidebar-close:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .stf-nav {
   flex: 1;
-  padding: 20px 12px;
+  padding: 14px 12px 20px;
   overflow-y: auto;
 }
 
-.stf-nav-group {
-  margin-bottom: 20px;
-}
-
-.stf-nav-group:last-child {
-  margin-bottom: 0;
+.stf-nav-group + .stf-nav-group {
+  margin-top: 14px;
 }
 
 .stf-nav-label {
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 11px;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.8px;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  margin: 0 8px 8px;
-}
-
-.stf-nav-divider {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  margin: 0 8px 8px;
+  margin: 10px 10px 6px;
 }
 
 .stf-nav-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.6);
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.65);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.stf-nav-link svg {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.5);
+  transition: color 0.2s ease;
 }
 
 .stf-nav-link:hover {
   background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  color: #ffffff;
 }
 
+.stf-nav-link:hover svg {
+  color: #ffffff;
+}
+
+/* Current page - gold bar on the left, gold icon, soft gold background */
 .stf-nav-link.active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(250, 204, 21, 0.1);
+  color: #ffffff;
+  font-weight: 600;
 }
 
-.stf-nav-link.disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+.stf-nav-link.active svg {
+  color: #facc15;
 }
 
-/* ---- Header ---- */
+.stf-nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: #facc15;
+}
+
+/* Dark background behind the sliding sidebar on phones */
+.stf-sidebar-backdrop {
+  display: none;
+}
+
+/* ---------- Header ---------- */
+
 .stf-main {
   flex: 1;
   display: flex;
@@ -113,6 +185,27 @@
   flex-shrink: 0;
   box-sizing: border-box;
   gap: 12px;
+  position: relative;
+}
+
+/* Only shows on phones */
+.stf-menu-btn {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.stf-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .stf-portal-pill {
@@ -131,17 +224,68 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  position: relative;
   flex-shrink: 0;
 }
 
 .stf-bell {
   background: transparent;
   border: none;
-  color: #fff;
+  color: #ffffff;
   cursor: pointer;
   padding: 8px;
+  border-radius: 8px;
   flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.stf-bell:hover {
+  color: #facc15;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---------- Profile button ---------- */
+
+.stf-profile-area {
+  position: relative;
+}
+
+.stf-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 5px 10px 5px 5px;
+  border-radius: 9999px;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.stf-profile-btn:hover,
+.stf-profile-btn.open {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.stf-profile-btn .stf-avatar {
+  box-shadow: 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease;
+}
+
+.stf-profile-btn.open .stf-avatar {
+  box-shadow: 0 0 0 2px #facc15;
+}
+
+.stf-chevron {
+  color: rgba(255, 255, 255, 0.6);
+  transition: transform 0.2s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.stf-profile-btn.open .stf-chevron {
+  transform: rotate(180deg);
+  color: #facc15;
 }
 
 .stf-avatar {
@@ -156,149 +300,242 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .stf-avatar-lg {
-  width: 40px;
-  height: 40px;
-  font-size: 14px;
+  width: 46px;
+  height: 46px;
+  font-size: 15px;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #facc15;
+}
+
+.stf-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
 }
 
 .stf-username {
-  color: #fff;
+  color: #ffffff;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.stf-profile-btn {
+/* ---------- Profile dropdown ---------- */
+
+.stf-profile-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 270px;
+  background: #ffffff;
+  border: 1px solid #eef0f3;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(13, 31, 60, 0.18);
+  overflow: hidden;
+  z-index: 50;
+  transform-origin: top right;
+  animation: stf-menu-in 0.16s ease-out;
+}
+
+@keyframes stf-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Profile card at the top - clickable, goes to Settings */
+.stf-profile-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 16px 16px;
+  background: linear-gradient(180deg, #f5f7fb 0%, #ffffff 100%);
+  border: none;
+  border-bottom: 1px solid #eef0f3;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s ease;
+}
+
+.stf-profile-menu-head:hover {
+  background: #eef1f6;
+}
+
+.stf-profile-menu-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.stf-profile-menu-top {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
-  flex-shrink: 0;
-}
-
-.stf-profile-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.stf-chevron {
-  color: rgba(255, 255, 255, 0.6);
-  transition: transform 0.15s;
-  flex-shrink: 0;
-}
-
-.stf-chevron.open {
-  transform: rotate(180deg);
-}
-
-/* Dropdown menu */
-.stf-profile-menu {
-  position: absolute;
-  top: 56px;
-  right: 0;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  width: 264px;
-  max-width: calc(100vw - 32px);
-  overflow: hidden;
-  z-index: 50;
-}
-
-.stf-profile-menu-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border-bottom: 1px solid #f3f4f6;
-  box-sizing: border-box;
-}
-
-.stf-profile-menu-header span {
-  display: block;
-  flex: 1 1 auto;
   min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
+}
+
+.stf-profile-menu-name {
+  font-size: 15px;
+  font-weight: 700;
   color: #0d1f3c;
-  line-height: 1.4;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.stf-profile-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  text-align: left;
-  font-size: 14px;
-  color: #374151;
-  text-decoration: none;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-.stf-profile-menu-item svg {
+.stf-role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #0d1f3c;
+  color: #facc15;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
   flex-shrink: 0;
 }
 
-.stf-profile-menu-item:hover {
-  background: #f9fafb;
+.stf-profile-menu-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #b45309;
+  white-space: nowrap;
 }
 
-.stf-profile-menu-signout {
-  color: #dc2626;
+.stf-profile-menu-link svg {
+  transition: transform 0.15s ease;
+}
+
+.stf-profile-menu-head:hover .stf-profile-menu-link svg {
+  transform: translateX(3px);
+}
+
+/* Menu sections */
+.stf-profile-menu-items {
+  padding: 8px 6px 6px;
+}
+
+.stf-profile-menu-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+  padding: 2px 10px 6px;
+}
+
+.stf-profile-menu-footer {
+  padding: 6px;
   border-top: 1px solid #f3f4f6;
+  background: #fafbfc;
 }
 
-@media (max-width: 768px) {
-  .stf-header {
-    padding: 0 16px;
-  }
+.stf-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s ease;
 }
 
-@media (max-width: 480px) {
-  .stf-username {
-    display: none;
-  }
-
-  .stf-header {
-    padding: 0 12px;
-    gap: 8px;
-  }
-
-  .stf-profile-menu {
-    width: 240px;
-    right: -8px;
-  }
-
-  .stf-profile-menu-header,
-  .stf-profile-menu-item {
-    padding: 12px 14px;
-  }
+.stf-menu-item-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #eef1f6;
+  color: #0d1f3c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-/* ---- Content ---- */
-.stf-content {
-  flex: 1;
+.stf-menu-item-text {
   display: flex;
   flex-direction: column;
-  padding: 20px 32px 20px 24px;
-  overflow-y: auto;
+  min-width: 0;
 }
 
-.stf-page-heading {
-  flex-shrink: 0;
+.stf-menu-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.stf-menu-item-hint {
+  font-size: 11.5px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+.stf-menu-item:hover {
+  background: #f5f7fb;
+}
+
+.stf-menu-item:hover .stf-menu-item-icon {
+  background: #0d1f3c;
+  color: #facc15;
+}
+
+.stf-menu-item.danger .stf-menu-item-icon {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.stf-menu-item.danger .stf-menu-item-title {
+  color: #dc2626;
+}
+
+.stf-menu-item.danger:hover {
+  background: #fef2f2;
+}
+
+.stf-menu-item.danger:hover .stf-menu-item-icon {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.stf-menu-item.danger:hover .stf-menu-item-title {
+  color: #b91c1c;
+}
+
+/* ---------- Content ---------- */
+
+/* Same padding on the left and right */
+.stf-content {
+  flex: 1;
+  padding: 24px 32px 32px;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .stf-page-heading h1 {
@@ -311,43 +548,58 @@
 .stf-page-heading p {
   color: #6b7280;
   font-size: 14px;
-  margin: 0 0 16px;
+  margin: 0 0 22px;
 }
 
 .stf-page-body {
   display: block;
 }
 
-/* Sign out confirmation modal */
+/* ---------- Sign out modal ---------- */
+
 .stf-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(13, 31, 60, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 300;
+  z-index: 500;
+  padding: 16px;
 }
 
 .stf-modal {
-  background: #fff;
-  border-radius: 12px;
-  padding: 32px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 30px 28px;
   max-width: 380px;
-  width: 90%;
+  width: 100%;
   text-align: center;
+  box-shadow: 0 24px 56px rgba(13, 31, 60, 0.25);
+}
+
+.stf-modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
 }
 
 .stf-modal h3 {
   color: #0d1f3c;
-  font-size: 16px;
+  font-size: 17px;
   margin: 0 0 8px;
 }
 
 .stf-modal p {
   color: #6b7280;
-  font-size: 13px;
-  margin: 0 0 20px;
+  font-size: 14px;
+  margin: 0 0 22px;
 }
 
 .stf-modal-actions {
@@ -360,23 +612,112 @@
 }
 
 .stf-btn-secondary {
-  background: #fff;
+  background: #ffffff;
   color: #0d1f3c;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border: 1px solid #dfe4ec;
+  border-radius: 9999px;
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.stf-btn-secondary:hover {
+  background: #eef1f6;
+  border-color: #c7d0dd;
 }
 
 .stf-btn-danger {
   background: #dc2626;
-  color: #fff;
+  color: #ffffff;
   border: none;
-  border-radius: 6px;
+  border-radius: 9999px;
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.stf-btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* ---------- Tablet and phone ---------- */
+
+/* Sidebar hides and slides in from the left when the menu button is tapped */
+@media (max-width: 960px) {
+  .stf-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    height: 100vh;
+    z-index: 400;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+
+  .stf-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 12px 0 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .stf-sidebar-close {
+    display: flex;
+  }
+
+  .stf-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 31, 60, 0.5);
+    z-index: 390;
+  }
+
+  .stf-menu-btn {
+    display: flex;
+  }
+}
+
+@media (max-width: 768px) {
+  .stf-header {
+    padding: 0 16px;
+  }
+
+  .stf-content {
+    padding: 20px 20px 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stf-username {
+    display: none;
+  }
+
+  .stf-profile-btn {
+    padding: 4px;
+  }
+
+  .stf-header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .stf-portal-pill {
+    font-size: 12.5px;
+    padding: 5px 12px;
+  }
+
+  .stf-profile-menu {
+    width: calc(100vw - 24px);
+    max-width: 270px;
+  }
+
+  .stf-content {
+    padding: 16px 14px 24px;
+  }
 }

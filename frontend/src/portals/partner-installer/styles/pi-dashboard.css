@@ -1,180 +1,1198 @@
-.pi-dashboard-loading,
-.pi-dashboard-error {
-  color: #6b7280;
-  font-size: 14px;
+/* ===== Partner Installer Dashboard (pid-) ===== */
+
+.pid-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  color: #0f172a;
 }
 
-.pi-dashboard-error {
-  color: #dc2626;
+.pid-page *,
+.pid-page *::before,
+.pid-page *::after {
+  box-sizing: border-box;
 }
 
-/* ---- Stat cards ---- */
-.pi-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+.pid-page button {
+  font-family: inherit;
 }
 
-.pi-stat-card {
-  background: #fff;
-  border-radius: 10px;
-  padding: 18px 20px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
+/* Shared colour tones */
+.pid-page .tone-navy { --tone-bg: #eef1f6; --tone-fg: #0d1f3c; --tone-solid: #0d1f3c; }
+.pid-page .tone-amber { --tone-bg: #fef3c7; --tone-fg: #b45309; --tone-solid: #eab308; }
+.pid-page .tone-blue { --tone-bg: #dbeafe; --tone-fg: #1e40af; --tone-solid: #3b82f6; }
+.pid-page .tone-violet { --tone-bg: #ede9fe; --tone-fg: #6d28d9; --tone-solid: #8b5cf6; }
+.pid-page .tone-indigo { --tone-bg: #e0e7ff; --tone-fg: #3730a3; --tone-solid: #6366f1; }
+.pid-page .tone-green { --tone-bg: #dcfce7; --tone-fg: #166534; --tone-solid: #16a34a; }
+.pid-page .tone-green-light { --tone-bg: #dcfce7; --tone-fg: #166534; --tone-solid: #4ade80; }
+.pid-page .tone-red { --tone-bg: #fee2e2; --tone-fg: #991b1b; --tone-solid: #dc2626; }
+.pid-page .tone-gray { --tone-bg: #f1f5f9; --tone-fg: #64748b; --tone-solid: #94a3b8; }
 
-.pi-stat-label {
-  color: #6b7280;
-  font-size: 13px;
-  margin: 0 0 8px;
-}
+/* ---------- Welcome banner ---------- */
 
-.pi-stat-value {
-  color: #0d1f3c;
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0 0 4px;
-}
-
-.pi-stat-note {
-  color: #9ca3af;
-  font-size: 12px;
-  margin: 0;
-}
-
-/* ---- Incoming Requests ---- */
-.pi-incoming {
-  background: #fff;
-  border-radius: 10px;
+.pid-hero {
+  position: relative;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.pi-incoming-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px;
+  gap: 20px;
+  padding: 26px 28px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #0d1f3c 0%, #16325e 70%, #1b3a6b 100%);
+  color: #fff;
+  box-shadow: 0 14px 34px rgba(13, 31, 60, 0.22);
 }
 
-.pi-incoming-header h2 {
-  color: #0d1f3c;
-  font-size: 16px;
+.pid-hero-glow {
+  position: absolute;
+  top: -140px;
+  right: 8%;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.25) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.pid-hero-text {
+  position: relative;
+  min-width: 0;
+}
+
+.pid-hero-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: 999px;
+  background: rgba(250, 204, 21, 0.1);
+  font-size: 12px;
   font-weight: 700;
-  margin: 0;
+  color: #facc15;
 }
 
-.pi-view-all-button {
+.pid-hero h1 {
+  margin: 12px 0 6px;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.pid-hero h1 span {
+  color: #facc15;
+}
+
+.pid-hero p {
+  margin: 0;
+  font-size: 14.5px;
+  color: #cbd5e1;
+}
+
+.pid-hero-actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.pid-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.pid-hero-btn.gold {
+  border: none;
+  background: #facc15;
+  color: #0d1f3c;
+  box-shadow: 0 10px 22px rgba(250, 204, 21, 0.28);
+}
+
+.pid-hero-btn.gold:hover {
+  background: #eab308;
+  transform: translateY(-1px);
+}
+
+.pid-hero-btn.glass {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.pid-hero-btn.glass:hover {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* ---------- Overdue assessments ---------- */
+
+.pid-alert {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  border-radius: 14px;
+  background: #fef2f2;
+}
+
+.pid-alert-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pid-alert-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pid-alert-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #991b1b;
+}
+
+.pid-alert-sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.pid-alert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
   background: #0d1f3c;
   color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pid-alert-btn svg {
+  color: #facc15;
+  transition: transform 0.2s ease;
+}
+
+.pid-alert-btn:hover {
+  background: #16325e;
+}
+
+.pid-alert-btn:hover svg {
+  transform: translateX(3px);
+}
+
+/* ---------- Main grid ---------- */
+
+.pid-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+  gap: 20px;
+}
+
+.pid-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.pid-card {
+  border: 1px solid #eef2f7;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(13, 31, 60, 0.04), 0 6px 16px rgba(13, 31, 60, 0.05);
+}
+
+.pid-side .pid-card {
+  padding: 18px 18px 16px;
+}
+
+/* ---------- Recent activity ---------- */
+
+/* overflow stays visible so the Filter menu is never cut off */
+.pid-recent {
+  min-width: 0;
+}
+
+.pid-card-head {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 18px 20px 16px;
+}
+
+.pid-card-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.pid-card-head p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+
+.pid-live {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+/* Always on the right side, even when it wraps under the title */
+.pid-card-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* Filter */
+.pid-filter {
+  position: relative;
+}
+
+.pid-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px 0 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
   font-size: 13px;
   font-weight: 600;
+  color: #334155;
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.pi-incoming-empty {
-  padding: 24px 20px;
-  color: #6b7280;
-  font-size: 14px;
+.pid-filter-btn svg {
+  color: #64748b;
 }
 
-.pi-incoming-table {
-  width: 100%;
+.pid-filter-btn:hover,
+.pid-filter-btn.open {
+  border-color: #0d1f3c;
 }
 
-.pi-incoming-row {
+.pid-filter-btn.open {
+  box-shadow: 0 0 0 3px rgba(13, 31, 60, 0.1);
+}
+
+.pid-filter-btn.filtered {
+  border-color: #eab308;
+  background: #fffbeb;
+  color: #78350f;
+}
+
+.pid-filter-btn.filtered svg {
+  color: #92400e;
+}
+
+.pid-filter-indicator {
+  min-width: 20px;
+  height: 20px;
   display: grid;
-  grid-template-columns: 1.2fr 1.6fr 1.2fr 1.2fr 0.8fr;
-  align-items: center;
-  padding: 14px 20px;
-  border-top: 1px solid #f3f4f6;
-  gap: 12px;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #facc15;
+  color: #0d1f3c;
+  font-size: 11px;
+  font-weight: 800;
 }
 
-.pi-incoming-head {
-  background: #0d1f3c;
-  color: #fff;
-  font-size: 12px;
+.pid-filter-chevron {
+  transition: transform 0.2s ease;
+}
+
+.pid-filter-btn.open .pid-filter-chevron {
+  transform: rotate(180deg);
+}
+
+/* The Filter button is the last thing on the right, so the menu
+   lines up with its right edge and opens inward, inside the card */
+.pid-filter-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  width: 250px;
+  max-width: calc(100vw - 40px);
+  max-height: min(460px, 70vh);
+  overflow-y: auto;
+  overflow: hidden;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(13, 31, 60, 0.16);
+  animation: pidPop 0.15s ease-out;
+}
+
+@keyframes pidPop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pid-filter-menu-title {
+  margin: 0;
+  padding: 12px 16px 8px;
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  border-top: none;
+  color: #94a3b8;
 }
 
-.pi-incoming-ticket {
-  color: #2563eb;
+.pid-filter-list {
+  padding: 0 6px 6px;
+}
+
+.pid-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pid-filter-option:hover {
+  background: #f5f7fb;
+}
+
+.pid-filter-option.selected {
+  background: #fffbeb;
+}
+
+.pid-filter-option-label {
+  flex: 1;
+  font-size: 13.5px;
   font-weight: 600;
-  font-size: 14px;
+  color: #111827;
 }
 
-.pi-incoming-row:not(.pi-incoming-head) span {
-  font-size: 14px;
-  color: #374151;
+.pid-filter-option-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
 }
 
-.pi-status-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
+.pid-filter-option.selected .pid-filter-option-count {
+  background: #facc15;
+  color: #0d1f3c;
 }
 
-.pi-status-badge.assigned,
-.pi-status-badge.compatible {
-  background: #dcfce7;
-  color: #16a34a;
-}
-
-.pi-status-badge.in-progress {
-  background: #fef9c3;
+.pid-filter-check {
+  width: 18px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
   color: #ca8a04;
 }
 
-.pi-status-badge.not-compatible {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.pi-status-badge.withdrawn {
-  background: #e5e7eb;
-  color: #6b7280;
-}
-
-.pi-action-button {
-  background: #0d1f3c;
-  color: #fff;
+.pid-filter-reset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 11px 16px;
   border: none;
-  border-radius: 6px;
-  padding: 6px 14px;
+  border-top: 1px solid #f1f5f9;
+  background: #fafbfc;
   font-size: 13px;
   font-weight: 600;
+  color: #dc2626;
   cursor: pointer;
 }
 
+.pid-filter-reset:hover {
+  background: #fef2f2;
+}
+
+/* Little coloured dot used in the filter */
+.pid-dot {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--tone-solid);
+}
+
+/* View All Tickets - navy pill with the arrow in a gold circle */
+.pid-view-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 5px 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: #0d1f3c;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pid-view-all svg {
+  width: 28px;
+  height: 28px;
+  padding: 7px;
+  border-radius: 50%;
+  background: #facc15;
+  color: #0d1f3c;
+  transition: transform 0.2s ease;
+}
+
+.pid-view-all:hover {
+  background: #16325e;
+  box-shadow: 0 6px 18px rgba(13, 31, 60, 0.25);
+}
+
+.pid-view-all:hover svg {
+  transform: translateX(3px);
+}
+
+/* Table */
+.pid-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.pid-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 0.75fr) minmax(0, 1.55fr);
+  align-items: center;
+  gap: 14px;
+  padding: 12px 44px 12px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.pid-row:last-child {
+  border-bottom: none;
+  border-radius: 0 0 16px 16px;
+}
+
+.pid-row-head {
+  padding-top: 11px;
+  padding-bottom: 11px;
+  border-bottom: none;
+  background: #0d1f3c;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.pid-row-click {
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pid-row-click:hover,
+.pid-row-click:focus-visible {
+  outline: none;
+  background: #f8fafc;
+  box-shadow: inset 4px 0 0 #facc15;
+}
+
+.pid-row-click:active {
+  background: #eef1f6;
+}
+
+.pid-row-arrow {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  color: #cbd5e1;
+  transform: translateY(-50%);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.pid-row-click:hover .pid-row-arrow {
+  color: #0d1f3c;
+  transform: translate(3px, -50%);
+}
+
+.pid-customer {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.pid-avatar {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #0d1f3c;
+  color: #facc15;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pid-customer-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pid-customer-name {
+  overflow: hidden;
+  font-weight: 700;
+  color: #0f172a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pid-ticket-no {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.pid-row-click:hover .pid-ticket-no {
+  color: #b45309;
+}
+
+
+
+.pid-muted {
+  font-style: italic;
+  color: #cbd5e1;
+}
+
+.pid-date {
+  font-size: 13px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* Status badge */
+.pid-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pid-badge-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pid-badge.approved { background: #dcfce7; color: #166534; }
+.pid-badge.completed { background: #bbf7d0; color: #14532d; }
+.pid-badge.withdrawn { background: #e5e7eb; color: #4b5563; }
+.pid-badge.not-compatible { background: #fee2e2; color: #991b1b; }
+.pid-badge.pending { background: #fef9c3; color: #92400e; }
+.pid-badge.in-progress { background: #dbeafe; color: #1e40af; }
+.pid-badge.review { background: #ede9fe; color: #6d28d9; }
+.pid-badge.admin { background: #e0e7ff; color: #3730a3; }
+
+/* ---------- Side cards ---------- */
+
+.pid-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.pid-side-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.pid-count {
+  min-width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #facc15;
+  color: #0d1f3c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pid-side-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0d1f3c;
+  cursor: pointer;
+}
+
+.pid-side-link.small {
+  margin-top: 0;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.pid-side-link:hover {
+  color: #ca8a04;
+}
+
+.pid-side-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* Needs attention */
+.pid-todo {
+  border-color: #fde68a;
+}
+
+.pid-todo-list,
+.pid-visits {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pid-todo-item,
+.pid-visit {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.pid-todo-item:hover,
+.pid-visit:hover {
+  border-color: #fde68a;
+  background: #fffbeb;
+  transform: translateX(2px);
+}
+
+.pid-todo-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+
+.pid-todo-icon.overdue {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pid-todo-icon.today {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.pid-todo-icon.visit {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.pid-todo-text,
+.pid-visit-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pid-todo-text strong,
+.pid-visit-text strong {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pid-todo-text span,
+.pid-visit-text span {
+  overflow: hidden;
+  font-size: 12px;
+  color: #64748b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pid-wait {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pid-wait.late {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pid-wait.soon {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Visit date cell in the list */
+.pid-visit-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pid-visit-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.pid-updated {
+  font-size: 13px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* Small visit date under the name - only on phones */
+.pid-inline-visit {
+  display: none;
+  margin-top: 4px;
+}
+
+.pid-inline-visit .pid-visit-cell {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.pid-inline-visit .pid-visit-date {
+  font-size: 12px;
+}
+
+.pid-visit-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.pid-visit-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.pid-visit-flag.overdue {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pid-visit-flag.today {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Overdue rows get a red bar on the left */
+.pid-row.is-overdue {
+  box-shadow: inset 4px 0 0 #ef4444;
+}
+
+.pid-row.is-overdue:hover,
+.pid-row.is-overdue:focus-visible {
+  box-shadow: inset 4px 0 0 #ef4444;
+}
+
+.pid-allclear {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.pid-allclear strong {
+  display: block;
+  font-size: 14px;
+  color: #166534;
+}
+
+.pid-allclear span {
+  font-size: 12.5px;
+  color: #15803d;
+}
+
+/* Upcoming visits */
+.pid-visit-cal {
+  width: 42px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #fff;
+  text-align: center;
+}
+
+.pid-visit-cal span {
+  padding: 1px 0;
+  background: #0d1f3c;
+  color: #facc15;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pid-visit-cal strong {
+  padding: 2px 0 3px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.pid-visit-when {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pid-visit-when.soon {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* ---------- Empty and error states ---------- */
+
+.pid-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 44px 24px 50px;
+  text-align: center;
+}
+
+.pid-empty-badge {
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #eef1f6;
+  color: #0d1f3c;
+  box-shadow: 0 0 0 7px #f5f7fb;
+}
+
+.pid-empty-badge.red {
+  background: #fee2e2;
+  color: #dc2626;
+  box-shadow: 0 0 0 7px #fef2f2;
+}
+
+.pid-empty-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.pid-empty-hint {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  color: #64748b;
+}
+
+.pid-btn-primary,
+.pid-btn-secondary {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pid-btn-primary {
+  border: none;
+  background: #0d1f3c;
+  color: #fff;
+}
+
+.pid-btn-primary:hover {
+  background: #16325e;
+}
+
+.pid-btn-secondary {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0d1f3c;
+}
+
+.pid-btn-secondary:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+/* ---------- Skeleton loading ---------- */
+
+.pid-skel {
+  display: inline-block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #eef0f3 25%, #f7f8fa 37%, #eef0f3 63%);
+  background-size: 400% 100%;
+  animation: pidShimmer 1.4s ease infinite;
+}
+
+@keyframes pidShimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.pid-skel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pid-skel-customer {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.pid-skel-avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; }
+.pid-skel-pill { width: 110px; height: 24px; border-radius: 999px; }
+.pid-skel-w-sm { width: 70px; }
+.pid-skel-w-md { width: 120px; }
+.pid-skel-todo { width: 100%; height: 56px; border-radius: 12px; }
+
+/* ---------- Smaller screens ---------- */
+
+@media (max-width: 1100px) {
+  .pid-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pid-side {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
-  .pi-stat-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .pid-hero {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .pi-incoming-row {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      'ticket customer'
-      'visit status'
-      'action action';
+  .pid-row {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr) minmax(0, 1.2fr);
   }
 
-  .pi-incoming-head {
+  .pid-updated,
+  .pid-row-head span:nth-child(3),
+  .pid-row-skeleton > :nth-child(3) {
     display: none;
   }
 }
 
-@media (max-width: 480px) {
-  .pi-stat-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 700px) {
+  .pid-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pid-alert {
+    flex-wrap: wrap;
+  }
+
+  .pid-alert-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pid-card-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pid-card-controls {
+    justify-content: flex-end;
+  }
+
+  .pid-hero {
+    padding: 22px 20px;
+  }
+
+  .pid-hero h1 {
+    font-size: 22px;
+  }
+
+  .pid-hero-actions,
+  .pid-hero-btn {
+    width: 100%;
+  }
+
+  .pid-hero-btn {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .pid-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-right: 38px;
+    padding-left: 14px;
+  }
+
+  .pid-visit-col,
+  .pid-row-head span:nth-child(2),
+  .pid-row-skeleton > :nth-child(2) {
+    display: none;
+  }
+
+  .pid-inline-visit {
+    display: block;
+  }
+
+  .pid-row-arrow {
+    right: 10px;
+  }
+
+  /* Long status names wrap instead of squeezing the name */
+  .pid-badge {
+    max-width: 128px;
+    white-space: normal;
+    line-height: 1.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pid-page *,
+  .pid-page *::before,
+  .pid-page *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

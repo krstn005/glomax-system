@@ -1,3 +1,7 @@
+import json
+
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -6,7 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import Ticket, CompletionPhoto, RescheduleRequest
+from .models import Ticket, CompletionPhoto, RescheduleRequest, TicketAttempt
 from .quotation_linking import link_initial_quotation_to_ticket
 from .serializers import (
     TicketCreateSerializer,
@@ -17,6 +21,7 @@ from .serializers import (
     TicketApproveSerializer,
     TicketReturnForRevisionSerializer,
     RescheduleRequestCreateSerializer,
+    REAPPLY_STATUSES,
 )
 from accounts.permissions import (
     IsCustomer,
@@ -30,6 +35,134 @@ from accounts.models import User
 from notifications.models import Notification
 
 
+def notify_new_request(ticket, reapplied=False):
+    """
+    Tells every active Staff and Admin account that a customer just
+    submitted a new request, so it doesn't sit unnoticed. Staff are
+    the ones who assign a Partner Installer next; Admins get it too
+    so they can keep an eye on incoming work. Each role's link opens
+    the ticket in their own portal.
+
+    reapplied=True means the customer reapplied using an old ticket,
+    so the message says so (with the try number).
+    """
+    customer = ticket.customer
+    customer_name = (getattr(customer, 'full_name', '') or '').strip() or customer.username
+
+    if reapplied:
+        what = f"{ticket.ticket_number} was reapplied by {customer_name} (try {ticket.attempt_number})"
+    else:
+        what = f"New request {ticket.ticket_number} from {customer_name}"
+
+    for staff_user in User.objects.filter(role='STAFF', is_active=True):
+        Notification.objects.create(
+            recipient=staff_user,
+            kind=Notification.Kind.NEW_REQUEST,
+            message=f"{what}. Assign a Partner Installer.",
+            link=f"/staff/manage-tickets/{ticket.id}",
+        )
+
+    for admin_user in User.objects.filter(role='ADMIN', is_active=True):
+        Notification.objects.create(
+            recipient=admin_user,
+            kind=Notification.Kind.NEW_REQUEST,
+            message=f"{what}.",
+            link=f"/admin/requests/{ticket.id}",
+        )
+
+
+def find_active_ticket(customer, exclude_id=None):
+    """The customer's ticket that is still being worked on, if any."""
+    queryset = Ticket.objects.filter(customer=customer).exclude(
+        status__in=TicketListCreateView.RESOLVED_STATUSES
+    )
+    if exclude_id:
+        queryset = queryset.exclude(pk=exclude_id)
+    return queryset.order_by('-created_at').first()
+
+
+def link_initial_quotation(ticket):
+    """
+    If this ticket's Customer previously submitted a public
+    Inquiry (same email) that already had an Initial Quotation
+    sent via the Email Inquiries page, copy it onto this ticket.
+    """
+    from inquiries.models import Inquiry
+
+    inquiry = (
+        Inquiry.objects.filter(
+            email__iexact=ticket.customer.email,
+            quotation_sent=True,
+            subject=Inquiry.Subject.ROOF_ASSESSMENT,
+        )
+        .order_by('-quotation_sent_at')
+        .first()
+    )
+    if inquiry:
+        link_initial_quotation_to_ticket(ticket, inquiry)
+
+
+@transaction.atomic
+def reapply_ticket(ticket, new_details):
+    """
+    Reuses an old ticket (Withdrawn or Not Compatible - Can Reapply)
+    for a new try, instead of making a brand-new ticket.
+
+    1. Saves the old try as a TicketAttempt (a full snapshot, so the
+       old assessment, quotations, installer and dates are kept).
+    2. Clears what belonged to the old try (assessment, quotations,
+       reschedule requests, installer, visit date, notes).
+    3. Puts in the new details and sets the ticket back to
+       Request Submitted, as if it was just sent.
+    """
+    now = timezone.now()
+
+    # 1. Save the old try
+    snapshot = TicketSerializer(ticket, context={'skip_attempts': True}).data
+    snapshot = json.loads(json.dumps(snapshot, cls=DjangoJSONEncoder))
+    snapshot.pop('attempts', None)
+    TicketAttempt.objects.create(
+        ticket=ticket,
+        attempt_number=ticket.attempt_number,
+        status=ticket.status,
+        snapshot=snapshot,
+        started_at=ticket.created_at,
+        ended_at=ticket.withdrawn_at or ticket.completed_at or ticket.updated_at,
+    )
+
+    # 2. Clear the old try. The assessment is one-per-ticket, so it has
+    # to go for the Partner Installer to submit a new one. Its photo
+    # files stay on the server, so the links in the snapshot still work.
+    assessment = getattr(ticket, 'assessment', None)
+    if assessment is not None:
+        assessment.delete()
+    ticket.quotations.all().delete()
+    ticket.reschedule_requests.all().delete()
+
+    ticket.partner_installer = None
+    ticket.visit_date = None
+    ticket.admin_revision_notes = None
+    ticket.assigned_at = None
+    ticket.withdrawn_at = None
+    ticket.completed_at = None
+
+    # 3. New details and a fresh start
+    for field, value in new_details.items():
+        setattr(ticket, field, value)
+    ticket.status = Ticket.Status.REQUEST_SUBMITTED
+    ticket.attempt_number += 1
+    ticket.created_at = now
+    ticket.save()
+
+    # Same as a new request: copy the Initial Quotation from an
+    # Inquiry if there is one
+    link_initial_quotation(ticket)
+
+    # Load it again, so the old (now deleted) assessment isn't still
+    # remembered on this object
+    return Ticket.objects.get(pk=ticket.pk)
+
+
 # --- Stage 1 views (Customer) ---
 
 class TicketListCreateView(generics.ListCreateAPIView):
@@ -37,7 +170,7 @@ class TicketListCreateView(generics.ListCreateAPIView):
     GET  /api/tickets/  - list the logged-in Customer's own tickets
     POST /api/tickets/  - submit a new Schedule Request. Blocked while
          the Customer already has an active (still in-progress)
-         ticket.
+         ticket. Notifies Staff and Admins once it's created.
     """
     permission_classes = [permissions.IsAuthenticated, IsCustomer]
 
@@ -61,12 +194,7 @@ class TicketListCreateView(generics.ListCreateAPIView):
         serializer.save(customer=self.request.user)
 
     def create(self, request, *args, **kwargs):
-        active_ticket = (
-            Ticket.objects.filter(customer=request.user)
-            .exclude(status__in=self.RESOLVED_STATUSES)
-            .order_by('-created_at')
-            .first()
-        )
+        active_ticket = find_active_ticket(request.user)
         if active_ticket:
             return Response(
                 {
@@ -81,36 +209,75 @@ class TicketListCreateView(generics.ListCreateAPIView):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        # If the customer's latest ticket was Withdrawn or marked
+        # Not Compatible - Can Reapply, reuse it instead of making a
+        # new ticket (so they keep one ticket number).
+        latest = Ticket.objects.filter(customer=request.user).order_by('-created_at').first()
+        if latest and latest.status in REAPPLY_STATUSES:
+            ticket = reapply_ticket(latest, serializer.validated_data)
+            notify_new_request(ticket, reapplied=True)
+            data = TicketSerializer(ticket).data
+            data['reapplied'] = True
+            return Response(data, status=status.HTTP_200_OK)
+
         self.perform_create(serializer)
         ticket = serializer.instance
 
-        self._link_initial_quotation(ticket)
+        link_initial_quotation(ticket)
+        notify_new_request(ticket)
 
-        return Response(
-            TicketSerializer(ticket).data,
-            status=status.HTTP_201_CREATED,
-        )
+        data = TicketSerializer(ticket).data
+        data['reapplied'] = False
+        return Response(data, status=status.HTTP_201_CREATED)
 
-    def _link_initial_quotation(self, ticket):
-        """
-        If this ticket's Customer previously submitted a public
-        Inquiry (same email) that already had an Initial Quotation
-        sent via the Email Inquiries page, copy it onto this ticket
-        now that it exists.
-        """
-        from inquiries.models import Inquiry
 
-        inquiry = (
-            Inquiry.objects.filter(
-                email__iexact=ticket.customer.email,
-                quotation_sent=True,
-                subject=Inquiry.Subject.ROOF_ASSESSMENT,
+class TicketReapplyView(APIView):
+    """
+    POST /api/tickets/<id>/reapply/  - Customer's Reapply button on an
+    old ticket. Uses the same ticket again for a new try (see
+    reapply_ticket). Only works on the Customer's own ticket, only
+    while it's Withdrawn or Not Compatible - Can Reapply, and only if
+    they don't have another request in progress.
+
+    Body: the same fields as the Schedule Request form. Any field left
+    out keeps the ticket's old value.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsCustomer]
+
+    def post(self, request, pk):
+        try:
+            ticket = Ticket.objects.get(pk=pk, customer=request.user)
+        except Ticket.DoesNotExist:
+            return Response({"detail": "Ticket not found."}, status=404)
+
+        if ticket.status not in REAPPLY_STATUSES:
+            return Response(
+                {"detail": "Only withdrawn tickets, or tickets marked Not Compatible - Can Reapply, can be reapplied."},
+                status=400,
             )
-            .order_by('-quotation_sent_at')
-            .first()
-        )
-        if inquiry:
-            link_initial_quotation_to_ticket(ticket, inquiry)
+
+        active_ticket = find_active_ticket(request.user, exclude_id=ticket.id)
+        if active_ticket:
+            return Response(
+                {
+                    "detail": (
+                        f"You already have an active request ({active_ticket.ticket_number}). "
+                        "You can reapply once it's completed, withdrawn, or marked Not Compatible."
+                    ),
+                },
+                status=400,
+            )
+
+        serializer = TicketCreateSerializer(ticket, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        ticket = reapply_ticket(ticket, serializer.validated_data)
+        notify_new_request(ticket, reapplied=True)
+
+        data = TicketSerializer(ticket).data
+        data['reapplied'] = True
+        return Response(data)
 
 
 class TicketDetailView(generics.RetrieveAPIView):

@@ -1,0 +1,940 @@
+/* ===== Partner Installer Ticket History (pith-) ===== */
+
+.pith-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  color: #0f172a;
+  container-type: inline-size;
+  container-name: pith-page;
+}
+
+.pith-page *,
+.pith-page *::before,
+.pith-page *::after {
+  box-sizing: border-box;
+}
+
+.pith-page button,
+.pith-page input {
+  font-family: inherit;
+}
+
+/* Shared colour tones */
+.pith-page .tone-navy { --tone-bg: #eef1f6; --tone-fg: #0d1f3c; --tone-solid: #0d1f3c; }
+.pith-page .tone-blue { --tone-bg: #dbeafe; --tone-fg: #1e40af; --tone-solid: #3b82f6; }
+.pith-page .tone-gold { --tone-bg: #fef3c7; --tone-fg: #b45309; --tone-solid: #eab308; }
+.pith-page .tone-green { --tone-bg: #dcfce7; --tone-fg: #166534; --tone-solid: #16a34a; }
+.pith-page .tone-red { --tone-bg: #fee2e2; --tone-fg: #991b1b; --tone-solid: #dc2626; }
+
+/* ---------- Banner ---------- */
+
+.pith-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 24px 28px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #0d1f3c 0%, #16325e 70%, #1b3a6b 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 34px rgba(13, 31, 60, 0.22);
+}
+
+.pith-hero-glow {
+  position: absolute;
+  top: -150px;
+  right: 6%;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.24) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.pith-hero-icon {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: 16px;
+  background: rgba(250, 204, 21, 0.12);
+  color: #facc15;
+}
+
+.pith-hero-text {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.pith-hero h1 {
+  margin: 0 0 5px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+.pith-hero p {
+  margin: 0;
+  font-size: 14.5px;
+  color: #cbd5e1;
+}
+
+.pith-hero-actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.pith-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.pith-hero-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.pith-hero-btn.glass {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.pith-hero-btn.glass:hover:not(:disabled) {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.pith-page .spin {
+  animation: pithSpin 0.9s linear infinite;
+}
+
+@keyframes pithSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Cards ---------- */
+
+.pith-card {
+  min-width: 0;
+  border: 1px solid #eef2f7;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(13, 31, 60, 0.04), 0 6px 16px rgba(13, 31, 60, 0.05);
+  container-type: inline-size;
+  container-name: pith-card;
+}
+
+.pith-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid #f1f4f8;
+}
+
+.pith-card-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--tone-bg);
+  color: var(--tone-fg);
+}
+
+.pith-card-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pith-card-head-text h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.pith-card-head-text p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+/* ---------- Empty and error states ---------- */
+
+.pith-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px 52px;
+  text-align: center;
+}
+
+.pith-empty-state.small {
+  padding: 32px 20px 36px;
+}
+
+.pith-empty-badge {
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #eef1f6;
+  color: #0d1f3c;
+  box-shadow: 0 0 0 7px #f5f7fb;
+}
+
+.pith-empty-badge-red {
+  background: #fee2e2;
+  color: #dc2626;
+  box-shadow: 0 0 0 7px #fef2f2;
+}
+
+.pith-empty-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.pith-empty-hint {
+  margin: 0;
+  font-size: 13.5px;
+  color: #6b7280;
+}
+
+.pith-btn-primary,
+.pith-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pith-btn-primary {
+  border: none;
+  background: #0d1f3c;
+  color: #ffffff;
+}
+
+.pith-btn-primary:hover {
+  background: #16294f;
+  box-shadow: 0 6px 16px rgba(13, 31, 60, 0.2);
+}
+
+.pith-btn-secondary {
+  border: 1px solid #dfe4ec;
+  background: #ffffff;
+  color: #0d1f3c;
+}
+
+.pith-btn-secondary:hover {
+  border-color: #c7d0dd;
+  background: #eef1f6;
+}
+
+/* ---------- Skeleton loading ---------- */
+
+.pith-skel {
+  display: inline-block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #eef0f3 25%, #f7f8fa 37%, #eef0f3 63%);
+  background-size: 400% 100%;
+  animation: pith-shimmer 1.4s ease infinite;
+}
+
+.pith-skel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pith-skel-w-sm { width: 80px; }
+.pith-skel-w-md { width: 120px; }
+.pith-skel-w-lg { width: 220px; max-width: 100%; }
+.pith-skel-pill { width: 76px; height: 24px; border-radius: 999px; }
+
+@keyframes pith-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* ---------- Pagination ---------- */
+
+.pith-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 20px 14px;
+  border-top: 1px solid #f1f4f8;
+  border-radius: 0 0 18px 18px;
+  background: #fafbfd;
+}
+
+.pith-pagination-info {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.pith-pagination-info strong {
+  color: #0d1f3c;
+}
+
+.pith-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pith-page-btn,
+.pith-page-num {
+  min-width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0 8px;
+  border: 1px solid #dfe4ec;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0d1f3c;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pith-page-btn:hover:not(:disabled),
+.pith-page-num:hover:not(.active) {
+  border-color: #c7d0dd;
+  background: #eef1f6;
+}
+
+.pith-page-num.active {
+  border-color: #0d1f3c;
+  background: #0d1f3c;
+  color: #facc15;
+}
+
+.pith-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pith-page-gap {
+  padding: 0 4px;
+  color: #94a3b8;
+}
+
+/* ---------- Status badge ---------- */
+
+.pith-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pith-status-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* More colour tones for this page */
+.pith-page .tone-amber { --tone-bg: #fef3c7; --tone-fg: #b45309; --tone-solid: #eab308; }
+.pith-page .tone-gray { --tone-bg: #f1f5f9; --tone-fg: #64748b; --tone-solid: #94a3b8; }
+.pith-page .tone-gold { --tone-bg: #0d1f3c; --tone-fg: #facc15; --tone-solid: #facc15; }
+
+/* Gold line on the left of the banner when something is overdue */
+.pith-hero.urgent {
+  box-shadow: inset 5px 0 0 #facc15, 0 14px 34px rgba(13, 31, 60, 0.22);
+}
+
+.pith-hero.urgent .pith-hero-icon {
+  border-color: #facc15;
+  background: #facc15;
+  color: #0d1f3c;
+}
+
+/* ---------- List card head + search ---------- */
+
+.pith-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #f1f4f8;
+}
+
+.pith-card-title {
+  min-width: 0;
+}
+
+.pith-card-title h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.pith-card-title h2 svg {
+  color: #eab308;
+}
+
+.pith-card-title p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+
+.pith-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 320px;
+  max-width: 100%;
+  flex-shrink: 0;
+  height: 42px;
+  padding: 0 12px 0 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.pith-search:focus-within {
+  border-color: #facc15;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.18);
+}
+
+.pith-search-icon {
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+.pith-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.pith-search input::placeholder {
+  color: #94a3b8;
+}
+
+.pith-search-clear {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+}
+
+.pith-search-clear:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+/* Search and the Filter button sit together */
+.pith-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ---------- List ---------- */
+
+.pith-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.pith-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1.4fr) minmax(0, 1.3fr) 150px minmax(0, 190px) 20px;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+}
+
+/* Navy table header - same as the Dashboard tables */
+.pith-head {
+  min-height: 44px;
+  background: #0d1f3c;
+  border-bottom: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+}
+
+.pith-item,
+.pith-row-skeleton {
+  position: relative;
+  min-height: 74px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pith-item {
+  cursor: pointer;
+  outline: none;
+  transition: background 0.15s ease;
+}
+
+.pith-item:last-child {
+  border-bottom: none;
+  border-radius: 0 0 18px 18px;
+}
+
+.pith-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.pith-item:hover {
+  background: #f8fafc;
+}
+
+.pith-item:hover::before {
+  background: #facc15;
+}
+
+.pith-item.is-action::before {
+  background: #facc15;
+}
+
+.pith-item.is-late::before {
+  background: #dc2626;
+}
+
+.pith-item:focus-visible {
+  background: #fffbeb;
+  box-shadow: inset 0 0 0 2px #facc15;
+}
+
+.pith-ticket {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0d1f3c;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Customer */
+.pith-customer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pith-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #0d1f3c;
+  color: #facc15;
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.pith-customer-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pith-customer-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pith-customer-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.pith-package {
+  padding: 1px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+/* Shown under the name only on smaller screens */
+.pith-inline-date {
+  display: none;
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.pith-inline-date.late {
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.pith-inline-address {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pith-inline-address svg {
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+.pith-inline-address span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Address */
+.pith-address {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: #475569;
+}
+
+.pith-address svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #94a3b8;
+}
+
+.pith-address span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Date */
+.pith-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.pith-date-main {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.pith-date-sub {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.pith-date-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.pith-date-flag.late {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.pith-date-flag.soon {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.pith-muted {
+  font-size: 13px;
+  font-style: italic;
+  color: #cbd5e1;
+}
+
+/* Status */
+.pith-status {
+  background: var(--tone-bg);
+  color: var(--tone-fg);
+  line-height: 1.3;
+  white-space: normal;
+}
+
+.pith-status svg {
+  flex-shrink: 0;
+}
+
+/* Outcome (Ticket History) */
+.pith-outcome {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.pith-needs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Arrow at the end of each row */
+.pith-arrow {
+  display: grid;
+  place-items: center;
+  color: #cbd5e1;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.pith-item:hover .pith-arrow {
+  color: #0d1f3c;
+  transform: translateX(3px);
+}
+
+/* Skeleton bits */
+.pith-skel-customer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pith-skel-avatar {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+/* ---------- Smaller screens ---------- */
+
+/* List: hide the address column, show it under the name */
+@container pith-card (max-width: 900px) {
+  .pith-hide-md {
+    display: none !important;
+  }
+
+  .pith-inline-address {
+    display: inline-flex;
+  }
+
+  .pith-row {
+    grid-template-columns: 90px minmax(0, 1.5fr) 140px minmax(0, 170px) 20px;
+  }
+}
+
+/* Search and Filter take the full width of a narrow card */
+@container pith-card (max-width: 760px) {
+  .pith-card-head {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+
+  .pith-tools {
+    width: 100%;
+  }
+
+  .pith-search {
+    flex: 1;
+    width: auto;
+  }
+}
+
+/* List rows become small cards */
+@container pith-card (max-width: 620px) {
+  .pith-hide-sm,
+  .pith-head,
+  .pith-arrow {
+    display: none !important;
+  }
+
+  .pith-inline-date {
+    display: inline;
+  }
+
+  .pith-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 8px;
+    padding: 0 16px;
+  }
+
+  .pith-item,
+  .pith-row-skeleton {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .pith-ticket {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .pith-customer {
+    grid-column: 1 / -1;
+  }
+
+
+}
+
+@media (max-width: 900px) {
+  .pith-hero {
+    flex-wrap: wrap;
+  }
+
+  .pith-hero-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .pith-page {
+    gap: 16px;
+  }
+
+  .pith-hero {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .pith-hero-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+  }
+
+  .pith-hero h1 {
+    font-size: 20px;
+  }
+
+  .pith-hero p {
+    font-size: 13.5px;
+  }
+
+  .pith-hero-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .pith-card-head {
+    padding: 16px;
+  }
+
+  .pith-tools {
+    flex-wrap: wrap;
+  }
+
+  .pith-search {
+    flex: 1 1 200px;
+    width: auto;
+  }
+}

@@ -1,202 +1,954 @@
-.stfar-loading,
-.stfar-error {
-  font-size: 15px;
-  color: #6b7280;
-}
+/* ===== Staff Assessment Review (stfar-) ===== */
 
-.stfar-error {
-  color: #dc2626;
-}
-
-.stfar-toolbar {
+.stfar-page {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 20px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
+  width: 100%;
+  color: #0f172a;
 }
 
-.stfar-tabs {
-  display: flex;
-  gap: 6px;
+.stfar-page *,
+.stfar-page *::before,
+.stfar-page *::after {
+  box-sizing: border-box;
 }
 
-.stfar-tab {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  padding: 9px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  cursor: pointer;
+.stfar-page button,
+.stfar-page input {
+  font-family: inherit;
 }
 
-.stfar-tab:hover {
-  border-color: #0d1f3c;
-}
+/* Shared colour tones */
+.stfar-page .tone-navy { --tone-bg: #eef1f6; --tone-fg: #0d1f3c; --tone-solid: #0d1f3c; }
+.stfar-page .tone-amber { --tone-bg: #fef3c7; --tone-fg: #b45309; --tone-solid: #eab308; }
+.stfar-page .tone-green { --tone-bg: #dcfce7; --tone-fg: #166534; --tone-solid: #16a34a; }
+.stfar-page .tone-blue { --tone-bg: #dbeafe; --tone-fg: #1e40af; --tone-solid: #3b82f6; }
+.stfar-page .tone-violet { --tone-bg: #ede9fe; --tone-fg: #6d28d9; --tone-solid: #8b5cf6; }
+.stfar-page .tone-rose { --tone-bg: #ffe4e6; --tone-fg: #be123c; --tone-solid: #f43f5e; }
+.stfar-page .tone-indigo { --tone-bg: #e0e7ff; --tone-fg: #3730a3; --tone-solid: #6366f1; }
+.stfar-page .tone-gold { --tone-bg: #0d1f3c; --tone-fg: #facc15; --tone-solid: #facc15; }
+.stfar-page .tone-gray { --tone-bg: #f1f5f9; --tone-fg: #64748b; --tone-solid: #94a3b8; }
+.stfar-page .tone-red { --tone-bg: #fee2e2; --tone-fg: #991b1b; --tone-solid: #dc2626; }
 
-.stfar-tab.active {
-  background: #0d1f3c;
-  color: #ffffff;
-  border-color: #0d1f3c;
-}
+/* ---------- Banner ---------- */
 
-.stfar-search {
+.stfar-hero {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 10px 16px;
-  color: #9ca3af;
-  flex: 1;
-  min-width: 220px;
-  max-width: 320px;
+  gap: 18px;
+  padding: 24px 28px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #0d1f3c 0%, #16325e 70%, #1b3a6b 100%);
+  color: #fff;
+  box-shadow: 0 14px 34px rgba(13, 31, 60, 0.22);
 }
 
-.stfar-search input {
-  border: none;
-  outline: none;
-  font-size: 14px;
-  color: #374151;
-  width: 100%;
-  background: transparent;
-}
-
-.stfar-table-card {
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-
-.stfar-empty {
-  padding: 28px 16px;
-  color: #6b7280;
-  font-size: 14px;
-  text-align: center;
-}
-
-.stfar-table {
-  width: 100%;
-  min-width: 780px;
-  table-layout: fixed;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.stfar-table th {
-  text-align: center;
-  padding: 14px 14px;
-  background: #0d1f3c;
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-}
-
-.stfar-table td {
-  padding: 16px 14px;
-  border-bottom: 1px solid #f3f4f6;
-  color: #374151;
-  vertical-align: middle;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.stfar-table th:nth-child(2),
-.stfar-table td:nth-child(2) {
-  text-align: left;
-}
-
-.stfar-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.stfar-table tbody tr:hover {
-  background: #f9fafb;
-}
-
-.stfar-td-strong {
-  font-weight: 700;
-  color: #0d1f3c;
-}
-
-.stfar-customer-cell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  overflow: hidden;
-}
-
-.stfar-row-avatar {
-  width: 26px;
-  height: 26px;
+.stfar-hero-glow {
+  position: absolute;
+  top: -150px;
+  right: 6%;
+  width: 360px;
+  height: 360px;
   border-radius: 50%;
-  background: #0d1f3c;
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 700;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.24) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.stfar-hero-icon {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: 16px;
+  background: rgba(250, 204, 21, 0.12);
+  color: #facc15;
+}
+
+.stfar-hero-text {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.stfar-hero h1 {
+  margin: 0 0 5px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.stfar-hero p {
+  margin: 0;
+  font-size: 14.5px;
+  color: #cbd5e1;
+}
+
+.stfar-hero-actions {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
   flex-shrink: 0;
 }
 
-.stfar-status-badge {
-  display: inline-block;
-  padding: 4px 11px;
-  border-radius: 9999px;
-  font-size: 12px;
+.stfar-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.stfar-hero-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.stfar-hero-btn.gold {
+  border: none;
+  background: #facc15;
+  color: #0d1f3c;
+  box-shadow: 0 10px 22px rgba(250, 204, 21, 0.28);
+}
+
+.stfar-hero-btn.gold:hover {
+  background: #eab308;
+  transform: translateY(-1px);
+}
+
+.stfar-hero-btn.glass {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.stfar-hero-btn.glass:hover:not(:disabled) {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.stfar-page .spin {
+  animation: stfarSpin 0.9s linear infinite;
+}
+
+@keyframes stfarSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- List card ---------- */
+
+.stfar-card {
+  container-type: inline-size;
+  container-name: stfar-card;
+  overflow: hidden;
+  border: 1px solid #eef2f7;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(13, 31, 60, 0.04), 0 6px 16px rgba(13, 31, 60, 0.05);
+}
+
+.stfar-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.stfar-card-title {
+  min-width: 0;
+}
+
+.stfar-card-title h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.stfar-card-title h2 svg {
+  color: #eab308;
+}
+
+.stfar-card-title p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+
+/* Search */
+.stfar-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 320px;
+  max-width: 100%;
+}
+
+.stfar-search-icon {
+  position: absolute;
+  left: 13px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.stfar-search input {
+  width: 100%;
+  height: 42px;
+  padding: 0 38px 0 40px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stfar-search input::placeholder {
+  color: #94a3b8;
+}
+
+.stfar-search input:focus {
+  border-color: #facc15;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.18);
+}
+
+.stfar-search-clear {
+  position: absolute;
+  right: 9px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+}
+
+.stfar-search-clear:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+/* Search and the Filter button sit together */
+.stfar-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ---------- List ---------- */
+
+.stfar-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stfar-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) 180px;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+}
+
+.stfar-head {
+  min-height: 44px;
+  background: #f8fafc;
+  border-bottom: 1px solid #eef2f7;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.stfar-right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.stfar-item {
+  position: relative;
+  min-height: 76px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.15s ease;
+}
+
+.stfar-item:last-child {
+  border-bottom: none;
+}
+
+.stfar-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.stfar-item:hover {
+  background: #f8fafc;
+}
+
+.stfar-item:hover::before {
+  background: #0d1f3c;
+}
+
+.stfar-item.needs-action::before {
+  background: #facc15;
+}
+
+.stfar-item:focus-visible {
+  background: #fffbeb;
+  box-shadow: inset 0 0 0 2px #facc15;
+}
+
+.stfar-ticket {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0d1f3c;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Customer */
+.stfar-customer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stfar-avatar {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--tone-bg);
+  color: var(--tone-fg);
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.stfar-customer-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.stfar-customer-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.stfar-package {
+  padding: 1px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+/* Quotation status */
+.stfar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--tone-bg);
+  color: var(--tone-fg);
+  font-size: 12.5px;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.stfar-status-badge.approved {
-  background: #dcfce7;
-  color: #166534;
+/* Partner installer */
+.stfar-installer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
 }
 
-.stfar-status-badge.not-compatible {
+.stfar-installer-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.stfar-installer-name {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Dates */
+.stfar-date {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.stfar-time {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.stfar-muted {
+  font-size: 13px;
+  font-style: italic;
+  color: #cbd5e1;
+}
+
+/* Submitted date + how long it has waited */
+.stfar-submitted {
+  min-width: 0;
+}
+
+.stfar-wait {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.stfar-wait.old {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-weight: 800;
+}
+
+/* Status + "Returned by Admin" tag */
+.stfar-status-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+}
+
+.stfar-returned-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
   background: #fee2e2;
-  color: #991b1b;
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
-.stfar-status-badge.in-progress {
-  background: #dbeafe;
-  color: #1e40af;
+/* Tickets returned by Admin - soft red row with a red bar */
+.stfar-item.returned {
+  background: #fff7f5;
 }
 
-.stfar-action-button {
+.stfar-item.returned::before {
+  background: #dc2626;
+}
+
+.stfar-item.returned:hover {
+  background: #fdeee9;
+}
+
+.stfar-next.urgent {
+  background: #dc2626;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(220, 38, 38, 0.22);
+}
+
+.stfar-item:hover .stfar-next.urgent {
+  background: #b91c1c;
+}
+
+.stfar-next-inline.urgent {
+  color: #b91c1c;
+}
+
+.stfar-empty-badge.green {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+/* Next step */
+.stfar-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.stfar-next.action {
   background: #0d1f3c;
-  color: #ffffff;
-  border: none;
-  padding: 7px 14px;
-  border-radius: 6px;
+  color: #fff;
+}
+
+.stfar-next.action svg {
+  color: #facc15;
+}
+
+.stfar-item:hover .stfar-next.action {
+  background: #16325e;
+}
+
+.stfar-next svg,
+.stfar-next-inline svg,
+.stfar-status svg,
+.stfar-wait svg {
+  flex-shrink: 0;
+}
+
+.stfar-next-arrow {
+  transition: transform 0.2s ease;
+}
+
+.stfar-item:hover .stfar-next-arrow {
+  transform: translateX(3px);
+}
+
+.stfar-next.wait {
+  padding: 0;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.stfar-next.done {
+  padding: 0;
+  color: #15803d;
+}
+
+.stfar-next.muted {
+  padding: 0;
+  color: #cbd5e1;
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* Small next-step line under the name - only shown on smaller screens */
+.stfar-next-inline {
+  display: none;
+  align-items: center;
+  gap: 5px;
   font-size: 12px;
   font-weight: 700;
+  color: #64748b;
+}
+
+.stfar-next-inline.action {
+  color: #b45309;
+}
+
+.stfar-next-inline.done {
+  color: #15803d;
+}
+
+.stfar-next-inline.muted {
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+/* ---------- Skeleton ---------- */
+
+.stfar-row-skeleton {
+  min-height: 76px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.stfar-skel {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+  background-size: 200% 100%;
+  animation: stfarShimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes stfarShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.stfar-skel-customer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stfar-skel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;
+}
+
+.stfar-skel-avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+}
+
+.stfar-skel-xs { width: 60px; }
+.stfar-skel-sm { width: 70px; }
+.stfar-skel-md { width: 70%; max-width: 140px; }
+.stfar-skel-pill { width: 110px; height: 26px; border-radius: 999px; }
+.stfar-skel-btn { width: 150px; height: 34px; border-radius: 10px; }
+
+/* ---------- Empty / error ---------- */
+
+.stfar-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 56px 20px;
+  text-align: center;
+}
+
+.stfar-empty-badge {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  border-radius: 20px;
+  background: #eef1f6;
+  color: #0d1f3c;
+}
+
+.stfar-empty-badge.red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.stfar-empty-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.stfar-empty-hint {
+  margin: 6px 0 18px;
+  font-size: 13.5px;
+  color: #64748b;
+}
+
+.stfar-btn-primary,
+.stfar-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
   cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.stfar-action-button:hover {
-  background: #16294f;
+.stfar-btn-primary {
+  border: none;
+  background: #0d1f3c;
+  color: #fff;
 }
 
-@media (max-width: 768px) {
-  .stfar-toolbar {
-    flex-direction: column;
-    align-items: stretch;
+.stfar-btn-primary:hover {
+  background: #16325e;
+}
+
+.stfar-btn-secondary {
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #0d1f3c;
+}
+
+.stfar-btn-secondary:hover {
+  border-color: #0d1f3c;
+}
+
+/* ---------- Pagination ---------- */
+
+.stfar-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid #eef2f7;
+  background: #fbfcfe;
+}
+
+
+
+.stfar-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stfar-page-btn,
+.stfar-page-num {
+  min-width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #334155;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.stfar-page-btn:hover:not(:disabled),
+.stfar-page-num:hover:not(.active) {
+  border-color: #0d1f3c;
+  color: #0d1f3c;
+}
+
+.stfar-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stfar-page-num.active {
+  border-color: #0d1f3c;
+  background: #0d1f3c;
+  color: #facc15;
+}
+
+.stfar-page-gap {
+  padding: 0 4px;
+  color: #94a3b8;
+}
+
+/* ---------- Footnote ---------- */
+
+.stfar-footnote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 0;
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+
+/* ---------- Responsive ---------- */
+
+/* Search and Filter take the full width of a narrow card */
+@container stfar-card (max-width: 760px) {
+  .stfar-tools {
+    width: 100%;
   }
 
   .stfar-search {
-    max-width: none;
+    flex: 1;
+    width: auto;
+  }
+}
+
+/* The list changes based on the width of the card itself,
+   so it never overflows, whatever the sidebar size is. */
+@container stfar-card (max-width: 1050px) {
+  .stfar-hide-md {
+    display: none !important;
+  }
+
+  .stfar-next-inline {
+    display: inline-flex;
+  }
+
+  .stfar-row {
+    grid-template-columns: 90px minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+}
+
+@container stfar-card (max-width: 640px) {
+  .stfar-hide-sm {
+    display: none !important;
+  }
+
+  .stfar-head {
+    display: none;
+  }
+
+  .stfar-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 8px;
+    padding: 0 16px;
+  }
+
+  .stfar-item,
+  .stfar-row-skeleton {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .stfar-status {
+    height: 26px;
+    padding: 0 9px;
+    font-size: 11.5px;
+  }
+
+  .stfar-ticket {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .stfar-row-skeleton > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .stfar-pagination {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 16px;
+  }
+
+
+  .stfar-pagination-controls {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 900px) {
+  .stfar-hero {
+    flex-wrap: wrap;
+  }
+
+  .stfar-hero-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .stfar-page {
+    gap: 16px;
+  }
+
+  .stfar-hero {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .stfar-hero-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+  }
+
+  .stfar-hero h1 {
+    font-size: 20px;
+  }
+
+  .stfar-hero p {
+    font-size: 13.5px;
+  }
+
+  .stfar-hero-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .stfar-card-head {
+    padding: 16px;
+  }
+
+  .stfar-tools {
+    flex-wrap: wrap;
+  }
+
+  .stfar-search {
+    flex: 1 1 200px;
+    width: auto;
   }
 }

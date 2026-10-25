@@ -10,6 +10,15 @@ export async function getInquiries() {
   return response.data;
 }
 
+// Paginated version for the Email Inquiries page. isReplied can be
+// true, false, or omitted entirely to get every status.
+export async function getInquiriesPage(page = 1, isReplied = null) {
+  const params = new URLSearchParams({ page });
+  if (isReplied !== null) params.set('is_replied', isReplied);
+  const response = await client.get(`/inquiries/staff/?${params.toString()}`);
+  return response.data;
+}
+
 export async function getInquiryDetail(id) {
   const response = await client.get(`/inquiries/staff/${id}/`);
   return response.data;

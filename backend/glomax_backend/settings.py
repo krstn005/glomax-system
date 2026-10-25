@@ -8,9 +8,13 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
+
+The same file works on your computer and online:
+  - On your computer, values come from backend/.env (same as before).
+  - Online (Render), values come from the Environment settings on Render.
 """
 
-from decouple import config
+from decouple import config, Csv
 from pathlib import Path
 from datetime import timedelta
 
@@ -28,9 +32,12 @@ SECRET_KEY = config('SECRET_KEY')
 GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# On your computer this stays True. Online, set DEBUG=False on Render.
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.1.17"]
+# The addresses the Django backend answers on. Online, set this on Render:
+#   ALLOWED_HOSTS=api.glomaxsolar.me,glomax-api.onrender.com
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.1.17', cast=Csv())
 
 
 # Application definition
@@ -59,6 +66,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    # Serves the Django admin's CSS/JS and the PDF logo online
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -89,17 +98,35 @@ WSGI_APPLICATION = 'glomax_backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+#
+# Online: set DATABASE_URL on Render to the connection string from Neon
+# (it starts with postgresql://...). On your computer, leave DATABASE_URL
+# out of .env and the DB_NAME / DB_USER / ... values are used like before.
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
+DATABASE_URL = config('DATABASE_URL', default='')
+
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST'),
+            'PORT': config('DB_PORT'),
+        }
+    }
 
 
 # Password validation
@@ -166,10 +193,48 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Online, "python manage.py collectstatic" copies all static files here
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 # Media files (user-uploaded content, e.g. Proof of Visit Photos)
 # https://docs.djangoproject.com/en/5.2/topics/files/
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Where uploaded photos are saved.
+# On your computer: the backend/media folder, like before.
+# Online: Cloudinary (free). Render's free plan deletes files saved on
+# its own disk every time the server restarts, so photos would vanish.
+# Set CLOUDINARY_URL on Render (copy it from your Cloudinary dashboard,
+# it starts with cloudinary://) and photos go to Cloudinary instead.
+CLOUDINARY_URL = config('CLOUDINARY_URL', default='')
+
+STORAGES = {
+    'default': {
+        'BACKEND': (
+            'cloudinary_storage.storage.MediaCloudinaryStorage'
+            if CLOUDINARY_URL
+            else 'django.core.files.storage.FileSystemStorage'
+        ),
+    },
+    # Compressed, but keeps the normal file names, so the logo inside
+    # the Final Sheet and Completion Certificate PDFs is still found
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
+
+if CLOUDINARY_URL:
+    # cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+    from urllib.parse import urlparse
+
+    _cloudinary = urlparse(CLOUDINARY_URL)
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': _cloudinary.hostname,
+        'API_KEY': _cloudinary.username,
+        'API_SECRET': _cloudinary.password,
+        'SECURE': True,
+    }
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -177,17 +242,47 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# CORS settings - allows your React frontend (running on a different port)
-# to make requests to this Django backend
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://192.168.1.17:5173",
-]
+# Separate address per portal - each portal's own web address. These
+# must match the VITE_..._URL values in the frontend .env file.
+# Online, set them on Render, for example:
+#   CUSTOMER_PORTAL_URL=https://glomaxsolar.me
+#   STAFF_PORTAL_URL=https://staff.glomaxsolar.me
+#   INSTALLER_PORTAL_URL=https://installer.glomaxsolar.me
+#   ADMIN_PORTAL_URL=https://admin.glomaxsolar.me
+CUSTOMER_PORTAL_URL = config('CUSTOMER_PORTAL_URL', default='http://localhost:5173').rstrip('/')
+STAFF_PORTAL_URL = config('STAFF_PORTAL_URL', default='http://staff.localhost:5173').rstrip('/')
+INSTALLER_PORTAL_URL = config('INSTALLER_PORTAL_URL', default='http://installer.localhost:5173').rstrip('/')
+ADMIN_PORTAL_URL = config('ADMIN_PORTAL_URL', default='http://admin.localhost:5173').rstrip('/')
 
-# The public reply-link email points back to this frontend URL. Update
-# this to the real deployed domain before going live - localhost is only
-# correct for local development.
-FRONTEND_BASE_URL = "http://192.168.1.17:5173"
+# Which portal address each role uses (for links in emails)
+PORTAL_URLS = {
+    'CUSTOMER': CUSTOMER_PORTAL_URL,
+    'STAFF': STAFF_PORTAL_URL,
+    'PARTNER_INSTALLER': INSTALLER_PORTAL_URL,
+    'ADMIN': ADMIN_PORTAL_URL,
+}
+
+# Extra frontend addresses that may call the API, separated by commas
+# (for example testing from a phone on the same Wi-Fi, or the
+# glomax-system.pages.dev test address online)
+EXTRA_FRONTEND_ORIGINS = config(
+    'EXTRA_FRONTEND_ORIGINS',
+    default='http://192.168.1.17:5173,http://127.0.0.1:5173',
+    cast=Csv(),
+)
+
+# CORS settings - allows the React portals (running on different
+# addresses) to make requests to this Django backend
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys(
+    [CUSTOMER_PORTAL_URL, STAFF_PORTAL_URL, INSTALLER_PORTAL_URL, ADMIN_PORTAL_URL]
+    + [origin.rstrip('/') for origin in EXTRA_FRONTEND_ORIGINS if origin]
+))
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+# The public reply-link email points back to the Customer portal.
+# To test the link from a phone on your Wi-Fi, set this in .env:
+#   FRONTEND_BASE_URL=http://192.168.1.17:5173
+FRONTEND_BASE_URL = config('FRONTEND_BASE_URL', default=CUSTOMER_PORTAL_URL).rstrip('/')
 
 # Email settings - sends real emails (e.g. Initial Quotation from the
 # Staff Email Inquiries page) through Resend instead of Django's default
@@ -199,3 +294,30 @@ ANYMAIL = {
 }
 
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+
+# SMS settings - 2-step login codes sent by text message through
+# Semaphore (https://semaphore.co). Put your API key in the .env file.
+# SEMAPHORE_SENDER_NAME is optional: leave it empty to use Semaphore's
+# default sender name until your own name is approved.
+# While DEBUG is True and there's no API key, codes are printed in the
+# Django terminal instead of being sent (handy for local testing).
+SEMAPHORE_API_KEY = config('SEMAPHORE_API_KEY', default='')
+SEMAPHORE_SENDER_NAME = config('SEMAPHORE_SENDER_NAME', default='')
+
+
+# Online safety settings - only turned on when DEBUG is False
+if not DEBUG:
+    # Render sits in front of Django and handles https, so trust its header
+    # (Render already sends every http visit to https by itself)
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'
+
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {'console': {'class': 'logging.StreamHandler'}},
+        'root': {'handlers': ['console'], 'level': 'WARNING'},
+    }

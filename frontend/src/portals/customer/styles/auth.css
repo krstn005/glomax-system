@@ -287,3 +287,7 @@ body {
   -webkit-appearance: none;
   appearance: none;
 }
+
+.auth-tab:hover:not(.active) {
+  color: var(--navy);
+}

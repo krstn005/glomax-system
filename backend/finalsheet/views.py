@@ -1,3 +1,8 @@
+import os
+from datetime import date
+from decimal import Decimal
+
+from django.apps import apps
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from rest_framework import generics, permissions, status
@@ -101,9 +106,12 @@ def _pdf_link_callback(uri, rel):
     static URL, into an absolute path on disk so both can actually
     render inside the PDF.
     """
-    import os
     from django.conf import settings
     from django.contrib.staticfiles import finders
+
+    # Already a real file on disk (like the logo path we pass in)
+    if os.path.isfile(uri):
+        return uri
 
     clean_uri = uri.lstrip("/")
     media_prefix = settings.MEDIA_URL.lstrip("/")
@@ -138,6 +146,63 @@ def _format_payment_terms_lines(text):
     return [p.strip() for p in text.split(",") if p.strip()]
 
 
+# Logo file names to look for, in order
+LOGO_NAMES = [
+    'GLOMAX_LOGO.png',
+    'glomax_logo.png',
+    'logo.png',
+    'logo.jpg',
+]
+
+
+def _find_logo_path():
+    """
+    Finds the company logo on disk. Checks the finalsheet app's
+    templates/finalsheet/ folder first (where GLOMAX_LOGO.png is kept),
+    then its static folder, then any static folder Django knows about.
+    Returns None if no logo is found, and the PDF just skips it.
+    """
+    from django.contrib.staticfiles import finders
+
+    try:
+        app_path = apps.get_app_config('finalsheet').path
+    except LookupError:
+        app_path = None
+
+    if app_path:
+        folders = [
+            os.path.join(app_path, 'templates', 'finalsheet'),
+            os.path.join(app_path, 'static'),
+            os.path.join(app_path, 'static', 'images'),
+            os.path.join(app_path, 'static', 'finalsheet'),
+        ]
+        for folder in folders:
+            for name in LOGO_NAMES:
+                path = os.path.join(folder, name)
+                if os.path.isfile(path):
+                    return path
+
+    for name in LOGO_NAMES:
+        for candidate in (name, f'images/{name}', f'finalsheet/{name}'):
+            found = finders.find(candidate)
+            if found:
+                return found[0] if isinstance(found, (list, tuple)) else found
+
+    return None
+
+
+def _peso(amount):
+    """xhtml2pdf's built-in fonts have no peso sign, so 'PHP' is used instead."""
+    return f'PHP {amount:,.2f}'
+
+
+def _local(dt):
+    """Converts a date/time to local time when it has a timezone."""
+    if dt and timezone.is_aware(dt):
+        return timezone.localtime(dt)
+    return dt
+
+
 class FinalSheetPDFView(APIView):
     """
     GET /api/tickets/<id>/final-sheet/pdf/  - generates and returns a
@@ -170,7 +235,17 @@ class FinalSheetPDFView(APIView):
         updated_quotation = ticket.quotations.filter(quotation_type='UPDATED').order_by('-sent_at').first()
         photos = assessment.photos.all() if assessment else []
 
+        # Customer's real name if we have it, otherwise their username
+        customer = ticket.customer
+        customer_name = (
+            (getattr(ticket, 'full_name', '') or '').strip()
+            or (customer.get_full_name() or '').strip()
+            or customer.username
+        )
+
         html = render_to_string('finalsheet/final_sheet_pdf.html', {
+            'logo_path': _find_logo_path(),
+            'customer_name': customer_name,
             'ticket': ticket,
             'final_sheet': final_sheet,
             'assessment': assessment,
@@ -242,68 +317,160 @@ class CompletionCertificatePDFView(APIView):
 class AdminReportsPDFView(APIView):
     """
     GET /api/tickets/reports/pdf/  - generates a PDF export of the
-    Reports & Analytics page's stats (Admin only). Computes the same
-    numbers the frontend page already shows, server-side, so the PDF
-    and the on-screen page never disagree.
+    Reports & Analytics page (Admin only). Works out the same numbers
+    the frontend page shows, so the PDF and the screen match:
+    revenue only counts COMPLETED installations, and approved jobs
+    that aren't installed yet are shown separately as "waiting".
     """
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    STATUS_GROUPS = [
+        ('New Requests', ['REQUEST_SUBMITTED'], '#f59e0b'),
+        ('Under Assessment', ['PI_ASSIGNED', 'ASSESSMENT_SUBMITTED', 'STAFF_REVIEW', 'ADMIN_REVIEW'], '#3b82f6'),
+        ('Approved', ['APPROVED'], '#22c55e'),
+        ('Completed', ['COMPLETED'], '#eab308'),
+        ('Not Compatible', ['NC_CANNOT_PROCEED', 'NC_CAN_REAPPLY'], '#ef4444'),
+        ('Withdrawn', ['WITHDRAWN'], '#94a3b8'),
+    ]
+
+    # Tickets an installer is still working on
+    WORKER_ACTIVE = ['PI_ASSIGNED', 'ASSESSMENT_SUBMITTED', 'STAFF_REVIEW', 'ADMIN_REVIEW', 'APPROVED']
 
     def get(self, request):
         from accounts.models import User
 
-        tickets = Ticket.objects.all()
+        tickets = list(Ticket.objects.all())
+        total = len(tickets)
 
-        total_requests = tickets.count()
-        completed_installations = tickets.filter(status='COMPLETED').count()
+        def final_cost(t):
+            sheet = getattr(t, 'final_sheet', None)
+            return Decimal(sheet.final_cost or 0) if sheet else Decimal('0')
 
-        total_revenue = sum(
-            (t.final_sheet.final_cost for t in tickets if hasattr(t, 'final_sheet')),
-            start=0,
-        )
+        def rating(t):
+            fb = getattr(t, 'feedback', None)
+            return fb.rating if fb and fb.rating else None
 
-        rated_tickets = [t for t in tickets if hasattr(t, 'feedback')]
-        avg_rating = (
-            round(sum(t.feedback.rating for t in rated_tickets) / len(rated_tickets), 1)
-            if rated_tickets else 0.0
-        )
+        completed = [t for t in tickets if t.status == 'COMPLETED']
+        approved = [t for t in tickets if t.status == 'APPROVED']
 
-        status_groups = [
-            ('Pending', ['REQUEST_SUBMITTED']),
-            ('Under Assessment', ['PI_ASSIGNED', 'ASSESSMENT_SUBMITTED', 'STAFF_REVIEW', 'ADMIN_REVIEW']),
-            ('Approved', ['APPROVED']),
-            ('Rejected', ['NC_CANNOT_PROCEED', 'NC_CAN_REAPPLY']),
-            ('Completed', ['COMPLETED']),
-            ('Withdrawn', ['WITHDRAWN']),
-        ]
-        status_breakdown = [
-            {'label': label, 'count': tickets.filter(status__in=statuses).count()}
-            for label, statuses in status_groups
-        ]
+        earned = sum((final_cost(t) for t in completed), Decimal('0'))
+        waiting = sum((final_cost(t) for t in approved), Decimal('0'))
 
-        workers = User.objects.filter(role='PARTNER_INSTALLER')
-        worker_performance = [
+        ratings = [r for r in (rating(t) for t in tickets) if r]
+        avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else 0.0
+        completion_rate = round(len(completed) * 100 / total) if total else 0
+
+        # Status breakdown
+        status_breakdown = []
+        for label, statuses, color in self.STATUS_GROUPS:
+            count = sum(1 for t in tickets if t.status in statuses)
+            pct = round(count * 100 / total) if total else 0
+            status_breakdown.append({
+                'label': label,
+                'count': count,
+                'pct': pct,
+                'rest': 100 - pct,
+                'color': color,
+            })
+
+        # Last 6 months
+        now = timezone.localtime()
+        months = []
+        for i in range(5, -1, -1):
+            month = now.month - i
+            year = now.year
+            while month <= 0:
+                month += 12
+                year -= 1
+            months.append({
+                'year': year,
+                'month': month,
+                'label': date(year, month, 1).strftime('%b %Y'),
+                'requests': 0,
+                'completed': 0,
+                'revenue_value': Decimal('0'),
+            })
+
+        for t in tickets:
+            created = _local(getattr(t, 'created_at', None))
+            if created:
+                for m in months:
+                    if m['year'] == created.year and m['month'] == created.month:
+                        m['requests'] += 1
+            if t.status == 'COMPLETED':
+                done = _local(getattr(t, 'completed_at', None) or getattr(t, 'updated_at', None))
+                if done:
+                    for m in months:
+                        if m['year'] == done.year and m['month'] == done.month:
+                            m['completed'] += 1
+                            m['revenue_value'] += final_cost(t)
+
+        for m in months:
+            m['revenue'] = _peso(m['revenue_value']) if m['revenue_value'] else '-'
+
+        # Popular packages
+        package_counts = {}
+        for t in tickets:
+            name = (getattr(t, 'solar_package', '') or '').strip()
+            if name:
+                package_counts[name] = package_counts.get(name, 0) + 1
+        packages = [
             {
-                'username': w.username,
-                'completed': tickets.filter(partner_installer=w, status='COMPLETED').count(),
-                'is_active': w.is_active,
+                'rank': i + 1,
+                'name': name,
+                'count': count,
+                'pct': round(count * 100 / total) if total else 0,
             }
-            for w in workers
+            for i, (name, count) in enumerate(
+                sorted(package_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+            )
         ]
+
+        # Installer performance
+        worker_performance = []
+        for w in User.objects.filter(role='PARTNER_INSTALLER'):
+            mine = [t for t in tickets if t.partner_installer_id == w.id]
+            mine_ratings = [r for r in (rating(t) for t in mine) if r]
+            full_name = (getattr(w, 'full_name', '') or w.get_full_name() or '').strip()
+            worker_performance.append({
+                'name': full_name or w.username,
+                'username': w.username,
+                'assigned': len(mine),
+                'active': sum(1 for t in mine if t.status in self.WORKER_ACTIVE),
+                'completed': sum(1 for t in mine if t.status == 'COMPLETED'),
+                'avg_rating': round(sum(mine_ratings) / len(mine_ratings), 1) if mine_ratings else None,
+                'review_count': len(mine_ratings),
+                'is_active': w.is_active,
+            })
+        worker_performance.sort(key=lambda w: (w['completed'], w['assigned']), reverse=True)
 
         html = render_to_string('finalsheet/reports_pdf.html', {
-            'generated_on': timezone.now().strftime('%B %d, %Y'),
-            'total_requests': total_requests,
-            'completed_installations': completed_installations,
-            'total_revenue': f'{total_revenue:,.2f}',
+            'logo_path': _find_logo_path(),
+            'generated_on': now.strftime('%B %d, %Y at %I:%M %p'),
+            'total_requests': total,
+            'completed_installations': len(completed),
+            'completion_rate': completion_rate,
+            'total_revenue': _peso(earned),
+            'waiting_revenue': _peso(waiting) if waiting else None,
             'avg_rating': avg_rating,
+            'review_count': len(ratings),
             'status_breakdown': status_breakdown,
+            'months': months,
+            'packages': packages,
             'worker_performance': worker_performance,
         })
 
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="glomax-reports.pdf"'
+        response['Content-Disposition'] = (
+            f'attachment; filename="glomax-reports-{now.strftime("%Y-%m-%d")}.pdf"'
+        )
 
-        result = pisa.CreatePDF(html, dest=response)
+        result = pisa.CreatePDF(
+            html,
+            dest=response,
+            link_callback=_pdf_link_callback,
+            encoding='utf-8',
+        )
         if result.err:
             return HttpResponse("Could not generate PDF.", status=500)
 

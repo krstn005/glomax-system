@@ -17,3 +17,21 @@ export async function submitAssessment(ticketId, formData) {
   });
   return res.data;
 }
+
+// Marks an Approved ticket's installation as physically complete.
+// formData must be a FormData instance including one or more
+// "photos" files as proof of completion.
+export async function completeInstallation(ticketId, formData) {
+  const res = await apiClient.patch(`/tickets/${ticketId}/complete/`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+}
+
+// PI Calendar page - returns every one of this PI's own tickets with
+// a scheduled visit in the given month (month is 1-12, not 0-11).
+export async function getInstallerCalendarTickets(month, year) {
+  const params = new URLSearchParams({ month, year });
+  const res = await apiClient.get(`/tickets/installer/calendar/?${params.toString()}`);
+  return res.data;
+}

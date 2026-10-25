@@ -1,4 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
+import PortalLoginPage from './portals/shared/pages/PortalLoginPage';
+
 import LandingPage from './portals/customer/pages/LandingPage';
 import LoginPage from './portals/customer/pages/LoginPage';
 import RegisterPage from './portals/customer/pages/RegisterPage';
@@ -7,283 +10,122 @@ import DashboardPage from './portals/customer/pages/DashboardPage';
 import NewRequestPage from './portals/customer/pages/NewRequestPage';
 import RequestStatusPage from './portals/customer/pages/RequestStatusPage';
 import PastRequestsPage from './portals/customer/pages/PastRequestsPage';
+import DocumentsPage from './portals/customer/pages/DocumentsPage';
 import FeedbackPage from './portals/customer/pages/FeedbackPage';
+import FaqPage from './portals/customer/pages/FaqPage';
 import SettingsPage from './portals/customer/pages/SettingsPage';
-import PortalLoginPage from './portals/shared/pages/PortalLoginPage';
-import ProtectedRoute from './portals/shared/components/ProtectedRoute';
+
 import StaffDashboardPage from './portals/staff/pages/StaffDashboardPage';
-import StaffSettingsPage from './portals/staff/pages/StaffSettingsPage';
 import StaffEmailInquiriesPage from './portals/staff/pages/StaffEmailInquiriesPage';
-import AdminDashboardPage from './portals/admin/pages/AdminDashboardPage';
-import PIDashboardPage from './portals/partner-installer/pages/PIDashboardPage';
 import StaffInquiryQuotationPage from './portals/staff/pages/StaffInquiryQuotationPage';
 import StaffQuotationManagementPage from './portals/staff/pages/StaffQuotationManagementPage';
 import StaffManageTicketsPage from './portals/staff/pages/StaffManageTicketsPage';
-import StaffTicketDetailPage from './portals/staff/pages/StaffTicketDetailPage';
-import StaffQuotationDetailPage from './portals/staff/pages/StaffQuotationDetailPage';
 import StaffAssessmentReviewPage from './portals/staff/pages/StaffAssessmentReviewPage';
 import StaffAssessmentDetailPage from './portals/staff/pages/StaffAssessmentDetailPage';
 import StaffCompletedTicketsPage from './portals/staff/pages/StaffCompletedTicketsPage';
 import StaffCompletedTicketDetailPage from './portals/staff/pages/StaffCompletedTicketDetailPage';
+import StaffTicketDetailPage from './portals/staff/pages/StaffTicketDetailPage';
+import StaffCalendarPage from './portals/staff/pages/StaffCalendarPage';
 import StaffActivePricesPage from './portals/staff/pages/StaffActivePricesPage';
 import StaffPriceHistoryPage from './portals/staff/pages/StaffPriceHistoryPage';
 import StaffPaymentTermsHistoryPage from './portals/staff/pages/StaffPaymentTermsHistoryPage';
-import InquiryReplyPage from './portals/shared/pages/InquiryReplyPage';
+import StaffSettingsPage from './portals/staff/pages/StaffSettingsPage';
+
+import PIDashboardPage from './portals/partner-installer/pages/PIDashboardPage';
 import PIIncomingTicketsPage from './portals/partner-installer/pages/PIIncomingTicketsPage';
 import PIAssessmentSheetPage from './portals/partner-installer/pages/PIAssessmentSheetPage';
+import PITicketHistoryPage from './portals/partner-installer/pages/PITicketHistoryPage';
+import PIMyRatingsPage from './portals/partner-installer/pages/PIMyRatingsPage';
+import PISettingsPage from './portals/partner-installer/pages/PISettingsPage';
+import PICalendarPage from './portals/partner-installer/pages/PICalendarPage';
 
-function isLoggedIn() {
-  return Boolean(localStorage.getItem('access_token'));
-}
+import AdminDashboardPage from './portals/admin/pages/AdminDashboardPage';
+import AdminRequestsPage from './portals/admin/pages/AdminRequestsPage';
+import AdminCompletedTicketsPage from './portals/admin/pages/AdminCompletedTicketsPage';
+import AdminTicketDetailPage from './portals/admin/pages/AdminTicketDetailPage';
+import AdminWorkersPage from './portals/admin/pages/AdminWorkersPage';
+import AdminPriceHistoryPage from './portals/admin/pages/AdminPriceHistoryPage';
+import AdminPaymentTermsHistoryPage from './portals/admin/pages/AdminPaymentTermsHistoryPage';
+import AdminActivePricesPage from './portals/admin/pages/AdminActivePricesPage';
+import AdminCustomersLogPage from './portals/admin/pages/AdminCustomersLogPage';
+import AdminReportsPage from './portals/admin/pages/AdminReportsPage';
+import AdminCustomerFeedbackPage from './portals/admin/pages/AdminCustomerFeedbackPage';
+import AdminSettingsPage from './portals/admin/pages/AdminSettingsPage';
 
-function RequireAuth({ children }) {
-  if (!isLoggedIn()) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-}
 
-export default function App() {
+function App() {
   return (
     <Routes>
-      {/* Customer portal */}
+      {/* Public - Customer-facing entry points */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route
-        path="/dashboard"
-        element={
-          <RequireAuth>
-            <DashboardPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/new-request"
-        element={
-          <RequireAuth>
-            <NewRequestPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/request-status"
-        element={
-          <RequireAuth>
-            <RequestStatusPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/past-requests"
-        element={
-          <RequireAuth>
-            <PastRequestsPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/feedback"
-        element={
-          <RequireAuth>
-            <FeedbackPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <RequireAuth>
-            <SettingsPage />
-          </RequireAuth>
-        }
-      />
 
-      {/* Public, no-login page - opened from the Reply Link inside
-          Staff's quotation/reply emails. Not part of any portal, not
-          protected - anyone with a valid access_token link can view
-          and reply to their own inquiry's conversation thread here. */}
-      <Route path="/inquiry-reply/:token" element={<InquiryReplyPage />} />
-
-      {/* Per-role login pages for Staff, Admin, and Partner Installer */}
+      {/* Public - Internal/Partner login pages (Staff, Admin, PI) -
+          these must stay public/unprotected since nobody is logged
+          in yet when they reach them. PortalLoginPage itself already
+          refuses to log a CUSTOMER account in through here. */}
       <Route path="/staff-login" element={<PortalLoginPage role="STAFF" />} />
       <Route path="/admin-login" element={<PortalLoginPage role="ADMIN" />} />
-      <Route
-        path="/partner-installer-login"
-        element={<PortalLoginPage role="PARTNER_INSTALLER" />}
-      />
+      <Route path="/partner-installer-login" element={<PortalLoginPage role="PARTNER_INSTALLER" />} />
 
-      {/* Staff portal */}
-      <Route
-        path="/staff/dashboard"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffDashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/settings"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffSettingsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/email-inquiries"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffEmailInquiriesPage />
-          </ProtectedRoute>
-        }
-      />
+      {/* Protected - Customer only */}
+      <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["CUSTOMER"]}><DashboardPage /></ProtectedRoute>} />
+      <Route path="/new-request" element={<ProtectedRoute allowedRoles={["CUSTOMER"]}><NewRequestPage /></ProtectedRoute>} />
+      <Route path="/request-status" element={<ProtectedRoute allowedRoles={["CUSTOMER"]}><RequestStatusPage /></ProtectedRoute>} />
+      <Route path="/past-requests" element={<ProtectedRoute allowedRoles={["CUSTOMER"]}><PastRequestsPage /></ProtectedRoute>} />
+      <Route path="/documents" element={<ProtectedRoute allowedRoles={["CUSTOMER"]}><DocumentsPage /></ProtectedRoute>} />
+      <Route path="/feedback" element={<ProtectedRoute allowedRoles={["CUSTOMER"]}><FeedbackPage /></ProtectedRoute>} />
+      <Route path="/faqs" element={<FaqPage />} />
+      <Route path="/settings" element={<ProtectedRoute allowedRoles={["CUSTOMER"]}><SettingsPage /></ProtectedRoute>} />
 
-      {/* Admin portal */}
-      <Route
-        path="/admin/dashboard"
-        element={
-          <ProtectedRoute allowedRole="ADMIN">
-            <AdminDashboardPage />
-          </ProtectedRoute>
-        }
-      />
+      {/* Protected - Staff only */}
+      <Route path="/staff/dashboard" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffDashboardPage /></ProtectedRoute>} />
+      <Route path="/staff/email-inquiries" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffEmailInquiriesPage /></ProtectedRoute>} />
+      <Route path="/staff/email-inquiries/:id/quotation" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffInquiryQuotationPage /></ProtectedRoute>} />
+      <Route path="/staff/quotation-management" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffQuotationManagementPage /></ProtectedRoute>} />
+      <Route path="/staff/manage-tickets" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffManageTicketsPage /></ProtectedRoute>} />
+      <Route path="/staff/manage-tickets/:id" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffTicketDetailPage /></ProtectedRoute>} />
+      <Route path="/staff/assessment-review" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffAssessmentReviewPage /></ProtectedRoute>} />
+      <Route path="/staff/assessment-review/:id" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffAssessmentDetailPage /></ProtectedRoute>} />
+      <Route path="/staff/completed-tickets" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffCompletedTicketsPage /></ProtectedRoute>} />
+      <Route path="/staff/completed-tickets/:id" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffCompletedTicketDetailPage /></ProtectedRoute>} />
+      <Route path="/staff/calendar" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffCalendarPage /></ProtectedRoute>} />
+      <Route path="/staff/active-prices" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffActivePricesPage /></ProtectedRoute>} />
+      <Route path="/staff/price-history" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffPriceHistoryPage /></ProtectedRoute>} />
+      <Route path="/staff/payment-terms-history" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffPaymentTermsHistoryPage /></ProtectedRoute>} />
+      <Route path="/staff/settings" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffSettingsPage /></ProtectedRoute>} />
 
-      {/* Partner Installer portal */}
-      <Route
-        path="/partner-installer/dashboard"
-        element={
-          <ProtectedRoute allowedRole="PARTNER_INSTALLER">
-            <PIDashboardPage />
-          </ProtectedRoute>
-        }
-      />
+      {/* Protected - Partner Installer only */}
+      <Route path="/partner-installer/dashboard" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PIDashboardPage /></ProtectedRoute>} />
+      <Route path="/partner-installer/incoming-tickets" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PIIncomingTicketsPage /></ProtectedRoute>} />
+      <Route path="/partner-installer/incoming-tickets/:id" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PIAssessmentSheetPage /></ProtectedRoute>} />
+      <Route path="/partner-installer/ticket-history" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PITicketHistoryPage /></ProtectedRoute>} />
+      <Route path="/partner-installer/my-ratings" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PIMyRatingsPage /></ProtectedRoute>} />
+      <Route path="/partner-installer/settings" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PISettingsPage /></ProtectedRoute>} />
+      <Route path="/partner-installer/calendar" element={<PICalendarPage />} />
+    
+      
+      
+      
+      {/* Protected - Admin only */}
+      <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminDashboardPage /></ProtectedRoute>} />
+      <Route path="/admin/requests" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminRequestsPage /></ProtectedRoute>} />
+      <Route path="/admin/requests/:id" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminTicketDetailPage /></ProtectedRoute>} />
+      <Route path="/admin/completed-tickets" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminCompletedTicketsPage /></ProtectedRoute>} />
+      <Route path="/admin/workers" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminWorkersPage /></ProtectedRoute>} />
+      <Route path="/admin/price-history" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminPriceHistoryPage /></ProtectedRoute>} />
+      <Route path="/admin/payment-terms-history" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminPaymentTermsHistoryPage /></ProtectedRoute>} />
+      <Route path="/admin/active-prices" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminActivePricesPage /></ProtectedRoute>} />
+      <Route path="/admin/customers-log" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminCustomersLogPage /></ProtectedRoute>} />
+      <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminReportsPage /></ProtectedRoute>} />
+      <Route path="/admin/customer-feedback" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminCustomerFeedbackPage /></ProtectedRoute>} />
+      <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminSettingsPage /></ProtectedRoute>} />
 
-      {/* Staff Inquiry Quotation */}
-      <Route
-        path="/staff/email-inquiries/:id/quotation"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffInquiryQuotationPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/quotations"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffQuotationManagementPage />
-          </ProtectedRoute>
-        }
-      />
-      {/* Manage Tickets (list + detail) */}
-      <Route
-        path="/staff/manage-tickets"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffManageTicketsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/manage-tickets/:id"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffTicketDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/quotations/:id"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffQuotationDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/assessment-review"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffAssessmentReviewPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/assessment-review/:id"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffAssessmentDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/completed-tickets"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffCompletedTicketsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/completed-tickets/:id"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffCompletedTicketDetailPage />
-          </ProtectedRoute>
-        }
-      />
-
-          {/* Partner Installer portal */}
-      <Route
-        path="/partner-installer/dashboard"
-        element={
-          <ProtectedRoute allowedRole="PARTNER_INSTALLER">
-            <PIDashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/partner-installer/incoming-tickets"
-        element={
-          <ProtectedRoute allowedRole="PARTNER_INSTALLER">
-            <PIIncomingTicketsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/partner-installer/incoming-tickets/:id"
-        element={
-          <ProtectedRoute allowedRole="PARTNER_INSTALLER">
-            <PIAssessmentSheetPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/active-prices"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffActivePricesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/price-history"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffPriceHistoryPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/staff/payment-terms-history"
-        element={
-          <ProtectedRoute allowedRole="STAFF">
-            <StaffPaymentTermsHistoryPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
+
+export default App;

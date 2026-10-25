@@ -1,0 +1,300 @@
+/* ===== Filter drop-down button - shared by every portal ===== */
+
+.gx-filter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+.gx-filter *,
+.gx-filter *::before,
+.gx-filter *::after {
+  box-sizing: border-box;
+}
+
+.gx-filter button {
+  font-family: inherit;
+}
+
+/* ---------- Button ---------- */
+.gx-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 12px 0 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #0d1f3c;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gx-filter-btn:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.gx-filter-btn:focus-visible {
+  outline: 3px solid rgba(250, 204, 21, 0.6);
+  outline-offset: 2px;
+}
+
+/* Menu is open: soft gold border */
+.gx-filter-btn.open {
+  border-color: #facc15;
+  box-shadow: 0 0 0 3px #fef3c7;
+}
+
+/* A filter is picked: navy button, with room for the clear (x) button */
+.gx-filter-btn.filtered {
+  border-color: #0d1f3c;
+  background: #0d1f3c;
+  color: #fff;
+  padding-right: 40px;
+}
+
+.gx-filter-btn.filtered:hover {
+  background: #16325e;
+}
+
+.gx-filter-btn.filtered svg:first-child {
+  color: #facc15;
+}
+
+.gx-filter-btn.filtered .gx-filter-chevron {
+  display: none;
+}
+
+.gx-filter-text {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gx-filter-chevron {
+  flex-shrink: 0;
+  color: #94a3b8;
+  transition: transform 0.15s ease;
+}
+
+.gx-filter-btn.open .gx-filter-chevron {
+  transform: rotate(180deg);
+}
+
+/* Small gold dot: something needs action */
+.gx-filter-alert {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #facc15;
+  box-shadow: 0 0 0 3px #fef3c7;
+}
+
+.gx-filter-btn.filtered .gx-filter-alert {
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.25);
+}
+
+.gx-filter-clear {
+  position: absolute;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+}
+
+.gx-filter-clear:hover {
+  background: #facc15;
+  color: #0d1f3c;
+}
+
+/* ---------- Drop-down list ---------- */
+.gx-filter-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: 290px;
+  max-width: calc(100vw - 32px);
+  max-height: min(460px, 70vh);
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid #e5e9f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(13, 31, 60, 0.18);
+  animation: gxFilterMenu 0.14s ease-out;
+}
+
+@keyframes gxFilterMenu {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gx-filter-group {
+  margin: 8px 0 4px;
+  padding: 6px 10px 0;
+  border-top: 1px solid #f1f5f9;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.gx-filter-item {
+  /* Colors for the small icon box (navy is the default) */
+  --tone-bg: #e8edf5;
+  --tone-fg: #0d1f3c;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 42px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #0d1f3c;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gx-filter-item:hover {
+  background: #f1f5f9;
+}
+
+.gx-filter-item:focus-visible {
+  outline: 2px solid #facc15;
+  outline-offset: -2px;
+}
+
+.gx-filter-item.selected {
+  background: #eef1f6;
+  font-weight: 800;
+}
+
+.gx-filter-item.tone-gold {
+  --tone-bg: #fef9c3;
+  --tone-fg: #a16207;
+}
+
+.gx-filter-item.tone-blue {
+  --tone-bg: #dbeafe;
+  --tone-fg: #1d4ed8;
+}
+
+.gx-filter-item.tone-green {
+  --tone-bg: #dcfce7;
+  --tone-fg: #15803d;
+}
+
+.gx-filter-item.tone-red {
+  --tone-bg: #fee2e2;
+  --tone-fg: #b91c1c;
+}
+
+.gx-filter-item.tone-gray {
+  --tone-bg: #f1f5f9;
+  --tone-fg: #64748b;
+}
+
+.gx-filter-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--tone-bg);
+  color: var(--tone-fg);
+}
+
+.gx-filter-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gx-filter-count {
+  min-width: 28px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Something needs action: gold count */
+.gx-filter-item.flag .gx-filter-count {
+  background: #facc15;
+  color: #0d1f3c;
+}
+
+.gx-filter-check {
+  width: 16px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #0d1f3c;
+}
+
+/* ---------- Small screens ---------- */
+
+/* Phones: "Filter" turns into an icon so the search box has room.
+   Once a filter is picked, the button fills the row below search. */
+@media (max-width: 520px) {
+  .gx-filter-btn:not(.filtered) .gx-filter-text {
+    display: none;
+  }
+
+  .gx-filter-btn:not(.filtered) {
+    padding: 0 10px;
+  }
+
+  .gx-filter.is-filtered {
+    flex: 1 1 100%;
+  }
+
+  .gx-filter-btn.filtered {
+    width: 100%;
+  }
+
+  .gx-filter-btn.filtered .gx-filter-text {
+    flex: 1;
+    max-width: none;
+    text-align: left;
+  }
+
+  .gx-filter-menu {
+    width: min(320px, calc(100vw - 32px));
+  }
+}

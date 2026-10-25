@@ -2,85 +2,505 @@
 <html>
 <head>
 <meta charset="utf-8">
+<title>Glomax Solar Enterprises - Reports &amp; Analytics</title>
 <style>
-  @page { size: A4; margin: 2cm; }
-  body { font-family: Helvetica, Arial, sans-serif; color: #0d1f3c; font-size: 11pt; }
-  h1 { font-size: 18pt; margin-bottom: 2px; }
-  .subtitle { color: #6b7280; font-size: 10pt; margin-bottom: 20px; }
-  .stats-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-  .stats-table td {
+  @page {
+    size: a4 portrait;
+    margin: 36pt 36pt 60pt 36pt;
+
+    @frame footer_frame {
+      -pdf-frame-content: page-footer;
+      left: 36pt;
+      width: 523pt;
+      top: 800pt;
+      height: 24pt;
+    }
+  }
+
+  body {
+    font-family: Helvetica;
+    font-size: 9.5pt;
+    color: #1e293b;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  td, th {
+    vertical-align: middle;
+  }
+
+  /* ---------- Header ---------- */
+  .header td {
+    background-color: #0d1f3c;
+    padding: 14pt 16pt;
+  }
+
+  /* Room for the 54pt logo: 70 - 14 left padding = 56 */
+  .header td.logo-cell {
+    width: 70pt;
+    padding: 12pt 0 12pt 14pt;
+  }
+
+  .brand-name {
+    font-size: 17pt;
+    font-weight: bold;
+    color: #ffffff;
+  }
+
+  .brand-sub {
+    font-size: 9pt;
+    color: #facc15;
+    padding-top: 2pt;
+  }
+
+  .report-title {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #facc15;
+    text-align: right;
+  }
+
+  .report-meta {
+    font-size: 8pt;
+    color: #cbd5e1;
+    text-align: right;
+    padding-top: 2pt;
+  }
+
+  .gold-line td {
+    background-color: #facc15;
+    height: 4pt;
+    font-size: 1pt;
+    line-height: 1pt;
+    padding: 0;
+  }
+
+  /* ---------- Summary boxes ---------- */
+  .stats {
+    margin-top: 16pt;
+  }
+
+  .stats td.box {
     width: 25%;
-    border: 1px solid #d1d5db;
-    padding: 12px;
-    text-align: left;
+    padding: 10pt 11pt;
+    border: 1px solid #e2e8f0;
+    background-color: #f8fafc;
     vertical-align: top;
   }
-  .stat-value { font-size: 16pt; font-weight: bold; margin: 0; }
-  .stat-label { font-size: 9pt; color: #6b7280; margin: 4px 0 0; }
-  h2 { font-size: 13pt; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; }
-  table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-  table.data-table th {
+
+  .stats td.gap {
+    width: 6pt;
+    padding: 0;
+    border: none;
+    background-color: #ffffff;
+  }
+
+  .box-label {
+    font-size: 7.5pt;
+    font-weight: bold;
+    color: #64748b;
+    text-transform: uppercase;
+    padding-top: 6pt;
+  }
+
+  .box-value {
+    font-size: 17pt;
+    font-weight: bold;
+    color: #0d1f3c;
+    padding-top: 4pt;
+  }
+
+  .box-value-small {
+    font-size: 12.5pt;
+    font-weight: bold;
+    color: #0d1f3c;
+    padding-top: 6pt;
+  }
+
+  .box-out-of {
+    font-size: 10pt;
+    color: #94a3b8;
+  }
+
+  .box-hint {
+    font-size: 7.5pt;
+    color: #94a3b8;
+    padding-top: 3pt;
+  }
+
+  .bar-navy td { background-color: #0d1f3c; }
+  .bar-gold td { background-color: #eab308; }
+  .bar-green td { background-color: #22c55e; }
+  .bar-amber td { background-color: #f59e0b; }
+
+  .top-bar td {
+    height: 3pt;
+    font-size: 1pt;
+    line-height: 1pt;
+    padding: 0;
+  }
+
+  /* ---------- Sections ---------- */
+  h2 {
+    font-size: 11.5pt;
+    color: #0d1f3c;
+    margin: 18pt 0 6pt 0;
+    padding-bottom: 4pt;
+    border-bottom: 1.5px solid #facc15;
+  }
+
+  .section-note {
+    font-size: 8pt;
+    color: #64748b;
+    margin: 0 0 6pt 0;
+  }
+
+  /* ---------- Data tables ---------- */
+  .data th {
     background-color: #0d1f3c;
     color: #ffffff;
-    padding: 6px 8px;
+    font-size: 7.5pt;
+    font-weight: bold;
+    text-transform: uppercase;
     text-align: left;
+    padding: 6pt 8pt;
+  }
+
+  .data td {
+    padding: 6pt 8pt;
+    border-bottom: 1px solid #e2e8f0;
     font-size: 9pt;
   }
-  table.data-table td {
-    padding: 6px 8px;
-    border-bottom: 1px solid #e5e7eb;
-    font-size: 10pt;
+
+  .data tr.alt td {
+    background-color: #f8fafc;
   }
-  .footer { margin-top: 30px; font-size: 8pt; color: #9ca3af; }
+
+  /* Small cells need their own padding, or there is no room left inside */
+  .data th.col-swatch {
+    width: 20pt;
+    padding: 6pt 0;
+  }
+
+  .data td.swatch {
+    width: 20pt;
+    padding: 0 6pt;
+  }
+
+  .data th.col-rank {
+    width: 24pt;
+    padding: 6pt 4pt;
+    text-align: center;
+  }
+
+  .data td.rank {
+    width: 24pt;
+    padding: 6pt 4pt;
+    background-color: #0d1f3c;
+    color: #facc15;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  /* Tables inside a data cell (bars, color square) get no padding */
+  .data .bar td,
+  .data .swatch-box td {
+    padding: 0;
+    border-bottom: none;
+  }
+
+  .col-status { width: 28%; }
+  .col-share { width: 40%; }
+  .col-small { width: 12%; }
+  .col-installer { width: 32%; }
+
+  .center {
+    text-align: center;
+  }
+
+  .right {
+    text-align: right;
+  }
+
+  .strong {
+    font-weight: bold;
+    color: #0d1f3c;
+  }
+
+  .muted {
+    color: #94a3b8;
+  }
+
+  .sub {
+    font-size: 7.5pt;
+    color: #94a3b8;
+  }
+
+  /* color square */
+  .swatch-box td {
+    height: 8pt;
+    font-size: 1pt;
+    line-height: 1pt;
+  }
+
+  /* progress bar */
+  .bar td {
+    height: 6pt;
+    font-size: 1pt;
+    line-height: 1pt;
+  }
+
+  .bar-empty {
+    background-color: #e2e8f0;
+  }
+
+  /* status text */
+  .tag-active {
+    color: #15803d;
+    font-weight: bold;
+  }
+
+  .tag-inactive {
+    color: #64748b;
+    font-weight: bold;
+  }
+
+  /* two tables side by side */
+  .two-col {
+    margin-top: 4pt;
+  }
+
+  .two-col td.col {
+    width: 49%;
+    vertical-align: top;
+    padding: 0;
+  }
+
+  .two-col td.col-gap {
+    width: 2%;
+    padding: 0;
+  }
+
+  .note-box {
+    margin-top: 16pt;
+  }
+
+  .note-box td {
+    background-color: #fefce8;
+    border: 1px solid #fde68a;
+    padding: 8pt 10pt;
+    font-size: 8pt;
+    color: #854d0e;
+  }
+
+  /* ---------- Footer ---------- */
+  .footer td {
+    font-size: 7.5pt;
+    color: #94a3b8;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 5pt;
+  }
 </style>
 </head>
 <body>
 
-  <h1>Glomax Solar Enterprises</h1>
-  <p class="subtitle">Reports &amp; Analytics &mdash; Generated {{ generated_on }}</p>
+  <!-- Page footer (shows on every page) -->
+  <div id="page-footer">
+    <table class="footer">
+      <tr>
+        <td>Glomax Solar Enterprises &middot; Reports &amp; Analytics &middot; Confidential</td>
+        <td class="right">Page <pdf:pagenumber /> of <pdf:pagecount /></td>
+      </tr>
+    </table>
+  </div>
 
-  <table class="stats-table">
+  <!-- Header -->
+  <table class="header">
     <tr>
+      {% if logo_path %}
+      <td class="logo-cell">
+        <img src="{{ logo_path }}" width="54" height="54" />
+      </td>
+      {% endif %}
       <td>
-        <p class="stat-value">{{ total_requests }}</p>
-        <p class="stat-label">Total Requests</p>
+        <div class="brand-name">Glomax Solar Enterprises</div>
+        <div class="brand-sub">Solar PV System Installation</div>
       </td>
       <td>
-        <p class="stat-value">{{ completed_installations }}</p>
-        <p class="stat-label">Completed Installations</p>
+        <div class="report-title">Reports &amp; Analytics</div>
+        <div class="report-meta">Generated {{ generated_on }}</div>
+        <div class="report-meta">Covers: all records to date</div>
       </td>
-      <td>
-        <p class="stat-value">&#8369;{{ total_revenue }}</p>
-        <p class="stat-label">Total Revenue</p>
+    </tr>
+  </table>
+  <table class="gold-line"><tr><td>&nbsp;</td></tr></table>
+
+  <!-- Summary boxes -->
+  <table class="stats">
+    <tr>
+      <td class="box">
+        <table class="top-bar bar-navy"><tr><td>&nbsp;</td></tr></table>
+        <div class="box-label">Total Requests</div>
+        <div class="box-value">{{ total_requests }}</div>
+        <div class="box-hint">All installation requests</div>
       </td>
-      <td>
-        <p class="stat-value">{{ avg_rating }} / 5.0</p>
-        <p class="stat-label">Avg. Customer Rating</p>
+      <td class="gap">&nbsp;</td>
+      <td class="box">
+        <table class="top-bar bar-gold"><tr><td>&nbsp;</td></tr></table>
+        <div class="box-label">Completed Installations</div>
+        <div class="box-value">{{ completed_installations }}</div>
+        <div class="box-hint">{{ completion_rate }}% of all requests</div>
+      </td>
+      <td class="gap">&nbsp;</td>
+      <td class="box">
+        <table class="top-bar bar-green"><tr><td>&nbsp;</td></tr></table>
+        <div class="box-label">Revenue</div>
+        <div class="box-value-small">{{ total_revenue }}</div>
+        <div class="box-hint">
+          {% if waiting_revenue %}+ {{ waiting_revenue }} waiting (approved){% else %}From completed installations{% endif %}
+        </div>
+      </td>
+      <td class="gap">&nbsp;</td>
+      <td class="box">
+        <table class="top-bar bar-amber"><tr><td>&nbsp;</td></tr></table>
+        <div class="box-label">Average Rating</div>
+        <div class="box-value">{{ avg_rating }} <span class="box-out-of">/ 5</span></div>
+        <div class="box-hint">From {{ review_count }} review{{ review_count|pluralize }}</div>
       </td>
     </tr>
   </table>
 
+  <!-- Status breakdown -->
   <h2>Request Status Breakdown</h2>
-  <table class="data-table">
-    <tr><th>Status</th><th>Count</th></tr>
-    {% for row in status_breakdown %}
-    <tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>
-    {% endfor %}
-  </table>
-
-  <h2>Worker Performance</h2>
-  <table class="data-table">
-    <tr><th>Worker</th><th>Completed</th><th>Status</th></tr>
-    {% for w in worker_performance %}
+  <p class="section-note">Where every request is right now.</p>
+  <table class="data">
     <tr>
-      <td>{{ w.username }}</td>
-      <td>{{ w.completed }}</td>
-      <td>{% if w.is_active %}Active{% else %}Inactive{% endif %}</td>
+      <th class="col-swatch"></th>
+      <th class="col-status">Status</th>
+      <th class="col-share">Share</th>
+      <th class="center col-small">Count</th>
+      <th class="right col-small">Percent</th>
+    </tr>
+    {% for s in status_breakdown %}
+    <tr>
+      <td class="swatch">
+        <table class="swatch-box"><tr><td bgcolor="{{ s.color }}">&nbsp;</td></tr></table>
+      </td>
+      <td class="strong">{{ s.label }}</td>
+      <td>
+        <table class="bar">
+          <tr>
+            {% if s.pct > 0 %}<td width="{{ s.pct }}%" bgcolor="{{ s.color }}">&nbsp;</td>{% endif %}
+            {% if s.rest > 0 %}<td width="{{ s.rest }}%" class="bar-empty">&nbsp;</td>{% endif %}
+          </tr>
+        </table>
+      </td>
+      <td class="center strong">{{ s.count }}</td>
+      <td class="right muted">{{ s.pct }}%</td>
     </tr>
     {% endfor %}
   </table>
 
-  <p class="footer">Glomax Solar Enterprises &middot; Confidential &middot; Generated {{ generated_on }}</p>
+  <!-- Months + packages side by side -->
+  <table class="two-col">
+    <tr>
+      <td class="col">
+        <h2>Last 6 Months</h2>
+        <table class="data">
+          <tr>
+            <th>Month</th>
+            <th class="center">Requests</th>
+            <th class="center">Completed</th>
+            <th class="right">Revenue</th>
+          </tr>
+          {% for m in months %}
+          <tr{% if forloop.counter|divisibleby:2 %} class="alt"{% endif %}>
+            <td class="strong">{{ m.label }}</td>
+            <td class="center">{{ m.requests }}</td>
+            <td class="center">{{ m.completed }}</td>
+            <td class="right">{{ m.revenue }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </td>
+      <td class="col-gap">&nbsp;</td>
+      <td class="col">
+        <h2>Popular Packages</h2>
+        {% if packages %}
+        <table class="data">
+          <tr>
+            <th class="col-rank">#</th>
+            <th>Package</th>
+            <th class="center">Requests</th>
+            <th class="right">Share</th>
+          </tr>
+          {% for p in packages %}
+          <tr{% if forloop.counter|divisibleby:2 %} class="alt"{% endif %}>
+            <td class="rank">{{ p.rank }}</td>
+            <td class="strong">{{ p.name }}</td>
+            <td class="center">{{ p.count }}</td>
+            <td class="right muted">{{ p.pct }}%</td>
+          </tr>
+          {% endfor %}
+        </table>
+        {% else %}
+        <p class="section-note">No package data yet.</p>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <!-- Installer performance -->
+  <h2>Installer Performance</h2>
+  {% if worker_performance %}
+  <table class="data">
+    <tr>
+      <th class="col-installer">Installer</th>
+      <th class="center">Assigned</th>
+      <th class="center">Active</th>
+      <th class="center">Completed</th>
+      <th class="center">Avg. Rating</th>
+      <th class="right">Status</th>
+    </tr>
+    {% for w in worker_performance %}
+    <tr{% if forloop.counter|divisibleby:2 %} class="alt"{% endif %}>
+      <td>
+        <span class="strong">{{ w.name }}</span><br />
+        <span class="sub">@{{ w.username }}</span>
+      </td>
+      <td class="center">{{ w.assigned }}</td>
+      <td class="center">{{ w.active }}</td>
+      <td class="center strong">{{ w.completed }}</td>
+      <td class="center">
+        {% if w.avg_rating %}
+          <span class="strong">{{ w.avg_rating }}</span> <span class="sub">/ 5 ({{ w.review_count }})</span>
+        {% else %}
+          <span class="muted">No ratings</span>
+        {% endif %}
+      </td>
+      <td class="right">
+        {% if w.is_active %}<span class="tag-active">Active</span>{% else %}<span class="tag-inactive">Inactive</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="section-note">No partner installers yet.</p>
+  {% endif %}
+
+  <!-- Note -->
+  <table class="note-box">
+    <tr>
+      <td>
+        <strong>How these numbers are counted:</strong>
+        Revenue only includes completed installations. Approved jobs that are not installed yet are shown
+        as "waiting". Amounts are in Philippine Pesos (PHP).
+      </td>
+    </tr>
+  </table>
 
 </body>
 </html>

@@ -1,0 +1,151 @@
+.vc-cal {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  text-align: left;
+}
+
+.vc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0d1f3c;
+  padding: 12px 14px;
+}
+
+.vc-title {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.vc-nav {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.vc-nav:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.vc-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.vc-body {
+  padding: 12px 12px 10px;
+}
+
+.vc-weekdays,
+.vc-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.vc-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  padding: 2px 0 6px;
+}
+
+.vc-blank {
+  aspect-ratio: 1;
+}
+
+.vc-day {
+  position: relative;
+  aspect-ratio: 1;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #111827;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.vc-day:hover:not(:disabled) {
+  background: #eef1f6;
+  color: #0d1f3c;
+}
+
+.vc-day.today {
+  color: #0d1f3c;
+  font-weight: 700;
+}
+
+.vc-day.today::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #facc15;
+}
+
+.vc-day.selected,
+.vc-day.selected:hover:not(:disabled) {
+  background: #0d1f3c;
+  color: #ffffff;
+}
+
+.vc-day:disabled {
+  color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.vc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid #f3f4f6;
+  padding: 10px 14px;
+}
+
+.vc-selected {
+  font-size: 12.5px;
+  color: #9ca3af;
+}
+
+.vc-selected strong {
+  color: #0d1f3c;
+}
+
+.vc-quick-btn {
+  background: #fef9c3;
+  color: #92400e;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.vc-quick-btn:hover {
+  background: #fde68a;
+}

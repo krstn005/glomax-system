@@ -1,0 +1,712 @@
+.adm-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #eef1f6;
+}
+
+/* ---------- Sidebar ---------- */
+
+/* Stays in place while the page scrolls */
+.adm-sidebar {
+  width: 248px;
+  background: #0d1f3c;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
+  box-sizing: border-box;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.adm-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 72px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.adm-logo-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.5);
+}
+
+.adm-logo-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.adm-brand-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.adm-brand-title {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14.5px;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.adm-brand-subtitle {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11.5px;
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Only shows on phones, inside the sliding sidebar */
+.adm-sidebar-close {
+  display: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.adm-sidebar-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.adm-nav {
+  flex: 1;
+  padding: 14px 12px 20px;
+  overflow-y: auto;
+}
+
+.adm-nav-group + .adm-nav-group {
+  margin-top: 14px;
+}
+
+.adm-nav-label {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 10px 10px 6px;
+}
+
+.adm-nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  margin-bottom: 2px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.adm-nav-link svg {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.5);
+  transition: color 0.2s ease;
+}
+
+.adm-nav-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.adm-nav-link:hover svg {
+  color: #ffffff;
+}
+
+/* Current page - gold bar on the left, gold icon, soft gold background */
+.adm-nav-link.active {
+  background: rgba(250, 204, 21, 0.1);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.adm-nav-link.active svg {
+  color: #facc15;
+}
+
+.adm-nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: #facc15;
+}
+
+/* Dark background behind the sliding sidebar on phones */
+.adm-sidebar-backdrop {
+  display: none;
+}
+
+/* ---------- Header ---------- */
+
+.adm-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.adm-header {
+  height: 72px;
+  background: #0d1f3c;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  gap: 12px;
+  position: relative;
+}
+
+/* Only shows on phones */
+.adm-menu-btn {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.adm-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.adm-portal-pill {
+  border: 1px solid #eab308;
+  border-radius: 9999px;
+  padding: 6px 16px;
+  color: #eab308;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 auto;
+  flex-shrink: 1;
+  white-space: nowrap;
+}
+
+.adm-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ---------- Profile button ---------- */
+
+.adm-profile-area {
+  position: relative;
+}
+
+.adm-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 5px 10px 5px 5px;
+  border-radius: 9999px;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.adm-profile-btn:hover,
+.adm-profile-btn.open {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.adm-profile-btn .adm-avatar {
+  box-shadow: 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease;
+}
+
+.adm-profile-btn.open .adm-avatar {
+  box-shadow: 0 0 0 2px #facc15;
+}
+
+.adm-chevron {
+  color: rgba(255, 255, 255, 0.6);
+  transition: transform 0.2s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.adm-profile-btn.open .adm-chevron {
+  transform: rotate(180deg);
+  color: #facc15;
+}
+
+.adm-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #eab308;
+  color: #0d1f3c;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.adm-avatar-lg {
+  width: 46px;
+  height: 46px;
+  font-size: 15px;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #facc15;
+}
+
+.adm-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+}
+
+.adm-username {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- Profile dropdown ---------- */
+
+.adm-profile-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid #eef0f3;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(13, 31, 60, 0.18);
+  overflow: hidden;
+  z-index: 50;
+  transform-origin: top right;
+  animation: adm-menu-in 0.16s ease-out;
+}
+
+@keyframes adm-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Profile card at the top - clickable, goes to Settings */
+.adm-profile-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 16px 16px;
+  background: linear-gradient(180deg, #f5f7fb 0%, #ffffff 100%);
+  border: none;
+  border-bottom: 1px solid #eef0f3;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s ease;
+}
+
+.adm-profile-menu-head:hover {
+  background: #eef1f6;
+}
+
+.adm-profile-menu-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Name and "Admin" badge side by side - the badge is short enough */
+.adm-profile-menu-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.adm-profile-menu-name {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0d1f3c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adm-role-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #0d1f3c;
+  color: #facc15;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.adm-profile-menu-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #b45309;
+  white-space: nowrap;
+}
+
+.adm-profile-menu-link svg {
+  transition: transform 0.15s ease;
+}
+
+.adm-profile-menu-head:hover .adm-profile-menu-link svg {
+  transform: translateX(3px);
+}
+
+/* Menu sections */
+.adm-profile-menu-items {
+  padding: 8px 6px 6px;
+}
+
+.adm-profile-menu-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+  padding: 2px 10px 6px;
+}
+
+.adm-profile-menu-footer {
+  padding: 6px;
+  border-top: 1px solid #f3f4f6;
+  background: #fafbfc;
+}
+
+.adm-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s ease;
+}
+
+.adm-menu-item-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #eef1f6;
+  color: #0d1f3c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.adm-menu-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.adm-menu-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.adm-menu-item-hint {
+  font-size: 11.5px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+.adm-menu-item:hover {
+  background: #f5f7fb;
+}
+
+.adm-menu-item:hover .adm-menu-item-icon {
+  background: #0d1f3c;
+  color: #facc15;
+}
+
+.adm-menu-item.danger .adm-menu-item-icon {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.adm-menu-item.danger .adm-menu-item-title {
+  color: #dc2626;
+}
+
+.adm-menu-item.danger:hover {
+  background: #fef2f2;
+}
+
+.adm-menu-item.danger:hover .adm-menu-item-icon {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.adm-menu-item.danger:hover .adm-menu-item-title {
+  color: #b91c1c;
+}
+
+/* ---------- Content ---------- */
+
+.adm-content {
+  flex: 1;
+  padding: 24px 32px 32px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.adm-page-heading h1 {
+  color: #0d1f3c;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.adm-page-heading p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 22px;
+}
+
+.adm-page-body {
+  display: block;
+}
+
+/* ---------- Sign out modal ---------- */
+
+.adm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 31, 60, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 16px;
+}
+
+.adm-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 30px 28px;
+  max-width: 380px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  box-shadow: 0 24px 56px rgba(13, 31, 60, 0.25);
+}
+
+.adm-modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.adm-modal h3 {
+  color: #0d1f3c;
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+
+.adm-modal p {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 22px;
+}
+
+.adm-modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.adm-modal-actions button {
+  flex: 1;
+}
+
+.adm-btn-secondary {
+  background: #ffffff;
+  color: #0d1f3c;
+  border: 1px solid #dfe4ec;
+  border-radius: 9999px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.adm-btn-secondary:hover {
+  background: #eef1f6;
+  border-color: #c7d0dd;
+}
+
+.adm-btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.adm-btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* ---------- Tablet and phone ---------- */
+
+/* Sidebar hides and slides in from the left when the menu button is tapped */
+@media (max-width: 960px) {
+  .adm-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    height: 100vh;
+    z-index: 400;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+
+  .adm-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 12px 0 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .adm-sidebar-close {
+    display: flex;
+  }
+
+  .adm-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 31, 60, 0.5);
+    z-index: 390;
+  }
+
+  .adm-menu-btn {
+    display: flex;
+  }
+}
+
+@media (max-width: 768px) {
+  .adm-header {
+    padding: 0 16px;
+  }
+
+  .adm-content {
+    padding: 20px 20px 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .adm-username {
+    display: none;
+  }
+
+  .adm-profile-btn {
+    padding: 4px;
+  }
+
+  .adm-header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .adm-portal-pill {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .adm-profile-menu {
+    width: calc(100vw - 24px);
+    max-width: 280px;
+  }
+
+  .adm-content {
+    padding: 16px 14px 24px;
+  }
+}

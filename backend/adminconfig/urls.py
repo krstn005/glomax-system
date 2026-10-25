@@ -18,3 +18,4 @@ urlpatterns = [
     path('faqs/<int:pk>/', FaqDetailView.as_view(), name='faq-detail'),
     path('faqs/public/', PublicFaqListView.as_view(), name='faq-public-list'),
 ]
+

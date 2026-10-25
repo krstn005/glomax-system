@@ -1,0 +1,380 @@
+.stf-notif-wrap {
+  position: relative;
+}
+
+/* ---------- Bell button ---------- */
+
+/* Base .stf-bell style lives in staff-layout.css - these add to it */
+.stf-bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stf-bell.open {
+  color: #facc15;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.stf-notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 9999px;
+  min-width: 17px;
+  height: 17px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 0 0 2px #0d1f3c;
+}
+
+/* ---------- Dropdown ---------- */
+
+.stf-notif-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: -8px;
+  width: 360px;
+  background: #ffffff;
+  border: 1px solid #eef0f3;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(13, 31, 60, 0.18);
+  overflow: hidden;
+  z-index: 50;
+  transform-origin: top right;
+  animation: stf-notif-in 0.16s ease-out;
+}
+
+@keyframes stf-notif-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ---------- Header ---------- */
+
+.stf-notif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef0f3;
+  background: linear-gradient(180deg, #f5f7fb 0%, #ffffff 100%);
+}
+
+.stf-notif-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.stf-notif-title h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0d1f3c;
+}
+
+.stf-notif-count {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #0d1f3c;
+  color: #facc15;
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.stf-notif-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.stf-notif-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 5px 7px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #b45309;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.stf-notif-action:hover {
+  background: #fef9c3;
+  color: #92400e;
+}
+
+.stf-notif-action.danger {
+  color: #dc2626;
+}
+
+.stf-notif-action.danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* "Clear all? Yes / No" */
+.stf-notif-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #991b1b;
+}
+
+.stf-notif-confirm-yes,
+.stf-notif-confirm-no {
+  border: none;
+  border-radius: 9999px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.stf-notif-confirm-yes {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.stf-notif-confirm-yes:hover {
+  background: #b91c1c;
+}
+
+.stf-notif-confirm-no {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.stf-notif-confirm-no:hover {
+  background: #e5e7eb;
+}
+
+/* ---------- List ---------- */
+
+.stf-notif-list {
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.stf-notif-item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s ease;
+}
+
+.stf-notif-item:last-child {
+  border-bottom: none;
+}
+
+.stf-notif-item:hover {
+  background: #f5f7fb;
+}
+
+/* Unread - soft gold background and a gold bar on the left */
+.stf-notif-item.unread {
+  background: #fffbeb;
+  box-shadow: inset 3px 0 0 #facc15;
+}
+
+.stf-notif-item.unread:hover {
+  background: #fef6d8;
+}
+
+.stf-notif-item-main {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  padding: 12px 6px 12px 16px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.stf-notif-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stf-notif-icon.tone-navy { background: #eef1f6; color: #0d1f3c; }
+.stf-notif-icon.tone-blue { background: #dbeafe; color: #1e40af; }
+.stf-notif-icon.tone-indigo { background: #e0e7ff; color: #3730a3; }
+.stf-notif-icon.tone-green { background: #dcfce7; color: #166534; }
+.stf-notif-icon.tone-red { background: #fee2e2; color: #991b1b; }
+.stf-notif-icon.tone-amber { background: #fef3c7; color: #b45309; }
+.stf-notif-icon.tone-gold { background: #0d1f3c; color: #facc15; }
+
+.stf-notif-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.stf-notif-item-message {
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.stf-notif-item.unread .stf-notif-item-message {
+  color: #111827;
+  font-weight: 600;
+}
+
+.stf-notif-item-date {
+  font-size: 11.5px;
+  color: #9ca3af;
+}
+
+.stf-notif-item.unread .stf-notif-item-date {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.stf-notif-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #eab308;
+  box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.2);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* Delete (x) - only shows on hover */
+.stf-notif-delete {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  width: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.stf-notif-item:hover .stf-notif-delete,
+.stf-notif-delete:focus-visible {
+  opacity: 1;
+}
+
+.stf-notif-delete:hover {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+/* ---------- Empty state ---------- */
+
+.stf-notif-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 34px 24px 36px;
+}
+
+.stf-notif-empty-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #eef1f6;
+  color: #0d1f3c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  box-shadow: 0 0 0 6px #f5f7fb;
+}
+
+.stf-notif-empty-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0d1f3c;
+  margin: 0 0 3px;
+}
+
+.stf-notif-empty-hint {
+  font-size: 12.5px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ---------- Footer ---------- */
+
+.stf-notif-footer {
+  margin: 0;
+  padding: 9px 16px;
+  border-top: 1px solid #f3f4f6;
+  background: #fafbfc;
+  font-size: 11.5px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+/* ---------- Phones ---------- */
+
+/* Always show the delete (x) on touch screens, since there's no hover */
+@media (hover: none) {
+  .stf-notif-delete {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .stf-notif-dropdown {
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+
+  .stf-notif-action svg {
+    display: none;
+  }
+}

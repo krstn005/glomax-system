@@ -11,6 +11,7 @@ class Notification(models.Model):
     """
 
     class Kind(models.TextChoices):
+        NEW_REQUEST = 'NEW_REQUEST', 'New Request Submitted'
         TICKET_ASSIGNED = 'TICKET_ASSIGNED', 'Ticket Assigned'
         ASSESSMENT_SUBMITTED = 'ASSESSMENT_SUBMITTED', 'Assessment Submitted'
         TICKET_DECISION = 'TICKET_DECISION', 'Ticket Decision'

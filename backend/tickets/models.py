@@ -76,7 +76,16 @@ class Ticket(models.Model):
         default=Status.REQUEST_SUBMITTED,
     )
 
+    # --- Reapply ---
+    # Starts at 1. Goes up by one each time the Customer reapplies with
+    # this same ticket (after Withdrawn or Not Compatible - Can Reapply).
+    # The older tries are saved in TicketAttempt.
+    attempt_number = models.PositiveIntegerField(default=1)
+
     # --- Timestamps for the status timeline ---
+    # On a reapply this is moved to the reapply time, so the ticket
+    # shows up as a fresh request in every list. The first date is
+    # kept in TicketAttempt.
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     assigned_at = models.DateTimeField(null=True, blank=True)
@@ -151,3 +160,35 @@ class RescheduleRequest(models.Model):
 
     def __str__(self):
         return f"Reschedule request for {self.ticket.ticket_number} ({self.status})"
+
+
+class TicketAttempt(models.Model):
+    """
+    One older try of a ticket, saved when the Customer reapplies using
+    the same ticket (so they don't get a new ticket number each time).
+
+    snapshot holds the ticket exactly as it looked when that try ended:
+    details, assessment (with photo links), quotations, installer,
+    reschedule requests and dates. This way the history is kept even
+    though the ticket itself starts fresh for the new try.
+    """
+
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name='attempts',
+    )
+    attempt_number = models.PositiveIntegerField()
+    # How that try ended: WITHDRAWN or NC_CAN_REAPPLY
+    status = models.CharField(max_length=30, choices=Ticket.Status.choices)
+    snapshot = models.JSONField(default=dict)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    archived_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['attempt_number']
+        unique_together = ('ticket', 'attempt_number')
+
+    def __str__(self):
+        return f"{self.ticket.ticket_number} - attempt {self.attempt_number} ({self.status})"

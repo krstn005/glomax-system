@@ -1,1 +1,11 @@
- .vscode/
+.vscode/
+node_modules
+.env
+.venv
+venv
+__pycache__
+*.pyc
+dist
+staticfiles
+*.sql
+backend/media/

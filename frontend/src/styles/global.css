@@ -1,0 +1,25 @@
+﻿/* ===== Global styles for the whole app (all 4 portals) =====
+   Loaded once in main.jsx. Only sets the basics: no white border,
+   and the same clean font everywhere. It does NOT block scrolling. */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #0f172a;
+}
+
+/* Buttons and form fields don't follow the page font by default,
+   so tell them to use it too */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}

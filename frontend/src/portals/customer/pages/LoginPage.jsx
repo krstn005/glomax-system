@@ -1,11 +1,44 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { ChevronLeft, User, Eye, EyeOff } from 'lucide-react';
+import {
+  ArrowLeft,
+  UserRound,
+  Lock,
+  Eye,
+  EyeOff,
+  Sun,
+  Home,
+  Activity,
+  FileText,
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+} from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
-import { login } from '../../../api/auth';
-import { googleLogin } from '../../../api/google';
+import apiClient from '../../../api/client';
+import { saveSession, getApiError } from '../../../api/twoFactor';
+import TwoFactorStep from '../../../components/auth/TwoFactorStep';
+import { ROLE_CONFIG } from '../../../roleConfig';
 import logo from '../../../assets/images/logo.jpg';
-import '../styles/auth.css';
+import '../styles/customer-login.css';
+
+const FEATURES = [
+  { icon: Home, label: 'Request a free roof check' },
+  { icon: Activity, label: 'Track your installation step by step' },
+  { icon: FileText, label: 'Get quotations and documents online' },
+];
+
+// This login page is for Customer accounts only. Staff, Partner
+// Installer and Admin accounts have their own separate login pages,
+// and the backend refuses them here (before any 2FA code is sent).
+const PORTAL = 'CUSTOMER';
+
+// Google's button needs a fixed pixel width, so fit it to the screen
+function getGoogleWidth() {
+  if (typeof window === 'undefined') return 360;
+  return Math.max(220, Math.min(366, window.innerWidth - 80));
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -14,27 +47,47 @@ export default function LoginPage() {
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [googleWidth, setGoogleWidth] = useState(getGoogleWidth);
+  // Set after the password (or Google) is accepted - shows the 2FA step
+  const [challenge, setChallenge] = useState(null);
 
-  function handleAuthSuccess(data) {
-    localStorage.setItem('access_token', data.access);
-    localStorage.setItem('refresh_token', data.refresh);
-    localStorage.setItem('role', data.role);
-    localStorage.setItem('username', data.username);
-
-    // ⚠️ Verify these role strings match your backend's User.role choices exactly
-    if (data.role === 'CUSTOMER') {
-      navigate('/dashboard');
-    } else if (data.role === 'PARTNER_INSTALLER') {
-      navigate('/worker/dashboard');
-    } else if (data.role === 'STAFF') {
-      navigate('/staff/dashboard');
-    } else if (data.role === 'ADMIN') {
-      navigate('/admin/dashboard');
-    } else {
-      setError('Unrecognized account role.');
+  useEffect(() => {
+    function onResize() {
+      setGoogleWidth(getGoogleWidth());
     }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  function checkCapsLock(e) {
+    if (typeof e.getModifierState === 'function') {
+      setCapsLock(e.getModifierState('CapsLock'));
+    }
+  }
+
+  // Called only after the 2FA code is correct
+  function handleAuthSuccess(data) {
+    // Only Customer accounts may use this page
+    if (data.role !== PORTAL) {
+      setChallenge(null);
+      setPassword('');
+      setError('This login page is for customers only. Please use the login page for your account.');
+      return;
+    }
+
+    saveSession(data);
+    navigate(ROLE_CONFIG.CUSTOMER.dashboardPath, { replace: true });
+  }
+
+  // A Staff / Partner Installer / Admin account tried to sign in here.
+  // Returns true if that was the problem.
+  function handleWrongPortal(err) {
+    if (!err?.response?.data?.wrong_portal) return false;
+    setError('This login page is for customers only. Please use the login page for your account.');
+    return true;
   }
 
   async function handleSubmit(e) {
@@ -43,11 +96,20 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const data = await login(usernameOrEmail, password);
-      handleAuthSuccess(data);
+      const res = await apiClient.post('/accounts/login/', {
+        username: usernameOrEmail.trim(),
+        password,
+        portal: PORTAL,
+      });
+      setChallenge(res.data);
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      setError(detail || 'Login failed. Please check your credentials and try again.');
+      if (handleWrongPortal(err)) {
+        setPassword('');
+      } else if (err?.response?.status === 401) {
+        setError('Wrong email/username or password. Please try again.');
+      } else {
+        setError(getApiError(err, 'Sign in failed. Please try again.'));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -55,121 +117,211 @@ export default function LoginPage() {
 
   async function handleGoogleSuccess(credentialResponse) {
     setError('');
+    setIsSubmitting(true);
     try {
-      const data = await googleLogin(credentialResponse.credential);
-      handleAuthSuccess(data);
+      const res = await apiClient.post('/accounts/google-login/', {
+        id_token: credentialResponse.credential,
+        portal: PORTAL,
+      });
+      setChallenge(res.data);
     } catch (err) {
-      console.error('Google sign-in failed:', err);
-      setError('Google sign-in failed. Please try again.');
+      if (!handleWrongPortal(err)) {
+        console.error('Google sign-in failed:', err);
+        setError(getApiError(err, 'Google sign-in failed. Please try again.'));
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-brand">
-        <img src={logo} alt="Glomax Solar Enterprises" className="auth-brand-logo" />
-        <span className="auth-brand-name">Glomax Solar Enterprises</span>
-      </div>
+    <div className="cl-page">
+      {/* Left: brand panel */}
+      <aside className="cl-brand">
+        <div className="cl-brand-glow" aria-hidden="true" />
+        <div className="cl-brand-grid" aria-hidden="true" />
 
-      <div className="auth-card">
-        <div className="auth-back-row">
-          <button
-            type="button"
-            className="auth-back-button"
-            onClick={() => navigate('/')}
-            aria-label="Back"
-          >
-            <ChevronLeft size={18} />
-          </button>
-        </div>
-
-        <div className="auth-header">
-          <div className="auth-icon-circle">
-            <User size={24} />
+        <div className="cl-brand-top">
+          <span className="cl-logo-ring">
+            <img src={logo} alt="Glomax Solar Enterprises" />
+          </span>
+          <div>
+            <p className="cl-brand-name">Glomax Solar</p>
+            <p className="cl-brand-sub">Enterprises</p>
           </div>
-          <h1 className="auth-title">Customer Portal</h1>
-          <p className="auth-subtitle">Submit requests and track your installation</p>
         </div>
 
-        <div className="auth-tabs">
-          <button type="button" className="auth-tab active">
-            Sign In
-          </button>
-          <Link to="/register" className="auth-tab">
-            Register
-          </Link>
+        <div className="cl-brand-body">
+          <span className="cl-portal-pill">
+            <Sun size={14} />
+            Customer Portal
+          </span>
+          <h2 className="cl-brand-headline">Power your home with the sun</h2>
+          <p className="cl-brand-text">
+            Request a solar installation, follow every step, and keep all your documents in one place.
+          </p>
+
+          <ul className="cl-features">
+            {FEATURES.map(({ icon: Icon, label }) => (
+              <li key={label}>
+                <span className="cl-feature-icon">
+                  <Icon size={16} />
+                </span>
+                {label}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {justRegistered && !error && (
-          <div className="auth-error" style={{ background: '#e8f5e9', color: '#1b5e20' }}>
-            Account created successfully! Please sign in.
-          </div>
-        )}
-        {error && <div className="auth-error">{error}</div>}
+        <p className="cl-brand-foot">© {new Date().getFullYear()} Glomax Solar Enterprises</p>
+      </aside>
 
-        <form onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <label htmlFor="usernameOrEmail">Email or Username</label>
-            <input
-              id="usernameOrEmail"
-              type="text"
-              className="auth-input"
-              placeholder="juan@email.com"
-              value={usernameOrEmail}
-              onChange={(e) => setUsernameOrEmail(e.target.value)}
-              required
+      {/* Right: sign in */}
+      <main className="cl-main">
+        <Link to="/" className="cl-back">
+          <ArrowLeft size={15} />
+          Back to home
+        </Link>
+
+        <div className="cl-card">
+          {challenge ? (
+            <TwoFactorStep
+              challenge={challenge}
+              onSuccess={handleAuthSuccess}
+              onCancel={() => {
+                setChallenge(null);
+                setPassword('');
+                setError('');
+              }}
             />
-          </div>
+          ) : (
+            <>
+              <div className="cl-card-head">
+                <span className="cl-role-badge">
+                  <Sun size={22} />
+                </span>
+                <div>
+                  <h1 className="cl-title">Welcome</h1>
+                  <p className="cl-subtitle">Sign in to submit requests and track your installation</p>
+                </div>
+              </div>
 
-          <div className="auth-field">
-            <div className="auth-field-row">
-              <label htmlFor="password">Password</label>
-              <Link to="/forgot-password" className="auth-forgot-link">
-                Forgot password?
-              </Link>
-            </div>
-            <div className="auth-password-wrap">
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                className="auth-input"
-                placeholder="********"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <button
-                type="button"
-                className="auth-password-toggle"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
+              <div className="cl-tabs">
+                <span className="cl-tab active">Sign In</span>
+                <Link to="/register" className="cl-tab">
+                  Register
+                </Link>
+              </div>
 
-          <button type="submit" className="auth-submit-button" disabled={isSubmitting}>
-            {isSubmitting ? 'Signing In...' : 'Sign In'}
-          </button>
-        </form>
+              {justRegistered && !error && (
+                <div className="cl-success" role="status">
+                  <CheckCircle2 size={16} />
+                  <span>Account created! You can now sign in.</span>
+                </div>
+              )}
 
-        <div className="auth-divider">
-          <span>or continue with</span>
+              {error && (
+                <div className="cl-error" role="alert">
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="cl-form">
+                <label className="cl-field">
+                  <span className="cl-label">Email or Username</span>
+                  <span className="cl-input-wrap">
+                    <UserRound size={17} className="cl-input-icon" />
+                    <input
+                      id="usernameOrEmail"
+                      type="text"
+                      placeholder="juan@email.com"
+                      value={usernameOrEmail}
+                      onChange={(e) => setUsernameOrEmail(e.target.value)}
+                      autoComplete="username"
+                      autoFocus
+                      required
+                    />
+                  </span>
+                </label>
+
+                <div className="cl-field">
+                  <div className="cl-label-row">
+                    <label htmlFor="password" className="cl-label">
+                      Password
+                    </label>
+                    <Link to="/forgot-password" className="cl-forgot">
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <span className="cl-input-wrap">
+                    <Lock size={17} className="cl-input-icon" />
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyUp={checkCapsLock}
+                      onKeyDown={checkCapsLock}
+                      onBlur={() => setCapsLock(false)}
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="cl-eye"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </span>
+                  {capsLock && (
+                    <span className="cl-caps">
+                      <AlertTriangle size={13} />
+                      Caps Lock is on
+                    </span>
+                  )}
+                </div>
+
+                <button type="submit" className="cl-submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={17} className="cl-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    <>
+                      Sign In
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <div className="cl-divider">
+                <span>or continue with</span>
+              </div>
+
+              <div className="cl-google">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError('Google sign-in failed. Please try again.')}
+                  width={String(googleWidth)}
+                  shape="rectangular"
+                  text="signin_with"
+                />
+              </div>
+
+              <p className="cl-register">
+                No account yet? <Link to="/register">Create one</Link>
+              </p>
+            </>
+          )}
         </div>
 
-        <div className="auth-google-button">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => setError('Google sign-in failed. Please try again.')}
-            width="318"
-          />
-        </div>
-
-        <div className="auth-footer-link">
-          No account yet? <Link to="/register">Register</Link>
-        </div>
-      </div>
+        <p className="cl-footer">Glomax Solar Enterprises · Customer Portal</p>
+      </main>
     </div>
   );
 }

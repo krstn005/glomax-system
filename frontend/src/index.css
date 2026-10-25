@@ -1,8 +1,16 @@
-* {
+/* Global reset - no white border around pages */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
-html, body {
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html,
+body {
   width: 100%;
   height: 100%;
   margin: 0;
@@ -13,9 +21,12 @@ html, body {
 #root {
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  font: 18px/145% system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   color: #08060d;
 }

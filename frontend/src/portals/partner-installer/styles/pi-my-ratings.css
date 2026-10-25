@@ -1,0 +1,903 @@
+/* ===== Partner Installer My Ratings (pimr-) ===== */
+
+.pimr-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  color: #0f172a;
+  container-type: inline-size;
+  container-name: pimr-page;
+}
+
+.pimr-page *,
+.pimr-page *::before,
+.pimr-page *::after,
+.pimr-modal-overlay,
+.pimr-modal-overlay * {
+  box-sizing: border-box;
+}
+
+.pimr-page button,
+.pimr-modal button {
+  font-family: inherit;
+}
+
+.pimr-card {
+  border: 1px solid #eef2f7;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(13, 31, 60, 0.04), 0 6px 16px rgba(13, 31, 60, 0.05);
+}
+
+/* ---------- Stars (can be partly filled) ---------- */
+
+.pimr-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pimr-star {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.pimr-star-empty {
+  display: block;
+  color: #d1d5db;
+}
+
+.pimr-star-empty.light {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.pimr-star-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.pimr-star-fill svg {
+  display: block;
+}
+
+/* ---------- Banner: score + rating bars ---------- */
+
+.pimr-hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  gap: 28px;
+  align-items: center;
+  padding: 26px 28px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #0d1f3c 0%, #16325e 70%, #1b3a6b 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 34px rgba(13, 31, 60, 0.22);
+}
+
+.pimr-hero-glow {
+  position: absolute;
+  top: -150px;
+  left: 4%;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.22) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.pimr-score {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.pimr-score-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #facc15;
+}
+
+.pimr-score-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.pimr-score-value span {
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pimr-score-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 4px;
+}
+
+.pimr-score-tag {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #facc15;
+  color: #0d1f3c;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.pimr-score-count {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+/* Rating bars (also the star filter) */
+.pimr-dist {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pimr-dist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.pimr-hero-refresh {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pimr-hero-refresh:hover:not(:disabled) {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.pimr-hero-refresh:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.pimr-page .spin {
+  animation: pimrSpin 0.9s linear infinite;
+}
+
+@keyframes pimrSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pimr-dist-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pimr-dist-row:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pimr-dist-row.active {
+  border-color: rgba(250, 204, 21, 0.6);
+  background: rgba(250, 204, 21, 0.14);
+}
+
+.pimr-dist-row:disabled {
+  cursor: default;
+}
+
+.pimr-dist-star {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.pimr-dist-track {
+  display: block;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pimr-dist-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #eab308, #facc15);
+  transition: width 0.4s ease;
+}
+
+.pimr-dist-count {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+  text-align: right;
+}
+
+.pimr-dist-row.empty .pimr-dist-star,
+.pimr-dist-row.empty .pimr-dist-count {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ---------- Reviews toolbar ---------- */
+
+.pimr-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px 14px 20px;
+  border: 1px solid #eef2f7;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(13, 31, 60, 0.04), 0 6px 16px rgba(13, 31, 60, 0.05);
+}
+
+.pimr-toolbar-title {
+  min-width: 0;
+}
+
+.pimr-toolbar-title h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.pimr-toolbar-title h2 svg {
+  flex-shrink: 0;
+  color: #eab308;
+}
+
+.pimr-toolbar-title p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+
+.pimr-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pimr-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pimr-clear:hover {
+  border-color: #facc15;
+  background: #fef3c7;
+}
+
+/* Sort dropdown */
+.pimr-sort {
+  position: relative;
+}
+
+.pimr-sort-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pimr-sort-btn:hover,
+.pimr-sort-btn.open {
+  border-color: #0d1f3c;
+  background: #ffffff;
+}
+
+.pimr-sort-icon {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.pimr-sort-value {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0d1f3c;
+  white-space: nowrap;
+}
+
+.pimr-sort-chevron {
+  flex-shrink: 0;
+  color: #64748b;
+  transition: transform 0.2s ease;
+}
+
+.pimr-sort-btn.open .pimr-sort-chevron {
+  transform: rotate(180deg);
+}
+
+.pimr-sort-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  width: 230px;
+  overflow: hidden;
+  border: 1px solid #eef0f3;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgba(13, 31, 60, 0.16);
+}
+
+.pimr-sort-menu-title {
+  margin: 0;
+  padding: 12px 16px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.pimr-sort-list {
+  padding: 0 6px 6px;
+}
+
+.pimr-sort-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pimr-sort-option:hover {
+  background: #f5f7fb;
+}
+
+.pimr-sort-option.selected {
+  background: #fffbeb;
+}
+
+.pimr-sort-option-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #eef1f6;
+  color: #0d1f3c;
+}
+
+.pimr-sort-option.selected .pimr-sort-option-icon {
+  background: #0d1f3c;
+  color: #facc15;
+}
+
+.pimr-sort-option-label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.pimr-sort-check {
+  width: 18px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ca8a04;
+}
+
+/* ---------- Review cards ---------- */
+
+.pimr-reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.pimr-review-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 200px;
+  padding: 20px 20px 16px;
+  border: 1px solid #eef2f7;
+  border-radius: 16px;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(13, 31, 60, 0.04), 0 6px 16px rgba(13, 31, 60, 0.05);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* Thin colored line on top - shows the rating level at a glance */
+.pimr-review-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.pimr-review-card.tone-gold::before { background: #facc15; }
+.pimr-review-card.tone-amber::before { background: #94a3b8; }
+.pimr-review-card.tone-red::before { background: #dc2626; }
+
+.pimr-review-card:hover {
+  transform: translateY(-3px);
+  border-color: #fde68a;
+  box-shadow: 0 12px 26px rgba(13, 31, 60, 0.1);
+}
+
+.pimr-review-card:focus-visible {
+  outline: 3px solid rgba(250, 204, 21, 0.6);
+  outline-offset: 2px;
+}
+
+.pimr-review-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.pimr-review-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pimr-rating-num {
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: #0d1f3c;
+  color: #facc15;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.pimr-review-card.tone-red .pimr-rating-num {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.pimr-review-date {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.pimr-review-body {
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.pimr-quote-icon {
+  flex-shrink: 0;
+  color: #facc15;
+  transform: scaleX(-1);
+}
+
+.pimr-review-comment {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #334155;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.pimr-review-comment.muted,
+.pimr-modal-comment.muted {
+  font-style: italic;
+  color: #94a3b8;
+}
+
+.pimr-review-bottom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.pimr-avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #0d1f3c;
+  color: #facc15;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.pimr-avatar.large {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 13.5px;
+}
+
+.pimr-review-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pimr-review-ticket {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef1f6;
+  color: #0d1f3c;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ---------- Popup ---------- */
+
+.pimr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(13, 31, 60, 0.55);
+}
+
+.pimr-modal {
+  width: 100%;
+  max-width: 460px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 24px 56px rgba(13, 31, 60, 0.3);
+  animation: pimr-pop 0.16s ease-out;
+}
+
+@keyframes pimr-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pimr-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 16px 22px;
+  background: linear-gradient(135deg, #0d1f3c 0%, #1b3a6b 100%);
+}
+
+.pimr-modal-date {
+  flex: 1;
+  font-size: 12.5px;
+  color: #cbd5e1;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pimr-modal-close {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pimr-modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.pimr-modal-body {
+  display: flex;
+  gap: 12px;
+  padding: 22px 22px 18px;
+}
+
+.pimr-modal-comment {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: #334155;
+  overflow-wrap: anywhere;
+}
+
+.pimr-modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+  border-top: 1px solid #f1f5f9;
+  background: #fafbfd;
+}
+
+.pimr-modal-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.pimr-modal-ticket {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* ---------- Empty and error states ---------- */
+
+.pimr-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 44px 24px 48px;
+  text-align: center;
+}
+
+.pimr-empty-state.compact {
+  padding: 30px 20px 32px;
+}
+
+.pimr-empty-badge {
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #eef1f6;
+  color: #0d1f3c;
+  box-shadow: 0 0 0 7px #f5f7fb;
+}
+
+.pimr-empty-badge.red {
+  background: #fee2e2;
+  color: #dc2626;
+  box-shadow: 0 0 0 7px #fef2f2;
+}
+
+.pimr-empty-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0d1f3c;
+}
+
+.pimr-empty-hint {
+  max-width: 340px;
+  margin: 0;
+  font-size: 13.5px;
+  color: #6b7280;
+}
+
+.pimr-btn-primary,
+.pimr-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  margin-top: 16px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pimr-btn-primary {
+  border: none;
+  background: #0d1f3c;
+  color: #ffffff;
+}
+
+.pimr-btn-primary:hover {
+  background: #16325e;
+}
+
+.pimr-btn-secondary {
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #0d1f3c;
+}
+
+.pimr-btn-secondary:hover {
+  border-color: #0d1f3c;
+}
+
+/* ---------- Skeleton loading ---------- */
+
+.pimr-skel {
+  display: block;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #e6eaf0 25%, #f3f5f8 37%, #e6eaf0 63%);
+  background-size: 400% 100%;
+  animation: pimr-shimmer 1.4s ease infinite;
+}
+
+.pimr-skel-hero {
+  height: 230px;
+  border-radius: 20px;
+}
+
+.pimr-skel-bar-head {
+  height: 70px;
+}
+
+.pimr-skel-review {
+  height: 200px;
+}
+
+@keyframes pimr-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* ---------- Smaller screens ---------- */
+
+@container pimr-page (max-width: 760px) {
+  .pimr-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 22px 20px;
+  }
+
+  .pimr-score {
+    align-items: center;
+    text-align: center;
+  }
+
+  .pimr-score-meta {
+    justify-content: center;
+  }
+}
+
+@container pimr-page (max-width: 620px) {
+  .pimr-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 16px;
+  }
+
+  .pimr-toolbar-right {
+    justify-content: space-between;
+  }
+
+  .pimr-sort-btn {
+    width: 100%;
+  }
+
+  .pimr-sort {
+    flex: 1;
+  }
+
+  .pimr-sort-menu {
+    left: 0;
+    right: auto;
+    width: 100%;
+  }
+
+  .pimr-reviews-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .pimr-page {
+    gap: 16px;
+  }
+
+  .pimr-score-value {
+    font-size: 44px;
+  }
+}

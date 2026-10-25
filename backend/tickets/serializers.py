@@ -1,8 +1,14 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Ticket, CompletionPhoto, RescheduleRequest
+from .models import Ticket, CompletionPhoto, RescheduleRequest, TicketAttempt
 
 User = get_user_model()
+
+# A ticket in one of these can be reapplied using the same ticket
+REAPPLY_STATUSES = [
+    Ticket.Status.WITHDRAWN,
+    Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY,
+]
 
 
 class CompletionPhotoSerializer(serializers.ModelSerializer):
@@ -45,6 +51,19 @@ class RescheduleRequestCreateSerializer(serializers.Serializer):
         return attrs
 
 
+class TicketAttemptSerializer(serializers.ModelSerializer):
+    """An older try of a ticket (see TicketAttempt)."""
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = TicketAttempt
+        fields = [
+            'id', 'attempt_number', 'status', 'status_display',
+            'started_at', 'ended_at', 'snapshot',
+        ]
+        read_only_fields = fields
+
+
 class TicketCreateSerializer(serializers.ModelSerializer):
     """
     Used when a Customer submits the Schedule Request form.
@@ -82,12 +101,17 @@ class TicketSerializer(serializers.ModelSerializer):
     feedback = serializers.SerializerMethodField()
     completion_photos = serializers.SerializerMethodField()
     reschedule_requests = serializers.SerializerMethodField()
+    attempts = serializers.SerializerMethodField()
+    can_reapply = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
         fields = [
             'id',
             'ticket_number',
+            'attempt_number',
+            'attempts',
+            'can_reapply',
             'full_name',
             'customer_username',
             'partner_installer_username',
@@ -138,6 +162,16 @@ class TicketSerializer(serializers.ModelSerializer):
 
     def get_reschedule_requests(self, obj):
         return RescheduleRequestSerializer(obj.reschedule_requests.all(), many=True).data
+
+    def get_attempts(self, obj):
+        # Leave the older tries out when building a snapshot, so a
+        # snapshot never holds another copy of the history inside it.
+        if self.context.get('skip_attempts'):
+            return []
+        return TicketAttemptSerializer(obj.attempts.all(), many=True).data
+
+    def get_can_reapply(self, obj):
+        return obj.status in REAPPLY_STATUSES
 
 
 class TicketCalendarSerializer(serializers.ModelSerializer):
