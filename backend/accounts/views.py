@@ -300,6 +300,8 @@ class GoogleLoginView(APIView):
       - if an account with that email already exists, uses it
       - otherwise creates a new CUSTOMER account automatically, using
         the Google account's name/email, with an unusable password
+    Only regular (personal) Google accounts are accepted. School and
+    company (Google Workspace) accounts are turned away.
     After that, the same 2FA step as normal login applies: the
     response is a challenge_token, not the real tokens.
     """
@@ -323,6 +325,17 @@ class GoogleLoginView(APIView):
         email = payload.get('email')
         if not email:
             return Response({"detail": "Google account has no email."}, status=400)
+
+        # Only regular (personal) Google accounts may sign in this way.
+        # School and company accounts (Google Workspace) carry an "hd"
+        # (hosted domain) value in the token, so we turn them away.
+        if payload.get('hd'):
+            return Response(
+                {"detail": "Please sign in with a personal Google account (like a Gmail address). School and company accounts are not allowed."},
+                status=400,
+            )
+        if not payload.get('email_verified'):
+            return Response({"detail": "This Google email is not verified."}, status=400)
 
         try:
             user = User.objects.get(email__iexact=email)
