@@ -24,6 +24,8 @@ class Notification(models.Model):
         RESCHEDULE_REQUESTED = 'RESCHEDULE_REQUESTED', 'Reschedule Requested'
         RESCHEDULE_DECISION = 'RESCHEDULE_DECISION', 'Reschedule Decision'
         INQUIRY_REPLY = 'INQUIRY_REPLY', 'Inquiry Reply'
+        NEW_INQUIRY = 'NEW_INQUIRY', 'New Inquiry'
+        INQUIRY_FOLLOWUP = 'INQUIRY_FOLLOWUP', 'Inquiry Follow-up'
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,

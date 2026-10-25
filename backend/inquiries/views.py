@@ -50,14 +50,48 @@ def notify_customer_account_of_reply(inquiry):
         logger.error(f"Could not create inquiry reply notification for inquiry {inquiry.pk}: {e}")
 
 
+def notify_staff_of_inquiry(inquiry, kind, message):
+    """
+    Puts a bell notification in every active Staff account's portal.
+    Used when a customer sends a new inquiry, or a follow-up message.
+    The link opens Staff's Email Inquiries page. This never breaks
+    the customer's action: if anything goes wrong here, it is logged
+    and skipped.
+    """
+    try:
+        staff_members = User.objects.filter(
+            role=User.Role.STAFF,
+            is_active=True,
+            is_active_account=True,
+        )
+        for staff in staff_members:
+            Notification.objects.create(
+                recipient=staff,
+                kind=kind,
+                message=message[:255],
+                link="/staff/email-inquiries",
+            )
+    except Exception as e:
+        logger.error(f"Could not create staff inquiry notification for inquiry {inquiry.pk}: {e}")
+
+
 class InquiryCreateView(generics.CreateAPIView):
     """
     POST /api/inquiries/  - public Landing Page contact form.
     No login required - anyone can submit an inquiry.
+    Every active Staff member gets a bell notification.
     """
     queryset = Inquiry.objects.all()
     serializer_class = InquiryCreateSerializer
     permission_classes = [permissions.AllowAny]
+
+    def perform_create(self, serializer):
+        inquiry = serializer.save()
+        notify_staff_of_inquiry(
+            inquiry,
+            Notification.Kind.NEW_INQUIRY,
+            f"New inquiry from {inquiry.full_name}: {inquiry.get_subject_display()}",
+        )
 
 
 class OptionalPageNumberPagination(PageNumberPagination):
@@ -330,7 +364,8 @@ class PublicInquiryThreadView(APIView):
          page is open, so this uses a generous throttle.
     POST /api/inquiries/public/<uuid:token>/  - the customer submits a
          new follow-up message from that same page. Sets
-         has_unread_reply = True so Staff sees a notification badge.
+         has_unread_reply = True so Staff sees a notification badge,
+         and puts a bell notification in every Staff portal.
          Uses a tighter throttle, since this is a real write action.
 
     Both actions are scoped ENTIRELY by the access_token in the URL -
@@ -376,5 +411,11 @@ class PublicInquiryThreadView(APIView):
 
         inquiry.has_unread_reply = True
         inquiry.save(update_fields=["has_unread_reply"])
+
+        notify_staff_of_inquiry(
+            inquiry,
+            Notification.Kind.INQUIRY_FOLLOWUP,
+            f"{inquiry.full_name} sent a follow-up message on their inquiry.",
+        )
 
         return Response(PublicInquiryThreadSerializer(inquiry).data, status=status.HTTP_201_CREATED)
