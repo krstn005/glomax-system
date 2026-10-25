@@ -13,6 +13,7 @@ from .serializers import (
     PriceHistorySerializer,
     PriceHistoryCreateSerializer,
 )
+from .utils import announce_price_change
 
 
 class PaymentTermsListView(generics.ListCreateAPIView):
@@ -49,6 +50,11 @@ class PriceHistoryListView(generics.ListCreateAPIView):
          at its default (True) automatically deactivates the previous
          entry for the same package_name (see PriceHistory.save()) -
          no extra logic needed here.
+
+         If the new price is different from the package's previous
+         active price, every customer gets a bell notification, and
+         customers with Email Updates on also get an email (see
+         pricing/utils.py). This never blocks or fails the save.
     """
     queryset = PriceHistory.objects.all()
 
@@ -61,6 +67,20 @@ class PriceHistoryListView(generics.ListCreateAPIView):
         if self.request.method == 'POST':
             return [permissions.IsAuthenticated(), IsAdmin()]
         return [permissions.IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        # Remember the price that is active right now (before the new
+        # one replaces it), so we can tell what changed.
+        package_name = serializer.validated_data.get('package_name')
+        previous = PriceHistory.objects.filter(
+            package_name=package_name, is_active=True
+        ).first()
+        old_price = previous.price if previous else None
+
+        new_entry = serializer.save()
+
+        if old_price is not None and old_price != new_entry.price:
+            announce_price_change(old_price, new_entry)
 
 
 class TicketQuotationListCreateView(generics.ListCreateAPIView):

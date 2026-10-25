@@ -26,6 +26,7 @@ class Notification(models.Model):
         INQUIRY_REPLY = 'INQUIRY_REPLY', 'Inquiry Reply'
         NEW_INQUIRY = 'NEW_INQUIRY', 'New Inquiry'
         INQUIRY_FOLLOWUP = 'INQUIRY_FOLLOWUP', 'Inquiry Follow-up'
+        PRICE_UPDATE = 'PRICE_UPDATE', 'Package Price Update'
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
