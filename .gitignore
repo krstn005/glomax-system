@@ -9,3 +9,5 @@ dist
 staticfiles
 *.sql
 backend/media/
+*_test.json
+*_diff.txt
