@@ -23,6 +23,7 @@ class Notification(models.Model):
         INSTALLATION_COMPLETED = 'INSTALLATION_COMPLETED', 'Installation Completed'
         RESCHEDULE_REQUESTED = 'RESCHEDULE_REQUESTED', 'Reschedule Requested'
         RESCHEDULE_DECISION = 'RESCHEDULE_DECISION', 'Reschedule Decision'
+        INQUIRY_REPLY = 'INQUIRY_REPLY', 'Inquiry Reply'
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,

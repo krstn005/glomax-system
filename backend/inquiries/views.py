@@ -17,10 +17,37 @@ from .serializers import (
     MessageCreateSerializer,
     PublicInquiryThreadSerializer,
 )
+from accounts.models import User
 from accounts.permissions import IsStaff
+from notifications.models import Notification
 from .utils import send_quotation_email, send_reply_email
 
 logger = logging.getLogger(__name__)
+
+
+def notify_customer_account_of_reply(inquiry):
+    """
+    If the person who sent this inquiry also has a Customer account
+    (same email), put a bell notification in their portal that opens
+    the full conversation page. Guests with no account only get the
+    email. This never breaks the reply: if anything goes wrong here,
+    it is logged and skipped.
+    """
+    try:
+        customers = User.objects.filter(
+            role=User.Role.CUSTOMER,
+            email__iexact=inquiry.email,
+        )
+        link = f"/inquiry-reply/{inquiry.access_token}/"
+        for customer in customers:
+            Notification.objects.create(
+                recipient=customer,
+                kind=Notification.Kind.INQUIRY_REPLY,
+                message="Glomax Staff replied to your inquiry. Tap to view the full conversation.",
+                link=link,
+            )
+    except Exception as e:
+        logger.error(f"Could not create inquiry reply notification for inquiry {inquiry.pk}: {e}")
 
 
 class InquiryCreateView(generics.CreateAPIView):
@@ -158,6 +185,23 @@ class InquirySendQuotationView(APIView):
         inquiry.is_replied = True
         inquiry.save()
 
+        # If the Customer already has an account and a ticket (they
+        # submitted their Schedule Request before Staff got around to
+        # replying to their inquiry), link this Initial Quotation onto
+        # that ticket right now instead of waiting for a ticket that
+        # already exists and never will trigger the other direction's
+        # auto-link logic.
+        from tickets.models import Ticket
+        from tickets.quotation_linking import link_initial_quotation_to_ticket
+
+        matching_ticket = (
+            Ticket.objects.filter(customer__email__iexact=inquiry.email)
+            .order_by('-created_at')
+            .first()
+        )
+        if matching_ticket:
+            link_initial_quotation_to_ticket(matching_ticket, inquiry)
+
         return Response(InquirySerializer(inquiry).data, status=status.HTTP_200_OK)
 
 
@@ -176,6 +220,10 @@ class StaffInquiryMessagesView(APIView):
          returned, but with an "email_sent": false flag and a
          "warning" message, so the frontend can show Staff a clear
          heads-up instead of a broken page.
+
+         If the customer also has an account (same email), a bell
+         notification is added too, and it opens the full
+         conversation page.
     """
     permission_classes = [permissions.IsAuthenticated, IsStaff]
 
@@ -212,6 +260,9 @@ class StaffInquiryMessagesView(APIView):
             staff_user=request.user,
             content=content,
         )
+
+        # Bell notification for customers who have an account
+        notify_customer_account_of_reply(inquiry)
 
         email_sent = True
         warning = None
@@ -327,63 +378,3 @@ class PublicInquiryThreadView(APIView):
         inquiry.save(update_fields=["has_unread_reply"])
 
         return Response(PublicInquiryThreadSerializer(inquiry).data, status=status.HTTP_201_CREATED)
-
-
-    def post(self, request, pk):
-        try:
-            inquiry = Inquiry.objects.get(pk=pk)
-        except Inquiry.DoesNotExist:
-            return Response({"detail": "Inquiry not found."}, status=404)
-
-        if inquiry.quotation_sent:
-            return Response(
-                {"detail": "An Initial Quotation has already been sent for this inquiry."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer = InquirySendQuotationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        try:
-            send_quotation_email(
-                inquiry=inquiry,
-                package_details=data["package_details"],
-                estimated_cost=data["estimated_cost"],
-                payment_terms=data["payment_terms"],
-                notes=data.get("notes", ""),
-            )
-        except AnymailError as e:
-            logger.error(f"Failed to send quotation email for inquiry {pk}: {e}")
-            return Response(
-                {"detail": "Could not send the quotation email. Please check the email service and try again."},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        inquiry.quotation_package_details = data["package_details"]
-        inquiry.quotation_estimated_cost = data["estimated_cost"]
-        inquiry.quotation_payment_terms = data["payment_terms"]
-        inquiry.quotation_message_to_customer = data.get("notes", "")
-        inquiry.quotation_sent = True
-        inquiry.quotation_sent_at = timezone.now()
-        inquiry.is_replied = True
-        inquiry.save()
-
-        # If the Customer already has an account and a ticket (they
-        # submitted their Schedule Request before Staff got around to
-        # replying to their inquiry), link this Initial Quotation onto
-        # that ticket right now instead of waiting for a ticket that
-        # already exists and never will trigger the other direction's
-        # auto-link logic.
-        from tickets.models import Ticket
-        from tickets.quotation_linking import link_initial_quotation_to_ticket
-
-        matching_ticket = (
-            Ticket.objects.filter(customer__email__iexact=inquiry.email)
-            .order_by('-created_at')
-            .first()
-        )
-        if matching_ticket:
-            link_initial_quotation_to_ticket(matching_ticket, inquiry)
-
-        return Response(InquirySerializer(inquiry).data, status=status.HTTP_200_OK)
