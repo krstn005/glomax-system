@@ -3,7 +3,6 @@ import {
   ShieldCheck,
   MessageSquareText,
   Mail,
-  KeyRound,
   ArrowLeft,
   Loader2,
   AlertCircle,
@@ -11,7 +10,6 @@ import {
   Copy,
   Download,
   Check,
-  Info,
   MonitorSmartphone,
 } from 'lucide-react';
 import {
@@ -199,17 +197,13 @@ export default function TwoFactorStep({ challenge, onSuccess, onCancel }) {
   const token = challenge.challenge_token;
   const isVerify = challenge.two_factor === 'verify';
 
-  // verify | choose | code | backup
+  // verify | choose | code
   const [view, setView] = useState(isVerify ? 'verify' : 'choose');
   const [method, setMethod] = useState(
     challenge.method === EMAIL || challenge.method === SMS ? challenge.method : SMS
   );
   const [code, setCode] = useState('');
-  const [useBackup, setUseBackup] = useState(false);
-  const [backupInput, setBackupInput] = useState('');
   const [setupData, setSetupData] = useState(null);
-  const [sessionData, setSessionData] = useState(null);
-  const [savedCodes, setSavedCodes] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(true);
 
   // Mobile number for SMS setup. If the account already has one, we use
@@ -261,9 +255,9 @@ export default function TwoFactorStep({ challenge, onSuccess, onCancel }) {
   // ----- Sign in with a code -----
   async function submitVerify(value) {
     if (busyRef.current) return;
-    const entered = (value ?? (useBackup ? backupInput : code)).trim();
-    if (!entered) {
-      setError(useBackup ? 'Please enter one of your backup codes.' : 'Please enter the 6-digit code.');
+    const entered = (value ?? code).trim();
+    if (entered.length !== 6) {
+      setError('Please enter the 6-digit code.');
       return;
     }
     busyRef.current = true;
@@ -276,7 +270,6 @@ export default function TwoFactorStep({ challenge, onSuccess, onCancel }) {
     } catch (err) {
       handleError(err, 'Incorrect code. Please try again.');
       setCode('');
-      setBackupInput('');
     } finally {
       busyRef.current = false;
       setLoading(false);
@@ -302,7 +295,7 @@ export default function TwoFactorStep({ challenge, onSuccess, onCancel }) {
         setError(data.detail);
       } else if (status === 429 || status === 503) {
         // Too many codes, or the SMS/email could not be sent.
-        // Keep the screen open so they can still use a backup code.
+        // Keep the screen open so they can try again.
         setError(getApiError(err, "We couldn't send a new code. Please try again."));
       } else {
         handleError(err, "We couldn't send a new code. Please try again.");
@@ -362,8 +355,8 @@ export default function TwoFactorStep({ challenge, onSuccess, onCancel }) {
     setNotice('');
     try {
       const data = await confirmTwoFactorSetup(token, entered, rememberDevice);
-      setSessionData(data);
-      setView('backup');
+      // Signed in. (Backup codes are no longer shown - codes come by SMS or email.)
+      onSuccess(data);
     } catch (err) {
       handleError(err, 'Incorrect code. Please try again.');
       setCode('');
@@ -445,13 +438,11 @@ export default function TwoFactorStep({ challenge, onSuccess, onCancel }) {
       <div className="tf">
         <div className="tf-head">
           <span className="tf-icon">
-            {useBackup ? <KeyRound size={24} /> : isEmail ? <Mail size={24} /> : <MessageSquareText size={24} />}
+            {isEmail ? <Mail size={24} /> : <MessageSquareText size={24} />}
           </span>
-          <h2 className="tf-title">{useBackup ? 'Use a backup code' : '2-step verification'}</h2>
+          <h2 className="tf-title">2-step verification</h2>
           <p className="tf-text">
-            {useBackup ? (
-              'Enter one of the backup codes you saved when you set up 2-step login. Each code works only once.'
-            ) : isEmail ? (
+            {isEmail ? (
               <>
                 We sent a 6-digit code to <strong>{challenge.email_hint}</strong>. It expires in 5 minutes.
               </>
@@ -473,30 +464,16 @@ export default function TwoFactorStep({ challenge, onSuccess, onCancel }) {
             submitVerify();
           }}
         >
-          {useBackup ? (
-            <input
-              className="tf-text-input"
-              type="text"
-              placeholder="XXXX-XXXX"
-              value={backupInput}
-              onChange={(e) => setBackupInput(e.target.value.toUpperCase())}
-              autoFocus
-              autoComplete="off"
-              spellCheck={false}
-              maxLength={9}
-            />
-          ) : (
-            <CodeInput
-              value={code}
-              onChange={(v) => {
-                setCode(v);
-                if (error) setError('');
-              }}
-              onComplete={(v) => submitVerify(v)}
-              disabled={loading}
-              hasError={!!error}
-            />
-          )}
+          <CodeInput
+            value={code}
+            onChange={(v) => {
+              setCode(v);
+              if (error) setError('');
+            }}
+            onComplete={(v) => submitVerify(v)}
+            disabled={loading}
+            hasError={!!error}
+          />
 
           <RememberDevice checked={rememberDevice} onChange={setRememberDevice} />
 
@@ -515,19 +492,10 @@ export default function TwoFactorStep({ challenge, onSuccess, onCancel }) {
         </form>
 
         <div className="tf-row-links">
-          {!useBackup && resendButton}
-          <button
-            type="button"
-            className="tf-link"
-            onClick={() => {
-              setUseBackup((v) => !v);
-              setError('');
-              setCode('');
-              setBackupInput('');
-            }}
-          >
-            {useBackup ? 'Use my 6-digit code instead' : 'Use a backup code'}
-          </button>
+          {resendButton}
+          <span className="tf-muted">
+            {isEmail ? 'Check your spam folder too.' : 'Texts can take up to a minute to arrive.'}
+          </span>
         </div>
 
         <button type="button" className="tf-back" onClick={onCancel}>
@@ -730,35 +698,5 @@ export default function TwoFactorStep({ challenge, onSuccess, onCancel }) {
     );
   }
 
-  /* ---------- BACKUP CODES (after setup) ---------- */
-  return (
-    <div className="tf">
-      <div className="tf-head">
-        <span className="tf-icon tf-icon-success">
-          <CheckCircle2 size={24} />
-        </span>
-        <h2 className="tf-title">2-step login is on</h2>
-        <p className="tf-text">
-          Save these backup codes. If you lose your phone or can't get your code, you can use one of
-          them to sign in. <strong>You will only see them once.</strong>
-        </p>
-      </div>
-
-      <BackupCodesList codes={sessionData?.backup_codes || []} username={sessionData?.username} />
-
-      <div className="tf-tip">
-        <Info size={15} />
-        <span>Keep them in a safe place, like a notebook or a password manager.</span>
-      </div>
-
-      <label className="tf-check">
-        <input type="checkbox" checked={savedCodes} onChange={(e) => setSavedCodes(e.target.checked)} />
-        <span>I saved my backup codes</span>
-      </label>
-
-      <button type="button" className="tf-submit" disabled={!savedCodes} onClick={() => onSuccess(sessionData)}>
-        Continue to my account
-      </button>
-    </div>
-  );
+  return null;
 }
