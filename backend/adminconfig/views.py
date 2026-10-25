@@ -77,14 +77,19 @@ class FaqDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class PublicFaqListView(generics.ListAPIView):
     """
-    GET /api/adminconfig/faqs/public/  - published FAQs only, for the
-    Customer-facing FAQ display. Any logged-in user can view (not
-    Admin-only) - the actual Customer FAQ page will call this one,
-    not the Admin management endpoint above.
+    GET /api/adminconfig/faqs/public/  - published FAQs only. Open to
+    everyone, no login needed, so the Landing Page can show the same
+    FAQs that Admin sets in Admin Settings. Read-only. Only published
+    FAQs are shown, in the order Admin set.
+
+    authentication_classes is empty on purpose: a visitor with an old
+    or expired login in their browser would otherwise get a 401 here
+    instead of the FAQs.
     """
     queryset = Faq.objects.filter(is_published=True)
     serializer_class = PublicFaqSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
 
 
 class PublicSystemSettingView(APIView):

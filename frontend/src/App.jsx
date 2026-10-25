@@ -13,6 +13,7 @@ import DocumentsPage from './portals/customer/pages/DocumentsPage';
 import FeedbackPage from './portals/customer/pages/FeedbackPage';
 import FaqPage from './portals/customer/pages/FaqPage';
 import SettingsPage from './portals/customer/pages/SettingsPage';
+import InquiryReplyPage from './portals/shared/pages/InquiryReplyPage';
 
 import StaffDashboardPage from './portals/staff/pages/StaffDashboardPage';
 import StaffEmailInquiriesPage from './portals/staff/pages/StaffEmailInquiriesPage';
@@ -70,6 +71,10 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+      {/* Public - the full conversation page for an inquiry. The link in the
+          reply email and in the customer's bell notification both open this. */}
+      <Route path="/inquiry-reply/:token" element={<InquiryReplyPage />} />
 
       {/* Old login addresses now go to the one login page */}
       <Route path="/staff-login" element={<Navigate to="/login" replace />} />
