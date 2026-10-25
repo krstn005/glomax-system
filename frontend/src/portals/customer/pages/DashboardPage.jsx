@@ -5,7 +5,6 @@ import {
   Sunrise,
   Moon,
   Inbox,
-  Plus,
   AlertCircle,
   AlertTriangle,
   Check,
@@ -465,14 +464,6 @@ export default function DashboardPage() {
             </h1>
             <p>{heroText}</p>
           </div>
-          {!loading && !error && !activeTicket && (
-            <div className="db-hero-actions">
-              <Link to="/new-request" className="db-hero-btn gold">
-                <Plus size={17} />
-                New Request
-              </Link>
-            </div>
-          )}
         </section>
 
         {loading && <DashboardSkeleton />}
@@ -699,12 +690,7 @@ export default function DashboardPage() {
                         ? 'Submit your first roof assessment request to get started.'
                         : `You have no ${currentFilter.label.toLowerCase()} requests.`}
                     </p>
-                    {filterKey === 'ALL' ? (
-                      <Link to="/new-request" className="db-btn-primary">
-                        <Plus size={16} />
-                        New Request
-                      </Link>
-                    ) : (
+                    {filterKey !== 'ALL' && (
                       <button type="button" className="db-btn-secondary" onClick={() => setFilterKey('ALL')}>
                         Show all requests
                       </button>
@@ -797,14 +783,7 @@ export default function DashboardPage() {
                       <span style={{ width: `${((currentStepIndex + 1) / STATUS_STEPS.length) * 100}%` }} />
                     </div>
                   )}
-                  {!activeTicket && (
-                    <Link to="/new-request" className="db-btn-primary db-next-btn">
-                      <Plus size={16} />
-                      New Request
-                    </Link>
-                  )}
                 </div>
-
               </aside>
             </div>
           </>
