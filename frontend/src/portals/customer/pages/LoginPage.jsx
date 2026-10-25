@@ -29,10 +29,10 @@ const FEATURES = [
   { icon: FileText, label: 'Get quotations and documents online' },
 ];
 
-// This login page is for Customer accounts only. Staff, Partner
-// Installer and Admin accounts have their own separate login pages,
-// and the backend refuses them here (before any 2FA code is sent).
-const PORTAL = 'CUSTOMER';
+// ONE login page for everybody (Customer, Staff, Partner Installer, Admin).
+// We don't tell the backend which portal this is, so it accepts any role.
+// After the 2FA code is correct, the account's role decides which
+// dashboard opens (see ROLE_CONFIG in roleConfig.js).
 
 // Google's button needs a fixed pixel width, so fit it to the screen
 function getGoogleWidth() {
@@ -70,24 +70,16 @@ export default function LoginPage() {
 
   // Called only after the 2FA code is correct
   function handleAuthSuccess(data) {
-    // Only Customer accounts may use this page
-    if (data.role !== PORTAL) {
+    const target = ROLE_CONFIG[data.role];
+    if (!target) {
       setChallenge(null);
       setPassword('');
-      setError('This login page is for customers only. Please use the login page for your account.');
+      setError('This account has no portal. Please contact the administrator.');
       return;
     }
 
     saveSession(data);
-    navigate(ROLE_CONFIG.CUSTOMER.dashboardPath, { replace: true });
-  }
-
-  // A Staff / Partner Installer / Admin account tried to sign in here.
-  // Returns true if that was the problem.
-  function handleWrongPortal(err) {
-    if (!err?.response?.data?.wrong_portal) return false;
-    setError('This login page is for customers only. Please use the login page for your account.');
-    return true;
+    navigate(target.dashboardPath, { replace: true });
   }
 
   async function handleSubmit(e) {
@@ -99,13 +91,10 @@ export default function LoginPage() {
       const res = await apiClient.post('/accounts/login/', {
         username: usernameOrEmail.trim(),
         password,
-        portal: PORTAL,
       });
       setChallenge(res.data);
     } catch (err) {
-      if (handleWrongPortal(err)) {
-        setPassword('');
-      } else if (err?.response?.status === 401) {
+      if (err?.response?.status === 401) {
         setError('Wrong email/username or password. Please try again.');
       } else {
         setError(getApiError(err, 'Sign in failed. Please try again.'));
@@ -121,14 +110,11 @@ export default function LoginPage() {
     try {
       const res = await apiClient.post('/accounts/google-login/', {
         id_token: credentialResponse.credential,
-        portal: PORTAL,
       });
       setChallenge(res.data);
     } catch (err) {
-      if (!handleWrongPortal(err)) {
-        console.error('Google sign-in failed:', err);
-        setError(getApiError(err, 'Google sign-in failed. Please try again.'));
-      }
+      console.error('Google sign-in failed:', err);
+      setError(getApiError(err, 'Google sign-in failed. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -154,11 +140,11 @@ export default function LoginPage() {
         <div className="cl-brand-body">
           <span className="cl-portal-pill">
             <Sun size={14} />
-            Customer Portal
+            Glomax Portal
           </span>
-          <h2 className="cl-brand-headline">Power your home with the sun</h2>
+          <h2 className="cl-brand-headline">One login for everyone</h2>
           <p className="cl-brand-text">
-            Request a solar installation, follow every step, and keep all your documents in one place.
+            Customers, staff, partner installers and admins all sign in here. You are taken to the right dashboard automatically.
           </p>
 
           <ul className="cl-features">
@@ -202,7 +188,7 @@ export default function LoginPage() {
                 </span>
                 <div>
                   <h1 className="cl-title">Welcome</h1>
-                  <p className="cl-subtitle">Sign in to submit requests and track your installation</p>
+                  <p className="cl-subtitle">Sign in with your email or username</p>
                 </div>
               </div>
 
@@ -320,7 +306,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="cl-footer">Glomax Solar Enterprises · Customer Portal</p>
+        <p className="cl-footer">Glomax Solar Enterprises</p>
       </main>
     </div>
   );

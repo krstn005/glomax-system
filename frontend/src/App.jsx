@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
-import PortalLoginPage from './portals/shared/pages/PortalLoginPage';
 
 import LandingPage from './portals/customer/pages/LandingPage';
 import LoginPage from './portals/customer/pages/LoginPage';
@@ -52,23 +51,30 @@ import AdminReportsPage from './portals/admin/pages/AdminReportsPage';
 import AdminCustomerFeedbackPage from './portals/admin/pages/AdminCustomerFeedbackPage';
 import AdminSettingsPage from './portals/admin/pages/AdminSettingsPage';
 
+// The old staff. / installer. / admin. addresses just forward to the one login page
+const OLD_PORTAL_HOSTS = ['staff.', 'installer.', 'admin.'];
+function forwardOldAddress() {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  if (!OLD_PORTAL_HOSTS.some((h) => host.startsWith(h)) || host.endsWith('localhost')) return false;
+  window.location.replace(`https://${host.replace(/^(staff|installer|admin)\./, '')}/login`);
+  return true;
+}
 
 function App() {
+  if (forwardOldAddress()) return null;
   return (
     <Routes>
-      {/* Public - Customer-facing entry points */}
+      {/* Public - one login page for every role */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-      {/* Public - Internal/Partner login pages (Staff, Admin, PI) -
-          these must stay public/unprotected since nobody is logged
-          in yet when they reach them. PortalLoginPage itself already
-          refuses to log a CUSTOMER account in through here. */}
-      <Route path="/staff-login" element={<PortalLoginPage role="STAFF" />} />
-      <Route path="/admin-login" element={<PortalLoginPage role="ADMIN" />} />
-      <Route path="/partner-installer-login" element={<PortalLoginPage role="PARTNER_INSTALLER" />} />
+      {/* Old login addresses now go to the one login page */}
+      <Route path="/staff-login" element={<Navigate to="/login" replace />} />
+      <Route path="/admin-login" element={<Navigate to="/login" replace />} />
+      <Route path="/partner-installer-login" element={<Navigate to="/login" replace />} />
 
       {/* Protected - Customer only */}
       <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["CUSTOMER"]}><DashboardPage /></ProtectedRoute>} />
@@ -105,10 +111,7 @@ function App() {
       <Route path="/partner-installer/my-ratings" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PIMyRatingsPage /></ProtectedRoute>} />
       <Route path="/partner-installer/settings" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PISettingsPage /></ProtectedRoute>} />
       <Route path="/partner-installer/calendar" element={<PICalendarPage />} />
-    
-      
-      
-      
+
       {/* Protected - Admin only */}
       <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminDashboardPage /></ProtectedRoute>} />
       <Route path="/admin/requests" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminRequestsPage /></ProtectedRoute>} />
