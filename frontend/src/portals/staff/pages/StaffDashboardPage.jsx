@@ -12,7 +12,6 @@ import {
   Check,
   X,
   AlertCircle,
-  CalendarDays,
   Clock,
   PartyPopper,
   Sun,
@@ -20,6 +19,7 @@ import {
   Sunrise,
 } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
+import StaffMiniCalendar from "../components/StaffMiniCalendar";
 import { getStaffTickets } from "../../../api/staffTickets";
 import "../styles/staff-dashboard.css";
 
@@ -79,14 +79,6 @@ function timeAgo(value) {
 function daysWaiting(value) {
   if (!value) return 0;
   return Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 86400000));
-}
-
-function daysUntil(value) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const d = new Date(value);
-  d.setHours(0, 0, 0, 0);
-  return Math.round((d - today) / 86400000);
 }
 
 function getInitials(name) {
@@ -279,12 +271,6 @@ export default function StaffDashboardPage() {
       .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at))
       .map((t) => ({ ticket: t, kind: "review" })),
   ];
-
-  // Site visits from today onwards
-  const upcomingVisits = tickets
-    .filter((t) => t.visit_date && t.status === "PI_ASSIGNED" && daysUntil(t.visit_date) >= 0)
-    .sort((a, b) => new Date(a.visit_date) - new Date(b.visit_date))
-    .slice(0, 4);
 
   const username = localStorage.getItem("username") || "there";
   const hello = greeting();
@@ -524,49 +510,8 @@ export default function StaffDashboardPage() {
                   )}
                 </section>
 
-                {/* Upcoming visits */}
-                <section className="stfdb-card">
-                  <div className="stfdb-side-head">
-                    <h2>Upcoming site visits</h2>
-                    <button type="button" className="stfdb-side-link small" onClick={() => navigate("/staff/calendar")}>
-                      Calendar <ArrowRight size={13} />
-                    </button>
-                  </div>
-                  {loading ? (
-                    <div className="stfdb-skel-stack">
-                      <span className="stfdb-skel stfdb-skel-todo" />
-                    </div>
-                  ) : upcomingVisits.length === 0 ? (
-                    <p className="stfdb-side-empty">
-                      <CalendarDays size={16} />
-                      No visits scheduled yet.
-                    </p>
-                  ) : (
-                    <ul className="stfdb-visits">
-                      {upcomingVisits.map((t) => {
-                        const d = new Date(t.visit_date);
-                        const left = daysUntil(t.visit_date);
-                        return (
-                          <li key={t.id}>
-                            <button type="button" className="stfdb-visit" onClick={() => goToTicket(t.id)}>
-                              <span className="stfdb-visit-cal">
-                                <span>{d.toLocaleDateString("en-US", { month: "short" })}</span>
-                                <strong>{d.getDate()}</strong>
-                              </span>
-                              <span className="stfdb-visit-text">
-                                <strong>{customerName(t)}</strong>
-                                <span>{t.partner_installer_username || "Partner Installer"}</span>
-                              </span>
-                              <span className={`stfdb-visit-when ${left <= 1 ? "soon" : ""}`}>
-                                {left === 0 ? "Today" : left === 1 ? "Tomorrow" : `In ${left} days`}
-                              </span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </section>
+                {/* Small visit calendar */}
+                <StaffMiniCalendar />
               </aside>
             </div>
           </>

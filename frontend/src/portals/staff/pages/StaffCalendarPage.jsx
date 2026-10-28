@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -88,19 +88,47 @@ function getDayDistance(dateKey, todayKey) {
   return `${Math.abs(diff)} days ago`;
 }
 
+// Reads ?date=YYYY-MM-DD or ?month=YYYY-MM from the link
+function readStartDate(params) {
+  const date = params.get("date");
+  const month = params.get("month");
+  const dateMatch = date && /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (dateMatch) {
+    const y = Number(dateMatch[1]);
+    const m = Number(dateMatch[2]);
+    const d = Number(dateMatch[3]);
+    const real = new Date(y, m - 1, d);
+    if (real.getFullYear() === y && real.getMonth() === m - 1 && real.getDate() === d) {
+      return { year: y, month: m - 1, dayKey: formatDateKey(y, m - 1, d) };
+    }
+  }
+  const monthMatch = month && /^(\d{4})-(\d{2})$/.exec(month);
+  if (monthMatch) {
+    const y = Number(monthMatch[1]);
+    const m = Number(monthMatch[2]);
+    if (m >= 1 && m <= 12) return { year: y, month: m - 1, dayKey: null };
+  }
+  return null;
+}
+
 export default function StaffCalendarPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const today = new Date();
   const todayKey = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth()); // 0-11
+  // The Dashboard calendar can open this page on a day (?date=2026-11-05)
+  // or on a month (?month=2026-11). Anything that is not a real date is ignored.
+  const startDate = readStartDate(searchParams);
+
+  const [viewYear, setViewYear] = useState(startDate ? startDate.year : today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(startDate ? startDate.month : today.getMonth()); // 0-11
   const [monthTickets, setMonthTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [activeFilter, setActiveFilter] = useState("ALL");
-  const [selectedKey, setSelectedKey] = useState(null);
+  const [selectedKey, setSelectedKey] = useState(startDate ? startDate.dayKey : null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(viewYear);
   const pickerRef = useRef(null);

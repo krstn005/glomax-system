@@ -14,7 +14,6 @@ import {
   LogOut,
   ChevronDown,
   ArrowRight,
-  CalendarDays,
   Menu,
   X,
 } from 'lucide-react';
@@ -28,7 +27,7 @@ const NAV_GROUPS = [
   {
     label: 'Overview',
     items: [
-      { to: '/staff/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/staff/dashboard', label: 'Dashboard', icon: LayoutDashboard, alsoActive: ['/staff/calendar'] },
     ],
   },
   {
@@ -44,7 +43,6 @@ const NAV_GROUPS = [
       { to: '/staff/manage-tickets', label: 'Ticket Tracking', icon: Activity },
       { to: '/staff/assessment-review', label: 'Assessment Review', icon: ClipboardCheck },
       { to: '/staff/completed-tickets', label: 'Completed Tickets', icon: CheckCircle },
-      { to: '/staff/calendar', label: 'Calendar', icon: CalendarDays },
     ],
   },
   {
@@ -197,11 +195,13 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="stf-nav-group">
               <p className="stf-nav-label">{group.label}</p>
-              {group.items.map(({ to, label, icon: Icon }) => (
+              {group.items.map(({ to, label, icon: Icon, alsoActive = [] }) => (
                 <Link
                   key={to}
                   to={to}
-                  className={`stf-nav-link ${isActive(location.pathname, to) ? 'active' : ''}`}
+                  className={`stf-nav-link ${
+                    [to, ...alsoActive].some((path) => isActive(location.pathname, path)) ? 'active' : ''
+                  }`}
                 >
                   <Icon size={17} />
                   <span>{label}</span>
