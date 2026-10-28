@@ -115,7 +115,7 @@ function App() {
       <Route path="/partner-installer/ticket-history" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PITicketHistoryPage /></ProtectedRoute>} />
       <Route path="/partner-installer/my-ratings" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PIMyRatingsPage /></ProtectedRoute>} />
       <Route path="/partner-installer/settings" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PISettingsPage /></ProtectedRoute>} />
-      <Route path="/partner-installer/calendar" element={<PICalendarPage />} />
+      <Route path="/partner-installer/calendar" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PICalendarPage /></ProtectedRoute>} />
 
       {/* Protected - Admin only */}
       <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminDashboardPage /></ProtectedRoute>} />

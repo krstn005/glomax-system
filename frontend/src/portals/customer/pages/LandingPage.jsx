@@ -31,6 +31,7 @@ import {
   Info,
 } from 'lucide-react';
 import { submitInquiry } from '../../../api/inquiries';
+import { getPublicFaqs } from '../../../api/adminconfig';
 import { sanitizePhoneNumber } from '../../../utils/phone';
 import heroImage from '../assets/images/landing_hero.jpg';
 import aboutImage from '../assets/images/landing_section.jpg';
@@ -150,28 +151,35 @@ const PACKAGE_TIERS = [
   },
 ];
 
-const FAQS = [
+// Only used when the server can't be reached. Normally the FAQs shown on
+// this page are the ones Admin sets in Admin Settings > FAQs.
+const FALLBACK_FAQS = [
   {
+    id: 'fallback-1',
     question: 'What is the difference between On-Grid and Hybrid systems?',
     answer:
       'On-Grid connects your home to the regular power grid. It is the simpler and more affordable option. Hybrid adds a battery so you can still use power even when there is an outage or at night. Our team can help you figure out which one is right for your home during the roof check visit.',
   },
   {
+    id: 'fallback-2',
     question: 'How do I get started?',
     answer:
       'Just fill out the short inquiry form on our website. No account needed yet. We will get back to you with a quotation. Once you decide to move forward that is when you create your account and submit your request.',
   },
   {
+    id: 'fallback-3',
     question: 'Do I need to create an account to send an inquiry?',
     answer:
       'No. You can send us a message straight from our website without signing up. You only need to create an account after we send you a quotation and you decide to continue.',
   },
   {
+    id: 'fallback-4',
     question: 'Do I need to be home during the roof check?',
     answer:
       'Yes, someone needs to be at the property when our team comes to visit. They will need to see the roof up close to check if it is suitable for solar panels.',
   },
   {
+    id: 'fallback-5',
     question: 'What if my roof is not suitable for solar panels?',
     answer:
       'We will let you know right away and explain why. In some cases we may give you the chance to try again in the future. If that option is available you will see a button on your account that lets you submit a new request.',
@@ -250,11 +258,35 @@ export default function LandingPage() {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [packageType, setPackageType] = useState('onGrid');
 
+  // FAQs come from Admin Settings. status: 'loading' | 'ready'
+  const [faqs, setFaqs] = useState([]);
+  const [faqStatus, setFaqStatus] = useState('loading');
+
   const [form, setForm] = useState(EMPTY_FORM);
   const [chosenPackage, setChosenPackage] = useState(null);
   const [phoneWarning, setPhoneWarning] = useState('');
   const [status, setStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Load the FAQs that Admin set in Admin Settings.
+  // If the server can't be reached, show the built-in list instead.
+  useEffect(() => {
+    let cancelled = false;
+    getPublicFaqs()
+      .then((data) => {
+        if (cancelled) return;
+        setFaqs(Array.isArray(data) ? data : []);
+        setFaqStatus('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFaqs(FALLBACK_FAQS);
+        setFaqStatus('ready');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Solid nav bar after scrolling a bit
   useEffect(() => {
@@ -699,7 +731,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ---------- FAQs ---------- */}
+      {/* ---------- FAQs (set by Admin in Admin Settings) ---------- */}
       <section id="faqs" className="lnd-section">
         <div className="lnd-container lnd-faq" data-reveal>
           <div className="lnd-faq-side">
@@ -723,29 +755,38 @@ export default function LandingPage() {
           </div>
 
           <div className="lnd-faq-list">
-            {FAQS.map((faq, index) => {
-              const isOpen = openFaqIndex === index;
-              return (
-                <div className={`lnd-faq-item ${isOpen ? 'open' : ''}`} key={faq.question}>
-                  <button
-                    type="button"
-                    className="lnd-faq-q"
-                    aria-expanded={isOpen}
-                    onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                  >
-                    <span>{faq.question}</span>
-                    <span className="lnd-faq-chevron">
-                      <ChevronDown size={18} />
-                    </span>
-                  </button>
-                  <div className="lnd-faq-a">
-                    <div className="lnd-faq-a-inner">
-                      <p>{faq.answer}</p>
+            {faqStatus === 'loading' && <p className="lnd-body">Loading questions...</p>}
+
+            {faqStatus === 'ready' && faqs.length === 0 && (
+              <p className="lnd-body">
+                No questions have been posted yet. Send us a message and we will gladly help.
+              </p>
+            )}
+
+            {faqStatus === 'ready' &&
+              faqs.map((faq, index) => {
+                const isOpen = openFaqIndex === index;
+                return (
+                  <div className={`lnd-faq-item ${isOpen ? 'open' : ''}`} key={faq.id}>
+                    <button
+                      type="button"
+                      className="lnd-faq-q"
+                      aria-expanded={isOpen}
+                      onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                    >
+                      <span>{faq.question}</span>
+                      <span className="lnd-faq-chevron">
+                        <ChevronDown size={18} />
+                      </span>
+                    </button>
+                    <div className="lnd-faq-a">
+                      <div className="lnd-faq-a-inner">
+                        <p>{faq.answer}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       </section>

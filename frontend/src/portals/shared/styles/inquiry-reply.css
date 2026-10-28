@@ -37,7 +37,7 @@
 .inqreply-eyebrow {
   font-size: 12px;
   font-weight: 700;
-  color: #eab308;
+  color: #a16207;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   margin: 0 0 4px;
@@ -72,7 +72,7 @@
 .inqreply-summary-label {
   font-size: 11px;
   font-weight: 700;
-  color: #9ca3af;
+  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   margin: 0 0 3px;
@@ -141,7 +141,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #eab308;
+  color: #a16207;
   margin: 0 0 8px !important;
 }
 
@@ -191,6 +191,16 @@
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.inqreply-composer button:hover:not(:disabled) {
+  background: #1a3560;
+}
+
+.inqreply-composer button:focus-visible {
+  outline: 2px solid #eab308;
+  outline-offset: 2px;
 }
 
 .inqreply-composer button:disabled {
@@ -204,11 +214,67 @@
   margin: 10px 0 0;
 }
 
+.inqreply-next {
+  margin-top: 28px;
+  padding: 18px 20px;
+  background: #f9fafb;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.inqreply-next-text {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.inqreply-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.inqreply-cta {
+  display: inline-block;
+  background: #0d1f3c;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 11px 22px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+
+.inqreply-cta:hover {
+  background: #1a3560;
+}
+
+.inqreply-cta:focus-visible,
+.inqreply-login-link:focus-visible {
+  outline: 2px solid #eab308;
+  outline-offset: 2px;
+}
+
+.inqreply-login-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0d1f3c;
+  text-decoration: underline;
+}
+
+.inqreply-login-link:hover {
+  color: #a16207;
+}
+
 .inqreply-footnote {
   text-align: center;
-  color: #9ca3af;
+  color: #6b7280;
   font-size: 12px;
-  margin: 24px 0 0;
+  margin: 18px 0 0;
 }
 
 @media (max-width: 700px) {
@@ -233,5 +299,14 @@
 
   .inqreply-msg {
     max-width: 92%;
+  }
+
+  .inqreply-composer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inqreply-composer button {
+    justify-content: center;
   }
 }

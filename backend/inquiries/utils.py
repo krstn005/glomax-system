@@ -2,6 +2,7 @@ from email.mime.image import MIMEImage
 
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
+from django.utils.html import escape
 
 COMPANY_ADDRESS = "8000 Plaza Residences Plaza, Brgy. 303, Lacson St., Sta. Cruz, Manila"
 
@@ -134,9 +135,21 @@ def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms
     continue the conversation inside the system (via the public
     reply-link page) instead of replying directly to this email or
     submitting a brand new, disconnected inquiry.
+
+    Anything typed by a person (name, package, cost, terms, notes) is
+    escaped before it goes into the HTML part, so typed HTML or
+    symbols can never change how the email looks or works.
     """
     subject = "Your Glomax Solar Quotation"
     reply_link = _get_reply_link(inquiry)
+
+    # Safe versions for the HTML part only. The plain-text part below
+    # keeps the original text.
+    safe_name = escape(inquiry.full_name)
+    safe_package = escape(package_details)
+    safe_cost = escape(estimated_cost)
+    safe_terms = escape(payment_terms)
+    safe_notes = escape(notes) if notes else ""
 
     # Plain-text version - unchanged in content, still sent as the
     # fallback for email clients that don't render HTML.
@@ -166,7 +179,7 @@ def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms
     if notes:
         notes_html = f"""\
     <p style="margin:14px 0 0; font-size:13px; color:#374151; line-height:1.5;">
-      <strong>Message from our team:</strong><br />{notes}
+      <strong>Message from our team:</strong><br /><span style="white-space:pre-wrap;">{safe_notes}</span>
     </p>
 """
 
@@ -175,7 +188,7 @@ def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms
     # around the box, keeps it reading as ordinary email content
     # rather than a "designed" card.
     inner_html = f"""\
-    <p style="margin:0 0 14px; font-size:14px; color:#111827;">Hi {inquiry.full_name},</p>
+    <p style="margin:0 0 14px; font-size:14px; color:#111827;">Hi {safe_name},</p>
     <p style="margin:0 0 18px; font-size:14px; color:#374151; line-height:1.5;">
       Thank you for your inquiry with Glomax Solar Enterprises. Here is your
       initial quotation:
@@ -185,19 +198,19 @@ def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms
       <tr>
         <td style="padding:16px 18px 8px;">
           <p style="margin:0 0 3px; font-size:11px; color:#6b7280;">Package Details</p>
-          <p style="margin:0; font-size:14px; font-weight:bold; color:#111827;">{package_details}</p>
+          <p style="margin:0; font-size:14px; font-weight:bold; color:#111827;">{safe_package}</p>
         </td>
       </tr>
       <tr>
         <td style="padding:8px 18px;">
           <p style="margin:0 0 3px; font-size:11px; color:#6b7280;">Estimated Cost</p>
-          <p style="margin:0; font-size:15px; font-weight:bold; color:#0d1f3c;">{estimated_cost}</p>
+          <p style="margin:0; font-size:15px; font-weight:bold; color:#0d1f3c;">{safe_cost}</p>
         </td>
       </tr>
       <tr>
         <td style="padding:8px 18px 16px;">
           <p style="margin:0 0 3px; font-size:11px; color:#6b7280;">Payment Terms</p>
-          <p style="margin:0; font-size:14px; font-weight:bold; color:#111827;">{payment_terms}</p>
+          <p style="margin:0; font-size:14px; font-weight:bold; color:#111827;">{safe_terms}</p>
         </td>
       </tr>
     </table>
@@ -228,9 +241,15 @@ def send_reply_email(inquiry, staff_message_content):
     Sends Staff's follow-up reply to the customer's email. Includes
     the same Reply Link again so the customer can keep the
     conversation going as many times as needed.
+
+    The name and Staff's message are escaped before they go into the
+    HTML part, same as in the quotation email.
     """
     subject = "New Reply to Your Glomax Solar Inquiry"
     reply_link = _get_reply_link(inquiry)
+
+    safe_name = escape(inquiry.full_name)
+    safe_message = escape(staff_message_content)
 
     text_message = (
         f"Hi {inquiry.full_name},\n\n"
@@ -250,7 +269,7 @@ def send_reply_email(inquiry, staff_message_content):
     # Staff's message shown on a light gray background with just a
     # left color bar for emphasis - no full outline around it.
     inner_html = f"""\
-    <p style="margin:0 0 14px; font-size:14px; color:#111827;">Hi {inquiry.full_name},</p>
+    <p style="margin:0 0 14px; font-size:14px; color:#111827;">Hi {safe_name},</p>
     <p style="margin:0 0 14px; font-size:14px; color:#374151; line-height:1.5;">
       You have a new reply from Glomax Solar Enterprises regarding your inquiry:
     </p>
@@ -258,7 +277,7 @@ def send_reply_email(inquiry, staff_message_content):
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb; border-left:3px solid #0d1f3c;">
       <tr>
         <td style="padding:14px 18px;">
-          <p style="margin:0; font-size:14px; color:#111827; line-height:1.5; white-space:pre-wrap;">{staff_message_content}</p>
+          <p style="margin:0; font-size:14px; color:#111827; line-height:1.5; white-space:pre-wrap;">{safe_message}</p>
         </td>
       </tr>
     </table>

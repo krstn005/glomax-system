@@ -50,21 +50,20 @@ export async function sendInquiryReply(id, content) {
 
 // --- Public, no-login reply-link thread (customer side) ---
 // Uses a plain axios call (not the shared client) since these
-// endpoints are unauthenticated - no JWT token exists for a customer
-// with no account, so the shared client's auth header logic doesn't
-// apply here.
+// endpoints are unauthenticated - a customer with no account has no
+// login token, so the shared client's auth logic does not apply here.
 //
-// The API base URL is built dynamically from window.location.hostname
-// instead of being hard-coded, so this page works correctly whether
-// it's opened as http://localhost:5173 (on the same computer) or
-// http://192.168.x.x:5173 (from a phone on the same network) -
-// whatever hostname the browser actually used to reach this page is
-// the same one it should use to reach the Django backend, since
-// they're running on the same machine.
+// The address of the backend comes from VITE_API_URL, the same
+// setting the rest of the app uses. Online it is
+// https://api.glomaxsolar.me/api. If it is not set (local testing
+// only), it uses the same computer name the page was opened with, so
+// testing from a phone on the same Wi-Fi still works.
 
 import axios from 'axios';
 
-const API_BASE_URL = `http://${window.location.hostname}:8000/api`;
+const API_BASE_URL = String(
+  import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000/api`
+).replace(/\/+$/, '');
 
 export async function getPublicInquiryThread(token) {
   const response = await axios.get(`${API_BASE_URL}/inquiries/public/${token}/`);
