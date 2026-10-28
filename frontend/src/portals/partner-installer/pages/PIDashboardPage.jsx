@@ -20,6 +20,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import PILayout from '../components/PILayout';
+import PIMiniCalendar from '../components/PIMiniCalendar';
 import { getInstallerTickets } from '../../../api/piTickets';
 import '../styles/pi-dashboard.css';
 
@@ -312,12 +313,6 @@ export default function PIDashboardPage() {
       return (visitKey(a.ticket) || '9999').localeCompare(visitKey(b.ticket) || '9999');
     });
 
-  // Site visits from today onwards
-  const upcomingVisits = tickets
-    .filter((t) => t.status === 'PI_ASSIGNED' && visitKey(t) && visitKey(t) >= today)
-    .sort((a, b) => visitKey(a).localeCompare(visitKey(b)))
-    .slice(0, 4);
-
   const username = localStorage.getItem('username') || 'there';
   const hello = greeting();
   const HelloIcon = hello.icon;
@@ -591,53 +586,8 @@ export default function PIDashboardPage() {
                   )}
                 </section>
 
-                {/* Upcoming visits */}
-                <section className="pid-card">
-                  <div className="pid-side-head">
-                    <h2>Upcoming site visits</h2>
-                    <button
-                      type="button"
-                      className="pid-side-link small"
-                      onClick={() => navigate('/partner-installer/calendar')}
-                    >
-                      Calendar <ArrowRight size={13} />
-                    </button>
-                  </div>
-                  {loading ? (
-                    <div className="pid-skel-stack">
-                      <span className="pid-skel pid-skel-todo" />
-                    </div>
-                  ) : upcomingVisits.length === 0 ? (
-                    <p className="pid-side-empty">
-                      <CalendarDays size={16} />
-                      No visits scheduled yet.
-                    </p>
-                  ) : (
-                    <ul className="pid-visits">
-                      {upcomingVisits.map((t) => {
-                        const d = parseLocalDate(t.visit_date);
-                        const left = daysFromToday(t.visit_date);
-                        return (
-                          <li key={t.id}>
-                            <button type="button" className="pid-visit" onClick={() => goToTicket(t.id)}>
-                              <span className="pid-visit-cal">
-                                <span>{d.toLocaleDateString('en-US', { month: 'short' })}</span>
-                                <strong>{d.getDate()}</strong>
-                              </span>
-                              <span className="pid-visit-text">
-                                <strong>{customerName(t)}</strong>
-                                <span>{t.property_address || t.ticket_number}</span>
-                              </span>
-                              <span className={`pid-visit-when ${left <= 1 ? 'soon' : ''}`}>
-                                {left === 0 ? 'Today' : left === 1 ? 'Tomorrow' : `In ${left} days`}
-                              </span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </section>
+                {/* Small visit calendar */}
+                <PIMiniCalendar />
               </aside>
             </div>
           </>

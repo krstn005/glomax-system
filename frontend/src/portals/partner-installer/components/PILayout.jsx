@@ -9,7 +9,6 @@ import {
   LogOut,
   ChevronDown,
   ArrowRight,
-  CalendarDays,
   Menu,
   X,
 } from 'lucide-react';
@@ -22,13 +21,19 @@ import '../styles/pi-layout.css';
 const NAV_GROUPS = [
   {
     label: 'Overview',
-    items: [{ to: '/partner-installer/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+    items: [
+      {
+        to: '/partner-installer/dashboard',
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+        alsoActive: ['/partner-installer/calendar'],
+      },
+    ],
   },
   {
     label: 'My Work',
     items: [
       { to: '/partner-installer/incoming-tickets', label: 'Incoming Tickets', icon: Inbox },
-      { to: '/partner-installer/calendar', label: 'Calendar', icon: CalendarDays },
       { to: '/partner-installer/ticket-history', label: 'Ticket History', icon: History },
     ],
   },
@@ -178,11 +183,13 @@ export default function PILayout({ children, pageTitle, pageSubtitle }) {
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="pi-nav-group">
               <p className="pi-nav-label">{group.label}</p>
-              {group.items.map(({ to, label, icon: Icon }) => (
+              {group.items.map(({ to, label, icon: Icon, alsoActive = [] }) => (
                 <Link
                   key={to}
                   to={to}
-                  className={`pi-nav-link ${isActive(location.pathname, to) ? 'active' : ''}`}
+                  className={`pi-nav-link ${
+                    [to, ...alsoActive].some((path) => isActive(location.pathname, path)) ? 'active' : ''
+                  }`}
                 >
                   <Icon size={17} />
                   <span>{label}</span>
