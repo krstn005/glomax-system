@@ -65,8 +65,13 @@ const API_BASE_URL = String(
   import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000/api`
 ).replace(/\/+$/, '');
 
+// The reply page checks for new messages every few seconds. The
+// changing _t value makes sure the browser always asks the server and
+// never shows an old saved answer.
 export async function getPublicInquiryThread(token) {
-  const response = await axios.get(`${API_BASE_URL}/inquiries/public/${token}/`);
+  const response = await axios.get(`${API_BASE_URL}/inquiries/public/${token}/`, {
+    params: { _t: Date.now() },
+  });
   return response.data;
 }
 
