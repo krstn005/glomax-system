@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
+  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -21,6 +22,7 @@ import StaffLayout from "../components/StaffLayout";
 import { getStaffCalendarTickets } from "../../../api/staffTickets";
 import FilterMenu from "../../../components/FilterMenu";
 import "../styles/staff-calendar.css";
+import "../styles/staff-calendar-back.css";
 
 // Which color group each ticket status belongs to
 const STATUS_GROUP = {
@@ -297,6 +299,15 @@ export default function StaffCalendarPage() {
         {/* ---------- Banner ---------- */}
         <section className="stfcal-hero">
           <div className="stfcal-hero-glow" aria-hidden="true" />
+          <button
+            type="button"
+            className="stfcal-back"
+            onClick={() => navigate("/staff/dashboard")}
+            aria-label="Back to Dashboard"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={18} />
+          </button>
           <div className="stfcal-hero-icon">
             <CalendarDays size={26} />
           </div>

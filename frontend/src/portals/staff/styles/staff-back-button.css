@@ -1,0 +1,49 @@
+/* Back button for Staff pages that are not in the sidebar */
+.stf-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  margin-bottom: 14px;
+  padding: 0 16px 0 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #0d1f3c;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stf-back-btn svg {
+  width: 24px;
+  height: 24px;
+  padding: 5px;
+  border-radius: 50%;
+  background: #0d1f3c;
+  color: #facc15;
+  transition: transform 0.2s ease;
+}
+
+.stf-back-btn:hover {
+  border-color: #0d1f3c;
+  background: #f5f7fb;
+  box-shadow: 0 4px 12px rgba(13, 31, 60, 0.1);
+}
+
+.stf-back-btn:hover svg {
+  transform: translateX(-2px);
+}
+
+.stf-back-btn:focus-visible {
+  outline: 2px solid #eab308;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stf-back-btn,
+  .stf-back-btn svg {
+    transition: none;
+  }
+}
