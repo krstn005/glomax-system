@@ -5,6 +5,14 @@ input[type="password"]::-ms-clear {
 
 /* ---------- Layout ---------- */
 
+/* The box that holds the settings layout measures its own width, so the
+   page reacts to the space left beside the sidebar and not only to the
+   screen size. (Same idea as the Partner Installer and Admin settings.) */
+:has(> .stset-layout) {
+  container-type: inline-size;
+  container-name: stset-page;
+}
+
 .stset-layout {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -65,6 +73,14 @@ input[type="password"]::-ms-clear {
   border-radius: 14px;
   padding: 18px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.stset-user .stset-avatar-initials {
+  background: #16294f;
+}
+
+.stset-user .stset-avatar {
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.55);
 }
 
 .stset-user-text {
@@ -222,6 +238,10 @@ input[type="password"]::-ms-clear {
   flex-shrink: 0;
 }
 
+.stset-card-head > div {
+  min-width: 0;
+}
+
 .stset-card-head h2 {
   color: #0d1f3c;
   font-size: 17px;
@@ -295,17 +315,19 @@ input[type="password"]::-ms-clear {
 /* ---------- Notices ---------- */
 
 .stset-notice {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  position: relative;
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 10px 14px 10px 38px;
   font-size: 13px;
+  line-height: 1.45;
   margin: 0 0 18px;
+  overflow-wrap: anywhere;
 }
 
 .stset-notice svg {
-  flex-shrink: 0;
+  position: absolute;
+  left: 14px;
+  top: 11px;
 }
 
 .stset-notice-bottom {
@@ -332,8 +354,12 @@ input[type="password"]::-ms-clear {
 
 .stset-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px 20px;
+}
+
+.stset-grid > * {
+  min-width: 0;
 }
 
 .stset-field {
@@ -776,7 +802,7 @@ input[type="password"]::-ms-clear {
 .stset-rules {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 20px 0 0;
   padding: 14px 16px;
@@ -863,7 +889,9 @@ input[type="password"]::-ms-clear {
   align-items: center;
   gap: 10px;
   width: max-content;
-  max-width: 90vw;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
   border-radius: 10px;
   padding: 13px 22px;
   font-size: 14px;
@@ -902,6 +930,9 @@ input[type="password"]::-ms-clear {
   max-width: 400px;
   width: 100%;
   text-align: center;
+  box-sizing: border-box;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   box-shadow: 0 24px 56px rgba(13, 31, 60, 0.25);
 }
 
@@ -992,11 +1023,13 @@ input[type="password"]::-ms-clear {
   100% { background-position: 0 50%; }
 }
 
-/* ---------- Mobile ---------- */
+/* ---------- Narrow screens ---------- */
 
-@media (max-width: 960px) {
+/* Tabs move above the card and stay in one row, so no tab is hidden */
+@container stset-page (max-width: 820px) {
   .stset-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
   }
 
   .stset-side {
@@ -1004,25 +1037,75 @@ input[type="password"]::-ms-clear {
   }
 
   .stset-tabs {
-    flex-direction: row;
-    overflow-x: auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .stset-tab {
-    flex: 1;
-    min-width: 170px;
+    padding: 9px 10px 9px 9px;
+    gap: 10px;
+  }
+
+  .stset-tab-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .stset-tab-desc {
+    display: none;
+  }
+
+  .stset-tab-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .stset-tab.active::before {
     display: none;
   }
 
-  .stset-rules {
-    grid-template-columns: 1fr;
+  .stset-skel-tabs {
+    height: 76px;
+  }
+
+  .stset-skel-card {
+    height: 360px;
   }
 }
 
-@media (max-width: 640px) {
+/* Small tablets and big phones: icon above the label */
+@container stset-page (max-width: 560px) {
+  .stset-tabs {
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .stset-tab {
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 4px 9px;
+    text-align: center;
+  }
+
+  .stset-tab-text {
+    align-items: center;
+    width: 100%;
+  }
+
+  .stset-tab-label {
+    max-width: 100%;
+    font-size: 12.5px;
+  }
+
+  .stset-skel-tabs {
+    height: 86px;
+  }
+}
+
+/* Phones */
+@container stset-page (max-width: 620px) {
   .stset-card {
     padding: 20px 18px;
   }
@@ -1034,16 +1117,23 @@ input[type="password"]::-ms-clear {
     align-items: stretch;
   }
 
+  /* Main button on top, the smaller one under it - full width, any label length */
   .stset-save-actions {
     width: 100%;
+    flex-direction: column-reverse;
   }
 
   .stset-save-actions button {
-    flex: 1;
+    width: 100%;
   }
 
   .stset-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .stset-rules {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .stset-photo {
@@ -1051,11 +1141,28 @@ input[type="password"]::-ms-clear {
     text-align: center;
   }
 
-  .stset-tab-desc {
-    display: none;
+  .stset-toggle-row {
+    gap: 12px;
+    padding: 12px;
   }
 
-  .stset-tab {
-    min-width: 130px;
+  .stset-tip {
+    padding: 12px 14px;
+  }
+
+  .stset-modal {
+    padding: 26px 20px;
+  }
+}
+
+/* Very small phones */
+@container stset-page (max-width: 360px) {
+  .stset-user {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .stset-modal-actions {
+    flex-direction: column-reverse;
   }
 }
