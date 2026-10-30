@@ -13,7 +13,7 @@ from .serializers import (
     PriceHistorySerializer,
     PriceHistoryCreateSerializer,
 )
-from .utils import announce_price_change
+from .utils import announce_price_change, announce_payment_terms_change
 
 
 class PaymentTermsListView(generics.ListCreateAPIView):
@@ -24,6 +24,11 @@ class PaymentTermsListView(generics.ListCreateAPIView):
          History page.
     POST /api/pricing/payment-terms/  - Admin's "+ Add New Term" form.
          Admin only.
+
+         If the new terms are different from the previous ones, every
+         customer, Staff, Partner Installer and Admin gets a bell
+         notification, and customers with Email Updates on also get an
+         email (see pricing/utils.py). This never blocks or fails the save.
     """
     queryset = PaymentTerms.objects.all()
 
@@ -36,6 +41,17 @@ class PaymentTermsListView(generics.ListCreateAPIView):
         if self.request.method == 'POST':
             return [permissions.IsAuthenticated(), IsAdmin()]
         return [permissions.IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        # Remember the terms in use right now (before the new one is
+        # saved), so we can tell if they really changed.
+        previous = PaymentTerms.objects.first()
+        old_description = previous.description if previous else None
+
+        new_entry = serializer.save()
+
+        if old_description is not None and old_description.strip() != new_entry.description.strip():
+            announce_payment_terms_change(old_description, new_entry)
 
 
 class PriceHistoryListView(generics.ListCreateAPIView):
@@ -52,9 +68,9 @@ class PriceHistoryListView(generics.ListCreateAPIView):
          no extra logic needed here.
 
          If the new price is different from the package's previous
-         active price, every customer gets a bell notification, and
-         customers with Email Updates on also get an email (see
-         pricing/utils.py). This never blocks or fails the save.
+         active price, every customer, Staff, Partner Installer and
+         Admin gets a bell notification, and customers with Email
+         Updates on also get an email (see pricing/utils.py). This never blocks or fails the save.
     """
     queryset = PriceHistory.objects.all()
 
