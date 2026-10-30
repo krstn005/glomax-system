@@ -152,7 +152,7 @@ function getInitials(name) {
   return name.slice(0, 2).toUpperCase();
 }
 
-function Modal({ icon: Icon, tone, title, subtitle, onClose, busy, wide, children }) {
+function Modal({ icon: Icon, tone, title, subtitle, onClose, busy, wide, xwide, children }) {
   useEffect(() => {
     function onKey(e) {
       if (e.key === 'Escape' && !busy) onClose();
@@ -164,7 +164,7 @@ function Modal({ icon: Icon, tone, title, subtitle, onClose, busy, wide, childre
   return (
     <div className="admw-overlay" onMouseDown={() => !busy && onClose()}>
       <div
-        className={`admw-modal ${wide ? 'wide' : ''}`}
+        className={`admw-modal ${wide ? 'wide' : ''} ${xwide ? 'xwide' : ''}`}
         role="dialog"
         aria-modal="true"
         onMouseDown={(e) => e.stopPropagation()}
@@ -431,7 +431,8 @@ export default function AdminWorkersPage() {
   // ----- Credentials -----
   function openCredentials(worker) {
     setCredWorker(worker);
-    setCredMode('link');
+    // Workers with an email get the link. Manual is only for workers with no email.
+    setCredMode(worker.email ? 'link' : 'manual');
     setLinkSending(false);
     setLinkSentTo('');
     setNewPassword('');
@@ -451,13 +452,6 @@ export default function AdminWorkersPage() {
     setCredSuccess(false);
     setCopied(false);
   }, []);
-
-  function switchMode(mode) {
-    setCredMode(mode);
-    setCredError('');
-    setNewPassword('');
-    setConfirmPassword('');
-  }
 
   async function copyUsername() {
     try {
@@ -856,6 +850,7 @@ export default function AdminWorkersPage() {
           subtitle={credWorker.full_name || credWorker.username}
           onClose={closeCredentials}
           busy={credSaving || linkSending}
+          xwide={credMode === 'manual' && !credSuccess}
         >
           <div className="admw-cred-box">
             <div>
@@ -908,27 +903,20 @@ export default function AdminWorkersPage() {
                   </div>
                 </div>
 
-                {credWorker.email ? (
-                  <ul className="admw-link-facts">
-                    <li>
-                      <Check size={15} strokeWidth={3} />
-                      The link works once
-                    </li>
-                    <li>
-                      <Check size={15} strokeWidth={3} />
-                      It expires in 24 hours
-                    </li>
-                    <li>
-                      <Check size={15} strokeWidth={3} />
-                      Their old password works until they set a new one
-                    </li>
-                  </ul>
-                ) : (
-                  <p className="admw-link-missing">
-                    <AlertCircle size={15} />
-                    This worker has no email address, so a link can't be sent. Use the manual option below.
-                  </p>
-                )}
+                <ul className="admw-link-facts">
+                  <li>
+                    <Check size={15} strokeWidth={3} />
+                    The link works once
+                  </li>
+                  <li>
+                    <Check size={15} strokeWidth={3} />
+                    It expires in 24 hours
+                  </li>
+                  <li>
+                    <Check size={15} strokeWidth={3} />
+                    Their old password works until they set a new one
+                  </li>
+                </ul>
 
                 {credError && (
                   <p className="admw-form-error">
@@ -945,16 +933,13 @@ export default function AdminWorkersPage() {
                     type="button"
                     className="admw-btn-primary"
                     onClick={handleSendLink}
-                    disabled={linkSending || !credWorker.email}
+                    disabled={linkSending}
                   >
                     <Send size={15} />
                     {linkSending ? 'Sending...' : 'Send Password Link'}
                   </button>
                 </div>
 
-                <button type="button" className="admw-switch" onClick={() => switchMode('manual')} disabled={linkSending}>
-                  Set a password manually instead
-                </button>
               </>
             )
           ) : credSuccess ? (
@@ -974,31 +959,37 @@ export default function AdminWorkersPage() {
             </>
           ) : (
             <form onSubmit={handleSetPassword} className="admw-form">
-              <p className="admw-modal-hint">
-                Passwords can't be viewed once set. You can only replace it with a new one. It is safer to send the
-                worker a link so they choose their own.
+              <p className="admw-manual-note">
+                <AlertCircle size={15} />
+                This worker has no email address, so a password link can't be sent. Set a password here and tell the
+                worker. Passwords can't be viewed once set. Add an email later to use the safer link.
               </p>
 
-              <label className="admw-field">
-                <span>New Password</span>
-                <PasswordInput
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Create a strong password"
-                  autoFocus
-                />
-              </label>
-              <PasswordRules value={newPassword} />
+              <div className="admw-manual-grid">
+                <div className="admw-manual-left">
+                  <label className="admw-field">
+                    <span>New Password</span>
+                    <PasswordInput
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Create a strong password"
+                      autoFocus
+                    />
+                  </label>
 
-              <label className="admw-field">
-                <span>Confirm Password</span>
-                <PasswordInput
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Type it again"
-                />
-              </label>
-              <PasswordMatch password={newPassword} confirm={confirmPassword} />
+                  <label className="admw-field">
+                    <span>Confirm Password</span>
+                    <PasswordInput
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Type it again"
+                    />
+                  </label>
+                  <PasswordMatch password={newPassword} confirm={confirmPassword} />
+                </div>
+
+                <PasswordRules value={newPassword} />
+              </div>
 
               {credError && (
                 <p className="admw-form-error">
@@ -1019,10 +1010,6 @@ export default function AdminWorkersPage() {
                   {credSaving ? 'Saving...' : 'Set New Password'}
                 </button>
               </div>
-
-              <button type="button" className="admw-switch" onClick={() => switchMode('link')} disabled={credSaving}>
-                Send a password link by email instead
-              </button>
             </form>
           )}
         </Modal>

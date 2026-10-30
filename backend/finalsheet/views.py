@@ -15,6 +15,7 @@ from django.utils import timezone
 from tickets.models import Ticket
 from .models import Feedback
 from .serializers import FeedbackSerializer, FeedbackCreateSerializer
+from .pdf_builders import build_final_sheet_pdf, build_completion_certificate_pdf
 from accounts.permissions import IsCustomer, IsAdmin
 
 class TicketFeedbackView(APIView):
@@ -230,40 +231,12 @@ class FinalSheetPDFView(APIView):
         if final_sheet is None:
             return HttpResponse("This ticket has not been approved yet.", status=404)
 
-        assessment = getattr(ticket, 'assessment', None)
-        initial_quotation = ticket.quotations.filter(quotation_type='INITIAL').first()
-        updated_quotation = ticket.quotations.filter(quotation_type='UPDATED').order_by('-sent_at').first()
-        photos = assessment.photos.all() if assessment else []
-
-        # Customer's real name if we have it, otherwise their username
-        customer = ticket.customer
-        customer_name = (
-            (getattr(ticket, 'full_name', '') or '').strip()
-            or (customer.get_full_name() or '').strip()
-            or customer.username
-        )
-
-        html = render_to_string('finalsheet/final_sheet_pdf.html', {
-            'logo_path': _find_logo_path(),
-            'customer_name': customer_name,
-            'ticket': ticket,
-            'final_sheet': final_sheet,
-            'assessment': assessment,
-            'photos': photos,
-            'initial_quotation': initial_quotation,
-            'updated_quotation': updated_quotation,
-            'installer_name': ticket.partner_installer.username if ticket.partner_installer else None,
-            'approved_by_name': final_sheet.approved_by.username if final_sheet.approved_by else None,
-            'payment_terms_lines': _format_payment_terms_lines(final_sheet.payment_terms_summary),
-        })
-
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{ticket.ticket_number}-final-sheet.pdf"'
-
-        result = pisa.CreatePDF(html, dest=response, link_callback=_pdf_link_callback)
-        if result.err:
+        pdf = build_final_sheet_pdf(ticket)
+        if pdf is None:
             return HttpResponse("Could not generate PDF.", status=500)
 
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{ticket.ticket_number}-final-sheet.pdf"'
         return response
 
 
@@ -294,23 +267,12 @@ class CompletionCertificatePDFView(APIView):
         if ticket.status != Ticket.Status.COMPLETED:
             return HttpResponse("This ticket has not been marked complete yet.", status=404)
 
-        final_sheet = getattr(ticket, 'final_sheet', None)
-        completion_photos = ticket.completion_photos.all()
-
-        html = render_to_string('finalsheet/completion_certificate_pdf.html', {
-            'ticket': ticket,
-            'final_sheet': final_sheet,
-            'completion_photos': completion_photos,
-            'installer_name': ticket.partner_installer.username if ticket.partner_installer else None,
-        })
-
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{ticket.ticket_number}-completion-certificate.pdf"'
-
-        result = pisa.CreatePDF(html, dest=response, link_callback=_pdf_link_callback)
-        if result.err:
+        pdf = build_completion_certificate_pdf(ticket)
+        if pdf is None:
             return HttpResponse("Could not generate PDF.", status=500)
 
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{ticket.ticket_number}-completion-certificate.pdf"'
         return response
 
 

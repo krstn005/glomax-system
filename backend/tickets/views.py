@@ -535,6 +535,8 @@ class TicketDecisionView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsStaff]
 
     def patch(self, request, pk):
+        from .utils import send_not_compatible_email
+
         try:
             ticket = Ticket.objects.get(pk=pk)
         except Ticket.DoesNotExist:
@@ -561,10 +563,14 @@ class TicketDecisionView(APIView):
             ticket.completed_at = timezone.now()
             ticket.save()
 
+            message = f"Your request {ticket.ticket_number} was marked as Not Compatible."
+            if send_not_compatible_email(ticket, can_reapply=False):
+                message += " We also sent the details to your email."
+
             Notification.objects.create(
                 recipient=ticket.customer,
                 kind=Notification.Kind.TICKET_DECISION,
-                message=f"Your request {ticket.ticket_number} was marked as Not Compatible.",
+                message=message,
                 link="/request-status",
             )
         elif decision == 'NOT_COMPATIBLE_CAN_REAPPLY':
@@ -572,10 +578,14 @@ class TicketDecisionView(APIView):
             ticket.completed_at = timezone.now()
             ticket.save()
 
+            message = f"Your request {ticket.ticket_number} was marked as Not Compatible, but you can reapply."
+            if send_not_compatible_email(ticket, can_reapply=True):
+                message += " We also sent the details to your email."
+
             Notification.objects.create(
                 recipient=ticket.customer,
                 kind=Notification.Kind.TICKET_DECISION,
-                message=f"Your request {ticket.ticket_number} was marked as Not Compatible, but you can reapply.",
+                message=message,
                 link="/request-status",
             )
         else:
@@ -639,14 +649,16 @@ class TicketCompleteView(APIView):
         ticket.completed_at = timezone.now()
         ticket.save()
 
+        message = f"Your request {ticket.ticket_number} is completed!"
+        if send_completion_email(ticket):
+            message += " We sent your Completion Certificate to your email."
+
         Notification.objects.create(
             recipient=ticket.customer,
             kind=Notification.Kind.INSTALLATION_COMPLETED,
-            message=f"Your request {ticket.ticket_number} is completed!",
+            message=message,
             link="/request-status",
         )
-
-        send_completion_email(ticket)
 
         return Response(TicketSerializer(ticket).data)
 
@@ -677,6 +689,7 @@ class TicketApproveView(APIView):
 
     def patch(self, request, pk):
         from finalsheet.models import FinalSheet
+        from .utils import send_approval_email
 
         try:
             ticket = Ticket.objects.get(pk=pk)
@@ -696,10 +709,14 @@ class TicketApproveView(APIView):
         ticket.status = Ticket.Status.APPROVED
         ticket.save()
 
+        message = f"Your request {ticket.ticket_number} has been approved!"
+        if send_approval_email(ticket):
+            message += " We sent your Disclosure Agreement to your email."
+
         Notification.objects.create(
             recipient=ticket.customer,
             kind=Notification.Kind.TICKET_APPROVED,
-            message=f"Your request {ticket.ticket_number} has been approved!",
+            message=message,
             link="/request-status",
         )
 
