@@ -64,18 +64,17 @@ const STEPS = [
   { key: 'review', label: 'Staff Review' },
   { key: 'admin', label: 'Your Approval' },
   { key: 'approved', label: 'Approved' },
-  { key: 'installed', label: 'Installed' },
 ];
 
-// The step each status is on right now (1 = Submitted ... 7 = Installed)
+// The step each status is on right now (1 = Submitted ... 6 = Approved)
 const STATUS_STEP = {
   REQUEST_SUBMITTED: 2,
   PI_ASSIGNED: 3,
   ASSESSMENT_SUBMITTED: 4,
   STAFF_REVIEW: 4,
   ADMIN_REVIEW: 5,
-  APPROVED: 7,
-  COMPLETED: 7,
+  APPROVED: 6,
+  COMPLETED: 6,
 };
 
 const CONDITION_TONE = { GOOD: 'green', FAIR: 'gold', POOR: 'red' };
@@ -216,14 +215,15 @@ function StarRow({ rating }) {
 function ProgressLine({ ticket }) {
   const { reached, stop } = getProgress(ticket);
   const StopIcon = stop?.icon;
-  const allDone = !stop && ticket.status === 'COMPLETED';
+  // Approved and Completed are the last step, so everything shows as done
+  const allDone = !stop && (ticket.status === 'APPROVED' || ticket.status === 'COMPLETED');
   const nowStep = STEPS[reached - 1];
   return (
     <div className="admtd-progress" aria-label="Ticket progress">
       <ol className="admtd-steps">
         {STEPS.map((step, i) => {
           const n = i + 1;
-          const done = n < reached || (n === reached && !stop && ticket.status === 'COMPLETED');
+          const done = n < reached || (n === reached && allDone);
           const current = n === reached && !done;
           return (
             <li
@@ -236,7 +236,7 @@ function ProgressLine({ ticket }) {
           );
         })}
       </ol>
-      {/* Small screens: one line instead of seven labels */}
+      {/* Small screens: one line instead of six labels */}
       {!stop && (
         <p className="admtd-progress-now">
           {allDone ? (
