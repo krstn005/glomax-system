@@ -304,6 +304,12 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 SEMAPHORE_API_KEY = config('SEMAPHORE_API_KEY', default='')
 SEMAPHORE_SENDER_NAME = config('SEMAPHORE_SENDER_NAME', default='')
 
+# Request and update texts (Admin > Settings > SMS Templates) are only sent
+# when this is True. Keep it False (the default) until your Semaphore account
+# is approved. While it is False, the texts are only written in the server
+# log, so nothing is sent and no credits are used.
+SMS_NOTIFICATIONS_ENABLED = config('SMS_NOTIFICATIONS_ENABLED', default=False, cast=bool)
+
 
 # Online safety settings - only turned on when DEBUG is False
 if not DEBUG:

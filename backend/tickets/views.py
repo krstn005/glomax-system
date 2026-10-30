@@ -33,6 +33,7 @@ from accounts.permissions import (
 )
 from accounts.models import User
 from notifications.models import Notification
+from adminconfig.sms_notify import send_ticket_sms
 
 
 def notify_new_request(ticket, reapplied=False):
@@ -217,6 +218,7 @@ class TicketListCreateView(generics.ListCreateAPIView):
         if latest and latest.status in REAPPLY_STATUSES:
             ticket = reapply_ticket(latest, serializer.validated_data)
             notify_new_request(ticket, reapplied=True)
+            send_ticket_sms(ticket, '05')
             data = TicketSerializer(ticket).data
             data['reapplied'] = True
             return Response(data, status=status.HTTP_200_OK)
@@ -226,6 +228,7 @@ class TicketListCreateView(generics.ListCreateAPIView):
 
         link_initial_quotation(ticket)
         notify_new_request(ticket)
+        send_ticket_sms(ticket, '05')
 
         data = TicketSerializer(ticket).data
         data['reapplied'] = False
@@ -274,6 +277,7 @@ class TicketReapplyView(APIView):
 
         ticket = reapply_ticket(ticket, serializer.validated_data)
         notify_new_request(ticket, reapplied=True)
+        send_ticket_sms(ticket, '05')
 
         data = TicketSerializer(ticket).data
         data['reapplied'] = True
@@ -311,6 +315,8 @@ class TicketWithdrawView(APIView):
         ticket.status = Ticket.Status.WITHDRAWN
         ticket.withdrawn_at = timezone.now()
         ticket.save()
+
+        send_ticket_sms(ticket, '14')
 
         return Response(TicketSerializer(ticket).data)
 
@@ -409,6 +415,15 @@ class TicketRescheduleDecisionView(APIView):
             message=message,
             link="/request-status",
         )
+
+        # Text message to the Customer
+        if approved:
+            send_ticket_sms(
+                ticket, '08',
+                new_visit_date=reschedule.requested_date.strftime('%B %d, %Y'),
+            )
+        else:
+            send_ticket_sms(ticket, '09')
 
         # The Partner Installer must know when their visit date moves
         if approved and ticket.partner_installer_id:
@@ -536,6 +551,7 @@ class TicketAssignView(APIView):
         ticket.save()
 
         send_assignment_email(ticket)
+        send_ticket_sms(ticket, '06')
 
         Notification.objects.create(
             recipient=ticket.partner_installer,
@@ -592,6 +608,7 @@ class TicketDecisionView(APIView):
                 message=message,
                 link="/request-status",
             )
+            send_ticket_sms(ticket, '12', pref='notify_request_rejection')
         elif decision == 'NOT_COMPATIBLE_CAN_REAPPLY':
             ticket.status = Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY
             ticket.completed_at = timezone.now()
@@ -607,6 +624,7 @@ class TicketDecisionView(APIView):
                 message=message,
                 link="/request-status",
             )
+            send_ticket_sms(ticket, '13', pref='notify_request_rejection')
         else:
             ticket.save()
 
@@ -679,6 +697,8 @@ class TicketCompleteView(APIView):
             link="/request-status",
         )
 
+        send_ticket_sms(ticket, '15')
+
         return Response(TicketSerializer(ticket).data)
 
 
@@ -738,6 +758,8 @@ class TicketApproveView(APIView):
             message=message,
             link="/request-status",
         )
+
+        send_ticket_sms(ticket, '11', pref='notify_request_approval')
 
         return Response(TicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
 
@@ -802,4 +824,4 @@ class InstallerTicketCalendarView(generics.ListAPIView):
         if month and year:
             queryset = queryset.filter(visit_date__year=year, visit_date__month=month)
 
-        return queryset.order_by('visit_date')
+        return queryset.order_by('visit_date')s
