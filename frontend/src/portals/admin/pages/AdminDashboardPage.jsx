@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Inbox,
@@ -22,6 +22,7 @@ import {
   Sunrise,
   Moon,
   LayoutDashboard,
+  Activity,
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { getAdminTickets } from '../../../api/adminTickets';
@@ -38,8 +39,19 @@ const OPEN_STATUSES = ['REQUEST_SUBMITTED', 'PI_ASSIGNED', 'ASSESSMENT_SUBMITTED
 const STAT_CARDS = [
   { key: 'APPROVAL', label: 'Awaiting Your Approval', note: 'Sent to Admin by Staff', statuses: ['ADMIN_REVIEW'], icon: ShieldCheck, tone: 'gold' },
   { key: 'OPEN', label: 'Open Requests', note: 'Still in progress', statuses: OPEN_STATUSES, icon: Inbox, tone: 'blue' },
-  { key: 'APPROVED', label: 'Approved', note: 'Waiting for installation', statuses: ['APPROVED'], icon: CheckCircle2, tone: 'green' },
+  { key: 'APPROVED', label: 'Approved', note: 'Waiting to be completed', statuses: ['APPROVED'], icon: CheckCircle2, tone: 'green' },
   { key: 'COMPLETED', label: 'Completed', note: 'All time', statuses: ['COMPLETED'], icon: Award, tone: 'navy' },
+];
+
+// The stages of a request, shown as one bar. Each stage also filters the table.
+const PIPELINE = [
+  { key: 'S_NEW', label: 'New', statuses: ['REQUEST_SUBMITTED'], tone: 'violet' },
+  { key: 'S_ASSIGNED', label: 'Installer assigned', statuses: ['PI_ASSIGNED'], tone: 'blue' },
+  { key: 'S_ASSESSED', label: 'Assessment in', statuses: ['ASSESSMENT_SUBMITTED', 'STAFF_REVIEW'], tone: 'sky' },
+  { key: 'S_ADMIN', label: 'Admin review', statuses: ['ADMIN_REVIEW'], tone: 'gold' },
+  { key: 'S_APPROVED', label: 'Approved', statuses: ['APPROVED'], tone: 'green' },
+  { key: 'S_DONE', label: 'Completed', statuses: ['COMPLETED'], tone: 'ink' },
+  { key: 'S_CLOSED', label: 'Closed', statuses: ['WITHDRAWN', 'NC_CANNOT_PROCEED', 'NC_CAN_REAPPLY'], tone: 'gray' },
 ];
 
 // Badge look for each ticket status
@@ -98,6 +110,7 @@ function DashboardSkeleton() {
           <div key={c.key} className="admd-skel admd-skel-stat" />
         ))}
       </div>
+      <div className="admd-skel admd-skel-pipeline" />
       <div className="admd-skel admd-skel-list" />
     </div>
   );
@@ -105,6 +118,7 @@ function DashboardSkeleton() {
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
+  const listRef = useRef(null);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -153,21 +167,37 @@ export default function AdminDashboardPage() {
     setReloadKey((k) => k + 1);
   }
 
-  // Click a card to filter the table. Click it again to show everything.
+  // Click a card or a stage to filter the table. Click it again to show everything.
   function toggleFilter(key) {
     setActiveFilter((current) => (current === key ? 'ALL' : key));
+  }
+
+  // "Review now": show the approval group and scroll down to the table
+  function reviewNow() {
+    setActiveFilter('APPROVAL');
+    setTimeout(() => {
+      listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   }
 
   function openTicket(id) {
     navigate(`/admin/requests/${id}`);
   }
 
+  const total = tickets.length;
+
   const counts = {};
   STAT_CARDS.forEach((c) => {
     counts[c.key] = tickets.filter((t) => c.statuses.includes(t.status)).length;
   });
 
-  const currentCard = STAT_CARDS.find((c) => c.key === activeFilter);
+  const stageCounts = {};
+  PIPELINE.forEach((s) => {
+    stageCounts[s.key] = tickets.filter((t) => s.statuses.includes(t.status)).length;
+  });
+
+  const currentCard = STAT_CARDS.find((c) => c.key === activeFilter) || PIPELINE.find((s) => s.key === activeFilter);
+  const stageFilterOn = PIPELINE.some((s) => s.key === activeFilter);
   const filtered = currentCard ? tickets.filter((t) => currentCard.statuses.includes(t.status)) : tickets;
   const shown = [...filtered]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -209,6 +239,7 @@ export default function AdminDashboardPage() {
         {/* ---------- Banner ---------- */}
         <section className={`admd-hero ${heroUrgent && !error ? 'urgent' : ''}`}>
           <div className="admd-hero-glow" aria-hidden="true" />
+          <div className="admd-hero-dots" aria-hidden="true" />
           <div className="admd-hero-icon">
             {heroUrgent ? <ShieldCheck size={26} /> : <LayoutDashboard size={26} />}
           </div>
@@ -222,7 +253,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="admd-hero-actions">
             {heroUrgent && !error && activeFilter !== 'APPROVAL' && (
-              <button type="button" className="admd-hero-btn gold" onClick={() => setActiveFilter('APPROVAL')}>
+              <button type="button" className="admd-hero-btn gold" onClick={reviewNow}>
                 Review now
                 <ArrowRight size={16} />
               </button>
@@ -256,6 +287,7 @@ export default function AdminDashboardPage() {
                 const Icon = card.icon;
                 const active = activeFilter === card.key;
                 const urgent = card.key === 'APPROVAL' && approvalCount > 0;
+                const share = total > 0 ? Math.round((counts[card.key] / total) * 100) : 0;
                 return (
                   <button
                     type="button"
@@ -268,19 +300,67 @@ export default function AdminDashboardPage() {
                   >
                     <span className="admd-stat-top">
                       <span className="admd-stat-icon">
-                        <Icon size={18} />
+                        <Icon size={19} />
                       </span>
                       <span className="admd-stat-value">{counts[card.key]}</span>
                     </span>
                     <span className="admd-stat-label">{card.label}</span>
                     <span className="admd-stat-hint">{card.note}</span>
+                    <span className="admd-stat-bar" aria-hidden="true">
+                      <span style={{ width: `${share}%` }} />
+                    </span>
+                    <span className="admd-stat-share">{share}% of all requests</span>
                   </button>
                 );
               })}
             </div>
 
+            {/* ---------- Request pipeline ---------- */}
+            <section className="admd-card admd-pipeline-card">
+              <div className="admd-card-head">
+                <div className="admd-card-head-text">
+                  <h2>
+                    <Activity size={18} />
+                    Request Pipeline
+                  </h2>
+                  <p>Where all {total} request{total === 1 ? '' : 's'} are right now. Click a stage to filter the table.</p>
+                </div>
+              </div>
+
+              <div className="admd-pipeline-body">
+                <div className={`admd-pipe-bar ${stageFilterOn ? 'has-filter' : ''} ${total === 0 ? 'empty' : ''}`}>
+                  {PIPELINE.filter((s) => stageCounts[s.key] > 0).map((s) => (
+                    <button
+                      type="button"
+                      key={s.key}
+                      className={`admd-pipe-seg tone-${s.tone} ${activeFilter === s.key ? 'active' : ''}`}
+                      style={{ flexGrow: stageCounts[s.key] }}
+                      onClick={() => toggleFilter(s.key)}
+                      title={`${s.label}: ${stageCounts[s.key]}`}
+                      aria-label={`${s.label}: ${stageCounts[s.key]}`}
+                    />
+                  ))}
+                </div>
+
+                <div className="admd-pipe-legend">
+                  {PIPELINE.map((s) => (
+                    <button
+                      type="button"
+                      key={s.key}
+                      className={`admd-pipe-item tone-${s.tone} ${activeFilter === s.key ? 'active' : ''}`}
+                      onClick={() => toggleFilter(s.key)}
+                    >
+                      <span className="admd-pipe-dot" />
+                      <span className="admd-pipe-label">{s.label}</span>
+                      <span className="admd-pipe-count">{stageCounts[s.key]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+
             {/* ---------- Requests table ---------- */}
-            <section className="admd-card admd-list-card">
+            <section className="admd-card admd-list-card" ref={listRef}>
               <div className="admd-card-head">
                 <div className="admd-card-head-text">
                   <h2>
@@ -312,7 +392,7 @@ export default function AdminDashboardPage() {
                   </p>
                   <p className="admd-empty-hint">
                     {currentCard
-                      ? 'Pick another card above, or show all requests.'
+                      ? 'Pick another card or stage above, or show all requests.'
                       : 'New customer requests will show up here.'}
                   </p>
                   {currentCard && (
@@ -407,7 +487,7 @@ export default function AdminDashboardPage() {
 
                           <span role="cell">
                             <span className={`admd-status tone-${badge.tone} ${badge.solid ? 'solid' : ''}`}>
-                              <BadgeIcon size={12} />
+                              {needsYou ? <span className="admd-pulse" aria-hidden="true" /> : <BadgeIcon size={12} />}
                               {t.status_display}
                             </span>
                           </span>
