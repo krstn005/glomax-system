@@ -11,6 +11,7 @@ import {
   Power,
   Phone,
   Mail,
+  Send,
   AlertCircle,
   AlertTriangle,
   RefreshCw,
@@ -24,11 +25,19 @@ import {
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import FilterMenu from '../../../components/FilterMenu';
-import { getWorkers, addWorker, toggleWorkerActive, setWorkerPassword } from '../../../api/accounts';
+import {
+  getWorkers,
+  addWorker,
+  toggleWorkerActive,
+  setWorkerPassword,
+  sendWorkerPasswordLink,
+} from '../../../api/accounts';
 import '../styles/admin-workers.css';
 import '../styles/admin-workers-page.css';
+import '../styles/admin-workers-link.css';
 
-const EMPTY_FORM = { username: '', full_name: '', email: '', phone_number: '', password: '' };
+// No password here: the worker gets an email link and sets their own
+const EMPTY_FORM = { username: '', full_name: '', email: '', phone_number: '' };
 const MIN_PASSWORD = 8;
 
 // Password rules - every rule must pass before the password can be saved
@@ -60,6 +69,13 @@ function getStrength(value) {
   if (allOk) return { level: 3, label: 'Good', tone: 'green' };
   if (passed >= 4) return { level: 2, label: 'Fair', tone: 'gold' };
   return { level: 1, label: 'Weak', tone: 'red' };
+}
+
+// juan.delacruz@gmail.com -> ju***@gmail.com
+function maskEmail(email) {
+  if (!email || !email.includes('@')) return '';
+  const [name, domain] = email.split('@');
+  return `${name.slice(0, 2)}***@${domain}`;
 }
 
 function PasswordRules({ value }) {
@@ -260,6 +276,9 @@ export default function AdminWorkersPage() {
   const [saving, setSaving] = useState(false);
 
   const [credWorker, setCredWorker] = useState(null);
+  const [credMode, setCredMode] = useState('link'); // 'link' (email) or 'manual'
+  const [linkSending, setLinkSending] = useState(false);
+  const [linkSentTo, setLinkSentTo] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [credError, setCredError] = useState('');
@@ -349,28 +368,31 @@ export default function AdminWorkersPage() {
     e.preventDefault();
     setFormError('');
 
-    const passwordProblem = firstPasswordProblem(form.password);
-    if (passwordProblem) {
-      setFormError(passwordProblem);
-      return;
-    }
-
     setSaving(true);
     try {
       const payload = {
-        ...form,
         username: form.username.trim(),
         full_name: form.full_name.trim(),
         email: form.email.trim(),
         phone_number: form.phone_number.trim(),
       };
-      await addWorker(payload);
+      const created = await addWorker(payload);
       setShowAddModal(false);
       setForm(EMPTY_FORM);
-      setNotice({
-        type: 'success',
-        text: `Account for ${payload.full_name || payload.username} was created. They can now log in as "${payload.username}".`,
-      });
+
+      const who = payload.full_name || payload.username;
+      if (created?.password_link_sent === false) {
+        // The account exists, but the email did not go out
+        setNotice({
+          type: 'error',
+          text: `Account for ${who} was created, but the email could not be sent. Open Credentials and press "Send Password Link" to try again.`,
+        });
+      } else {
+        setNotice({
+          type: 'success',
+          text: `Account for ${who} was created. A link to set their password was sent to ${maskEmail(payload.email)}.`,
+        });
+      }
       loadWorkers({ silent: true });
     } catch (err) {
       setFormError(getErrorMessage(err, 'Could not create the worker account. Please try again.'));
@@ -409,6 +431,9 @@ export default function AdminWorkersPage() {
   // ----- Credentials -----
   function openCredentials(worker) {
     setCredWorker(worker);
+    setCredMode('link');
+    setLinkSending(false);
+    setLinkSentTo('');
     setNewPassword('');
     setConfirmPassword('');
     setCredError('');
@@ -418,12 +443,21 @@ export default function AdminWorkersPage() {
 
   const closeCredentials = useCallback(() => {
     setCredWorker(null);
+    setCredMode('link');
+    setLinkSentTo('');
     setNewPassword('');
     setConfirmPassword('');
     setCredError('');
     setCredSuccess(false);
     setCopied(false);
   }, []);
+
+  function switchMode(mode) {
+    setCredMode(mode);
+    setCredError('');
+    setNewPassword('');
+    setConfirmPassword('');
+  }
 
   async function copyUsername() {
     try {
@@ -432,6 +466,19 @@ export default function AdminWorkersPage() {
       setTimeout(() => setCopied(false), 1800);
     } catch {
       // Copy isn't allowed here; the username is still shown on screen.
+    }
+  }
+
+  async function handleSendLink() {
+    setCredError('');
+    setLinkSending(true);
+    try {
+      const res = await sendWorkerPasswordLink(credWorker.id);
+      setLinkSentTo(res?.sent_to || maskEmail(credWorker.email));
+    } catch (err) {
+      setCredError(getErrorMessage(err, 'Could not send the email. Please try again.'));
+    } finally {
+      setLinkSending(false);
     }
   }
 
@@ -734,22 +781,11 @@ export default function AdminWorkersPage() {
                   required
                 />
               </label>
-              <label className="admw-field admw-field-full">
-                <span>Password</span>
-                <PasswordInput
-                  value={form.password}
-                  onChange={(e) => updateField('password', e.target.value)}
-                  placeholder="Create a strong password"
-                />
-              </label>
-              <div className="admw-field-full">
-                <PasswordRules value={form.password} />
-              </div>
             </div>
 
             <p className="admw-form-note">
-              Give the username and password to the worker so they can log in. They can change their password later in
-              their Settings.
+              No password needed. We'll email the worker a one-time link to this address. They open it and create their
+              own password, so you will never see it.
             </p>
 
             {formError && (
@@ -764,7 +800,7 @@ export default function AdminWorkersPage() {
                 Cancel
               </button>
               <button type="submit" className="admw-btn-primary" disabled={saving}>
-                {saving ? 'Creating...' : 'Create Worker'}
+                {saving ? 'Creating...' : 'Create & Send Link'}
               </button>
             </div>
           </form>
@@ -819,7 +855,7 @@ export default function AdminWorkersPage() {
           title="Login Credentials"
           subtitle={credWorker.full_name || credWorker.username}
           onClose={closeCredentials}
-          busy={credSaving}
+          busy={credSaving || linkSending}
         >
           <div className="admw-cred-box">
             <div>
@@ -832,7 +868,96 @@ export default function AdminWorkersPage() {
             </button>
           </div>
 
-          {credSuccess ? (
+          {credMode === 'link' ? (
+            linkSentTo ? (
+              <>
+                <div className="admw-success-box">
+                  <CheckCircle2 size={22} />
+                  <div>
+                    <strong>Password link sent</strong>
+                    <span>
+                      We emailed {linkSentTo}. The worker opens the link and creates their own password. The link works
+                      once and expires in 24 hours.
+                    </span>
+                  </div>
+                </div>
+                <div className="admw-modal-actions">
+                  <button type="button" className="admw-btn-primary" onClick={closeCredentials}>
+                    Done
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="admw-link-panel">
+                  <span className="admw-link-icon">
+                    <Mail size={20} />
+                  </span>
+                  <div className="admw-link-text">
+                    <strong>Send a password link</strong>
+                    <p>
+                      {credWorker.email ? (
+                        <>
+                          We'll email a one-time link to <b>{maskEmail(credWorker.email)}</b>. The worker opens it and
+                          creates their own password. You won't see it.
+                        </>
+                      ) : (
+                        <>The worker opens a one-time link and creates their own password. You won't see it.</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {credWorker.email ? (
+                  <ul className="admw-link-facts">
+                    <li>
+                      <Check size={15} strokeWidth={3} />
+                      The link works once
+                    </li>
+                    <li>
+                      <Check size={15} strokeWidth={3} />
+                      It expires in 24 hours
+                    </li>
+                    <li>
+                      <Check size={15} strokeWidth={3} />
+                      Their old password works until they set a new one
+                    </li>
+                  </ul>
+                ) : (
+                  <p className="admw-link-missing">
+                    <AlertCircle size={15} />
+                    This worker has no email address, so a link can't be sent. Use the manual option below.
+                  </p>
+                )}
+
+                {credError && (
+                  <p className="admw-form-error">
+                    <AlertCircle size={15} />
+                    {credError}
+                  </p>
+                )}
+
+                <div className="admw-modal-actions">
+                  <button type="button" className="admw-btn-secondary" onClick={closeCredentials} disabled={linkSending}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="admw-btn-primary"
+                    onClick={handleSendLink}
+                    disabled={linkSending || !credWorker.email}
+                  >
+                    <Send size={15} />
+                    {linkSending ? 'Sending...' : 'Send Password Link'}
+                  </button>
+                </div>
+
+                <button type="button" className="admw-switch" onClick={() => switchMode('manual')} disabled={linkSending}>
+                  Set a password manually instead
+                </button>
+              </>
+            )
+          ) : credSuccess ? (
             <>
               <div className="admw-success-box">
                 <CheckCircle2 size={22} />
@@ -850,7 +975,8 @@ export default function AdminWorkersPage() {
           ) : (
             <form onSubmit={handleSetPassword} className="admw-form">
               <p className="admw-modal-hint">
-                Passwords can't be viewed once set. You can only replace it with a new one.
+                Passwords can't be viewed once set. You can only replace it with a new one. It is safer to send the
+                worker a link so they choose their own.
               </p>
 
               <label className="admw-field">
@@ -893,6 +1019,10 @@ export default function AdminWorkersPage() {
                   {credSaving ? 'Saving...' : 'Set New Password'}
                 </button>
               </div>
+
+              <button type="button" className="admw-switch" onClick={() => switchMode('link')} disabled={credSaving}>
+                Send a password link by email instead
+              </button>
             </form>
           )}
         </Modal>

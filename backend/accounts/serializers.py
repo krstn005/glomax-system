@@ -145,12 +145,29 @@ class StaffPartnerInstallerCreateSerializer(serializers.ModelSerializer):
     `role` is NOT accepted here - it's set explicitly in the view
     depending on which endpoint was called, so an Admin can never
     accidentally create an ADMIN or CUSTOMER account through this form.
+
+    The password is now optional. If the Admin doesn't type one, the
+    account starts with no usable password and the worker is emailed a
+    one-time link to set their own - so an email address is required
+    in that case.
     """
-    password = serializers.CharField(write_only=True, validators=[validate_password])
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        validators=[validate_password],
+    )
 
     class Meta:
         model = User
         fields = ['username', 'full_name', 'email', 'phone_number', 'password']
+
+    def validate(self, data):
+        if not data.get('password') and not data.get('email'):
+            raise serializers.ValidationError(
+                {"email": "Email is required so we can send the password link."}
+            )
+        return data
 
     def create(self, validated_data):
         role = self.context['role']
@@ -159,7 +176,9 @@ class StaffPartnerInstallerCreateSerializer(serializers.ModelSerializer):
             full_name=validated_data.get('full_name', ''),
             email=validated_data.get('email', ''),
             phone_number=validated_data.get('phone_number', ''),
-            password=validated_data['password'],
+            # No password -> create_user makes it unusable until the
+            # worker sets their own from the emailed link
+            password=validated_data.get('password') or None,
             role=role,
         )
 

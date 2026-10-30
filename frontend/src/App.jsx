@@ -14,6 +14,7 @@ import FeedbackPage from './portals/customer/pages/FeedbackPage';
 import FaqPage from './portals/customer/pages/FaqPage';
 import SettingsPage from './portals/customer/pages/SettingsPage';
 import InquiryReplyPage from './portals/shared/pages/InquiryReplyPage';
+import SetPasswordPage from './portals/shared/pages/SetPasswordPage';
 
 import StaffDashboardPage from './portals/staff/pages/StaffDashboardPage';
 import StaffEmailInquiriesPage from './portals/staff/pages/StaffEmailInquiriesPage';
@@ -75,6 +76,10 @@ function App() {
       {/* Public - the full conversation page for an inquiry. The link in the
           reply email and in the customer's bell notification both open this. */}
       <Route path="/inquiry-reply/:token" element={<InquiryReplyPage />} />
+
+      {/* Public - a worker (Staff or Partner Installer) creates their own
+          password from the one-time link the Admin emails them */}
+      <Route path="/set-password" element={<SetPasswordPage />} />
 
       {/* Old login addresses now go to the one login page */}
       <Route path="/staff-login" element={<Navigate to="/login" replace />} />

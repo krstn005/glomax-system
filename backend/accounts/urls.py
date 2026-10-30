@@ -21,6 +21,9 @@ from .views import (
     ManagedUserToggleActiveView,
     StaffPartnerInstallerListView,
     AdminSetWorkerPasswordView,
+    SendPasswordLinkView,
+    PasswordSetupCheckView,
+    PasswordSetupCompleteView,
     AdminResetTwoFactorView,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -48,6 +51,10 @@ urlpatterns = [
     path('2fa/send-code/', TwoFactorSendCodeView.as_view(), name='2fa-send-code'),
     path('2fa/backup-codes/', TwoFactorBackupCodesView.as_view(), name='2fa-backup-codes'),
 
+    # Worker sets their own password from the emailed link (public)
+    path('password-setup/check/', PasswordSetupCheckView.as_view(), name='password-setup-check'),
+    path('password-setup/complete/', PasswordSetupCompleteView.as_view(), name='password-setup-complete'),
+
     path('manage/staff/', ManageStaffListCreateView.as_view(), name='manage-staff'),
     path(
         'manage/partner-installers/',
@@ -63,6 +70,11 @@ urlpatterns = [
         'manage/<int:pk>/set-password/',
         AdminSetWorkerPasswordView.as_view(),
         name='manage-set-password',
+    ),
+    path(
+        'manage/<int:pk>/send-password-link/',
+        SendPasswordLinkView.as_view(),
+        name='manage-send-password-link',
     ),
     path(
         'manage/<int:pk>/reset-2fa/',

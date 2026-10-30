@@ -46,6 +46,14 @@ from .two_factor import (
     forget_devices,
     RESEND_WAIT_SECONDS,
 )
+from .password_setup import (
+    SETUP_ROLES,
+    LINK_HOURS,
+    send_password_link,
+    read_setup_token,
+    password_problem,
+    mask_email,
+)
 from accounts.permissions import IsAdmin, IsStaff
 
 logger = logging.getLogger(__name__)
@@ -634,6 +642,27 @@ class TwoFactorBackupCodesView(APIView):
 
 # --- Admin account management (Stage C) ---
 
+def created_account_response(user):
+    """
+    Response after the Admin creates a Staff / Partner Installer account.
+    If no password was typed, the account starts with no usable password
+    and the worker gets an email link to set their own. 'password_link_sent'
+    tells the screen if that email went out (True / False), or None when
+    the Admin typed a password instead.
+    """
+    data = dict(ManagedUserSerializer(user).data)
+    link_sent = None
+    if not user.has_usable_password():
+        try:
+            send_password_link(user)
+            link_sent = True
+        except Exception:
+            logger.exception("Could not send the password link to new account %s", user.id)
+            link_sent = False
+    data['password_link_sent'] = link_sent
+    return Response(data, status=status.HTTP_201_CREATED)
+
+
 class ManageStaffListCreateView(generics.ListCreateAPIView):
     """
     GET  /api/accounts/manage/staff/  - Manage Staff page's table listing
@@ -651,10 +680,7 @@ class ManageStaffListCreateView(generics.ListCreateAPIView):
         serializer = self.get_serializer(data=request.data, context={'role': 'STAFF'})
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(
-            ManagedUserSerializer(user).data,
-            status=status.HTTP_201_CREATED,
-        )
+        return created_account_response(user)
 
 
 class ManagePartnerInstallerListCreateView(generics.ListCreateAPIView):
@@ -676,10 +702,7 @@ class ManagePartnerInstallerListCreateView(generics.ListCreateAPIView):
         serializer = self.get_serializer(data=request.data, context={'role': 'PARTNER_INSTALLER'})
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(
-            ManagedUserSerializer(user).data,
-            status=status.HTTP_201_CREATED,
-        )
+        return created_account_response(user)
 
 
 class ManagedUserToggleActiveView(APIView):
@@ -721,6 +744,8 @@ class AdminSetWorkerPasswordView(APIView):
     PATCH /api/accounts/manage/<id>/set-password/  - Admin's
     "Credentials" modal on the Workers page. Lets Admin set a new
     password for a Staff or Partner Installer account directly.
+    This is now the backup way. The main way is the emailed password
+    link (see SendPasswordLinkView below).
     Only works on STAFF or PARTNER_INSTALLER accounts, same
     restriction as ManagedUserToggleActiveView. Notifies the worker
     that their password was reset.
@@ -747,6 +772,102 @@ class AdminSetWorkerPasswordView(APIView):
         )
 
         return Response({"detail": "Password updated successfully."})
+
+
+class SendPasswordLinkView(APIView):
+    """
+    POST /api/accounts/manage/<id>/send-password-link/  - Admin's
+    "Send Password Link" button in the Credentials popup. Emails the
+    worker a one-time link so they can create their own password. The
+    Admin never sees the password. The worker's current password keeps
+    working until they use the link.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def post(self, request, pk):
+        user = User.objects.filter(pk=pk, role__in=SETUP_ROLES).first()
+        if not user:
+            return Response({"detail": "Account not found."}, status=404)
+
+        if not user.is_active:
+            return Response(
+                {"detail": "This account is deactivated. Activate it first, then send the link."},
+                status=400,
+            )
+        if not user.email:
+            return Response(
+                {"detail": "This worker has no email address, so a link can't be sent."},
+                status=400,
+            )
+
+        try:
+            send_password_link(user)
+        except Exception:
+            logger.exception("Could not send the password link to user %s", user.id)
+            return Response(
+                {
+                    "detail": "We couldn't send the email right now. "
+                              "Please try again later, or set the password manually."
+                },
+                status=503,
+            )
+
+        return Response({
+            "detail": "Password link sent.",
+            "sent_to": mask_email(user.email),
+            "expires_in_hours": LINK_HOURS,
+        })
+
+
+class PasswordSetupCheckView(APIView):
+    """
+    GET /api/accounts/password-setup/check/?token=...  - The Set Password
+    page calls this when it opens, to see if the emailed link is still
+    good. Public (the worker is not signed in yet).
+    """
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        user, problem = read_setup_token(request.query_params.get('token'))
+        if problem:
+            return Response({"detail": problem}, status=400)
+        return Response({
+            "valid": True,
+            "username": user.username,
+            "full_name": user.full_name,
+        })
+
+
+class PasswordSetupCompleteView(APIView):
+    """
+    POST /api/accounts/password-setup/complete/
+    Body: { token, new_password }
+    Saves the password the worker chose. Same rules as the checklist on
+    the screen. The link stops working right after this.
+    """
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        user, problem = read_setup_token(request.data.get('token'))
+        if problem:
+            return Response({"detail": problem, "link_problem": True}, status=400)
+
+        new_password = request.data.get('new_password') or ''
+        issue = password_problem(new_password, user)
+        if issue:
+            return Response({"detail": issue}, status=400)
+
+        user.set_password(new_password)
+        user.save()
+        # New password: every remembered browser asks for a code again
+        forget_devices(user)
+
+        return Response({
+            "detail": "Your password has been set. You can now sign in.",
+            "username": user.username,
+        })
 
 
 class AdminResetTwoFactorView(APIView):
