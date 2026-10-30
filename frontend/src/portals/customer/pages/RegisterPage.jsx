@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   UserRound,
@@ -52,9 +52,12 @@ function getGoogleWidth() {
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  // The quotation email links here with the customer's name and email,
+  // so the form comes already filled in (they can still change it).
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({
-    username: '',
-    email: '',
+    username: (searchParams.get('name') || '').slice(0, 100),
+    email: (searchParams.get('email') || '').slice(0, 150),
     phone_number: '',
     address: '',
     password: '',

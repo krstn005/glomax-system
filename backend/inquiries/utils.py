@@ -1,4 +1,5 @@
 from email.mime.image import MIMEImage
+from urllib.parse import urlencode
 
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
@@ -22,6 +23,27 @@ def _get_reply_link(inquiry):
     """
     base_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173")
     return f"{base_url.rstrip('/')}/inquiry-reply/{inquiry.access_token}/"
+
+
+def _get_site_links(inquiry):
+    """
+    Links to our website for the Initial Quotation email, so the
+    customer can go straight to it without searching or opening the
+    conversation page first.
+
+    The Register link carries the customer's name and email, so the
+    form is already filled in. Registering with the same email also
+    lets the system connect their quotation to their new request.
+    """
+    base_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
+    params = urlencode({
+        "name": (inquiry.full_name or "")[:100],
+        "email": (inquiry.email or "")[:150],
+    })
+    return {
+        "register": f"{base_url}/register?{params}",
+        "login": f"{base_url}/login",
+    }
 
 
 def _attach_logo(email):
@@ -127,6 +149,32 @@ def _reply_button_html(reply_link, label="Reply to this Inquiry"):
 """
 
 
+def _cta_button_html(link, label):
+    """
+    The main "do this next" button. Gold, so it stands out from the
+    navy Reply button. Same centered-table method as the reply button,
+    so it works in Gmail, Outlook and phone mail apps.
+    """
+    return f"""\
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="background-color:#facc15;">
+                <a href="{link}" target="_blank"
+                   style="display:inline-block; padding:12px 26px; font-size:14px; font-weight:bold; color:#0d1f3c; text-decoration:none;">
+                  {label}
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+"""
+
+
 def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms, notes):
     """
     Sends the Initial Quotation to whoever submitted the inquiry.
@@ -142,6 +190,8 @@ def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms
     """
     subject = "Your Glomax Solar Quotation"
     reply_link = _get_reply_link(inquiry)
+    site_links = _get_site_links(inquiry)
+    safe_register_link = escape(site_links["register"])
 
     # Safe versions for the HTML part only. The plain-text part below
     # keeps the original text.
@@ -166,6 +216,8 @@ def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms
     text_message += (
         "\nIf you'd like to proceed, please register an account on our "
         "website and submit a schedule request for a roof assessment.\n\n"
+        f"Create your account: {site_links['register']}\n"
+        f"Already have an account? Sign in: {site_links['login']}\n\n"
         "Best regards,\n"
         "Glomax Solar Enterprises\n\n"
         "----\n"
@@ -215,9 +267,14 @@ def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms
       </tr>
     </table>
 {notes_html}
-    <p style="margin:18px 0; font-size:14px; color:#374151; line-height:1.5;">
+    <p style="margin:18px 0 16px; font-size:14px; color:#374151; line-height:1.5;">
       If you'd like to proceed, please register an account on our website and
       submit a schedule request for a roof assessment.
+    </p>
+{_cta_button_html(safe_register_link, "Create My Account")}
+    <p style="margin:0 0 22px; font-size:12px; color:#6b7280; text-align:center;">
+      Already have an account?
+      <a href="{site_links["login"]}" target="_blank" style="color:#0d1f3c; font-weight:bold;">Sign in</a>
     </p>
 
     <p style="margin:0 0 4px; font-size:14px; color:#111827; font-weight:bold; text-align:center;">Have a follow-up question?</p>
