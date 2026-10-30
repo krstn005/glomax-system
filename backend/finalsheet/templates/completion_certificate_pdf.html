@@ -238,8 +238,8 @@
         {% endif %}
       </td>
       <td class="title-cell">
-        <div class="doc-title">Completion Certificate</div>
-        <div class="doc-sub">(Your solar installation is complete)</div>
+        <div class="doc-title">Completion Record</div>
+        <div class="doc-sub">(Your request has been completed)</div>
         <div class="doc-ticket">Ticket No. {{ ticket.ticket_number }} &middot; COMPLETED</div>
       </td>
     </tr>
@@ -268,7 +268,7 @@
   <!-- ===================== Closing statement ===================== -->
   <table class="closing">
     <tr>
-      <td>INSTALLATION SUCCESSFULLY COMPLETED</td>
+      <td>SERVICE SUCCESSFULLY COMPLETED</td>
     </tr>
   </table>
 
@@ -295,7 +295,7 @@
         </table>
       </td>
       <td class="right">
-        <table class="bar-head"><tr><td>Installation Details</td></tr></table>
+        <table class="bar-head"><tr><td>Service Details</td></tr></table>
         <table class="rows">
           <tr>
             <td class="k">Partner Installer</td>
@@ -342,7 +342,7 @@
   <div id="page-footer">
     <table>
       <tr>
-        <td style="text-align: left;">Glomax Solar Enterprises &middot; Completion Certificate {{ ticket.ticket_number }}</td>
+        <td style="text-align: left;">Glomax Solar Enterprises &middot; Completion Record {{ ticket.ticket_number }}</td>
         <td style="text-align: right;">Generated {% now "F j, Y" %} &middot; Page <pdf:pagenumber /> of <pdf:pagecount /></td>
       </tr>
     </table>

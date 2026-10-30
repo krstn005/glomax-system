@@ -66,7 +66,7 @@ const HOW_IT_WORKS = [
   { icon: FileText, title: 'Submit a request', text: 'Tell us your address, preferred visit date, and package.' },
   { icon: HardHat, title: 'Site assessment', text: 'A Partner Installer visits and checks your roof.' },
   { icon: ClipboardCheck, title: 'Review & approval', text: 'Our team reviews the results and confirms your final price.' },
-  { icon: Sun, title: 'Installation', text: 'Your solar system gets installed and marked complete.' },
+  { icon: Sun, title: 'Request completed', text: 'Your request is marked as completed and you can leave feedback.' },
 ];
 
 function formatDate(dateStr) {
@@ -142,14 +142,14 @@ function getStatusMessage(ticket) {
         tone: 'green',
         icon: CheckCircle2,
         title: 'Your request is approved!',
-        text: 'Your final sheet is ready to download. Our team will get in touch to schedule your installation.',
+        text: 'Your Disclosure Agreement is ready to download. Our team will get in touch with you about the next steps.',
       };
     case 'COMPLETED':
       return {
         tone: 'green',
         icon: Sun,
-        title: 'Installation complete',
-        text: 'Your solar system has been installed. Thank you for choosing Glomax! We would love to hear how it went.',
+        title: 'Request completed',
+        text: 'Your request has been marked as completed. Thank you for choosing Glomax! We would love to hear how it went.',
         action: { to: '/feedback', label: 'Leave Feedback', icon: Star },
       };
     default:
@@ -461,7 +461,7 @@ function NoRequestsYet() {
         <h2>No requests yet</h2>
         <p>
           Once you submit a request, you can follow every step of it here, from the site
-          visit all the way to installation.
+          visit all the way to approval.
         </p>
         <div className="rs-empty-actions">
           <Link to="/new-request" className="rs-btn-primary">

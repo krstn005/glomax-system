@@ -605,7 +605,8 @@ class InstallerTicketListView(generics.ListAPIView):
 class TicketCompleteView(APIView):
     """
     PATCH /api/tickets/<id>/complete/  - Partner Installer's "Mark
-    Installation Complete" action.
+    Service Completed" action. The installation itself is handled
+    outside the system; this only closes the request with photos.
     """
     permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller]
     parser_classes = [MultiPartParser, FormParser]
@@ -641,7 +642,7 @@ class TicketCompleteView(APIView):
         Notification.objects.create(
             recipient=ticket.customer,
             kind=Notification.Kind.INSTALLATION_COMPLETED,
-            message=f"Your installation for {ticket.ticket_number} is complete!",
+            message=f"Your request {ticket.ticket_number} is completed!",
             link="/request-status",
         )
 

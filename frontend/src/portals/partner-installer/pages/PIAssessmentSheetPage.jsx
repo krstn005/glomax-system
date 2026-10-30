@@ -975,7 +975,7 @@ export default function PIAssessmentSheetPage() {
       setJustCompleted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      setCompleteError(getErrorMessage(err, 'Could not mark this installation complete. Please try again.'));
+      setCompleteError(getErrorMessage(err, 'Could not mark this request as completed. Please try again.'));
     } finally {
       setCompleting(false);
       setShowCompleteConfirm(false);
@@ -1159,7 +1159,7 @@ export default function PIAssessmentSheetPage() {
                   <CheckCircle size={20} />
                 </span>
                 <div>
-                  <p className="pias-banner-title">Installation marked complete!</p>
+                  <p className="pias-banner-title">Service marked as completed!</p>
                   <p className="pias-banner-sub">The customer has been notified. Thanks for finishing this one.</p>
                 </div>
               </div>
@@ -1326,14 +1326,14 @@ export default function PIAssessmentSheetPage() {
                   </form>
                 )}
 
-                {/* Mark installation complete */}
+                {/* Mark service completed */}
                 {canComplete && (
                   <form className="pias-card pias-complete-card" onSubmit={handleCompleteClick} noValidate>
                     <SectionTitle
                       icon={Hammer}
                       tone="gold"
-                      title="Mark Installation Complete"
-                      subtitle="Once the work is done on-site, add at least one photo of the finished installation. The customer will be notified."
+                      title="Mark Service Completed"
+                      subtitle="Once the work is done, add at least one photo of the finished work. The customer will be notified."
                     />
 
                     <PhotoPicker
@@ -1342,7 +1342,7 @@ export default function PIAssessmentSheetPage() {
                       onAdd={addCompletionPhotos}
                       onRemove={removeCompletionPhoto}
                       onPreview={setLightboxSrc}
-                      hint="Photos of the finished installation. JPG or PNG."
+                      hint="Photos of the finished work. JPG or PNG."
                     />
 
                     {completeError && (
@@ -1355,7 +1355,7 @@ export default function PIAssessmentSheetPage() {
                     <div className="pias-complete-foot">
                       <button type="submit" className="pias-btn-primary" disabled={completing}>
                         <FileCheck size={15} />
-                        {completing ? 'Marking Complete...' : 'Mark Installation Complete'}
+                        {completing ? 'Marking Complete...' : 'Mark Service Completed'}
                       </button>
                     </div>
                   </form>
@@ -1367,7 +1367,7 @@ export default function PIAssessmentSheetPage() {
                     <SectionTitle
                       icon={Award}
                       tone="gold"
-                      title="Installation Completed"
+                      title="Service Completed"
                       subtitle={`Completed on ${
                         ticket.completed_at
                           ? new Date(ticket.completed_at).toLocaleDateString('en-US', {
@@ -1485,7 +1485,7 @@ export default function PIAssessmentSheetPage() {
         <ConfirmModal
           icon={Award}
           tone="gold"
-          title="Mark this installation complete?"
+          title="Mark this service as completed?"
           message="The customer will be notified. You can't undo this from here."
           confirmLabel="Mark Complete"
           busyLabel="Marking Complete..."

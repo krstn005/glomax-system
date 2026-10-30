@@ -206,12 +206,12 @@ function NextStep({ ticket, installerName, onAssignClick }) {
   } else if (status === 'APPROVED') {
     tone = 'green';
     Icon = CheckCircle2;
-    title = 'Approved, waiting for installation';
-    text = `${installerName || 'The Partner Installer'} will mark it complete once the solar system is installed.`;
+    title = 'Approved, waiting to be completed';
+    text = `${installerName || 'The Partner Installer'} will mark it as completed once the work is done.`;
   } else if (status === 'COMPLETED') {
     tone = 'green';
     Icon = Award;
-    title = 'Installation completed';
+    title = 'Request completed';
     text = 'This request is done. You can find it under Completed Tickets.';
   } else if (status === 'WITHDRAWN') {
     tone = 'gray';
@@ -674,7 +674,7 @@ export default function StaffTicketDetailPage() {
         ticket.visit_date && { label: 'Site visit', date: ticket.visit_date, icon: CalendarDays, future: visitDays > 0 },
         ticket.withdrawn_at && { label: 'Withdrawn by customer', date: ticket.withdrawn_at, icon: Ban },
         ticket.completed_at && {
-          label: ticket.status === 'COMPLETED' ? 'Installation completed' : 'Request closed',
+          label: ticket.status === 'COMPLETED' ? 'Request completed' : 'Request closed',
           date: ticket.completed_at,
           icon: ticket.status === 'COMPLETED' ? Award : XCircle,
         },

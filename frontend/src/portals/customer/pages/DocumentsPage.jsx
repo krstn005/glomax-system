@@ -26,8 +26,8 @@ import '../styles/documents.css';
 // Choices in the Filter drop-down
 const FILTER_OPTIONS = [
   { key: 'ALL', label: 'All Documents', icon: Layers, tone: 'navy', match: () => true },
-  { key: 'COMPLETED', label: 'Certificate Ready', icon: Award, tone: 'gold', match: (s) => s === 'COMPLETED' },
-  { key: 'APPROVED', label: 'Waiting for Install', icon: Clock, tone: 'blue', match: (s) => s === 'APPROVED' },
+  { key: 'COMPLETED', label: 'Record Ready', icon: Award, tone: 'gold', match: (s) => s === 'COMPLETED' },
+  { key: 'APPROVED', label: 'Approved', icon: Clock, tone: 'blue', match: (s) => s === 'APPROVED' },
 ];
 
 function formatDate(dateStr) {
@@ -178,7 +178,7 @@ function FileTile({ icon: Icon, tone, title, subtitle, onDownload }) {
   );
 }
 
-// Shown in place of the certificate before the installation is done
+// Shown in place of the Completion Record before the request is completed
 function LockedTile({ title, subtitle }) {
   return (
     <div className="doc-file-wrap">
@@ -228,7 +228,7 @@ function DocumentCard({ ticket }) {
         <FileTile
           icon={FileText}
           tone="navy"
-          title="Final Sheet"
+          title="Disclosure Agreement"
           subtitle={`Approved on ${formatDate(ticket.final_sheet?.approved_at || ticket.updated_at)}`}
           onDownload={() => downloadFinalSheetPDF(ticket.id, ticket.ticket_number)}
         />
@@ -237,12 +237,12 @@ function DocumentCard({ ticket }) {
           <FileTile
             icon={Award}
             tone="gold"
-            title="Completion Certificate"
+            title="Completion Record"
             subtitle={`Completed on ${formatDate(ticket.completed_at)}`}
             onDownload={() => downloadCompletionCertificatePDF(ticket.id, ticket.ticket_number)}
           />
         ) : (
-          <LockedTile title="Completion Certificate" subtitle="Available once your installation is complete" />
+          <LockedTile title="Completion Record" subtitle="Available once your request is completed" />
         )}
       </div>
     </div>
@@ -293,8 +293,8 @@ export default function DocumentsPage() {
     load();
   }, []);
 
-  // Only tickets with a real Final Sheet (Approved or Completed) have
-  // any documents to show here. Newest approval first.
+  // Only tickets with a real Disclosure Agreement (Approved or Completed)
+  // have any documents to show here. Newest approval first.
   const documentTickets = tickets
     .filter((t) => t.status === 'APPROVED' || t.status === 'COMPLETED')
     .sort(
@@ -325,7 +325,7 @@ export default function DocumentsPage() {
   }
 
   return (
-    <CustomerLayout pageTitle="My Documents" pageSubtitle="Download your Final Sheets and Completion Certificates">
+    <CustomerLayout pageTitle="My Documents" pageSubtitle="Download your Disclosure Agreements and Completion Records">
       <div className="doc-page">
         <section className="doc-hero">
           <div className="doc-hero-glow" aria-hidden="true" />
@@ -334,7 +334,7 @@ export default function DocumentsPage() {
           </div>
           <div className="doc-hero-text">
             <h1>Your Documents</h1>
-            <p>Final Sheets and Completion Certificates for your approved requests, ready to download as PDF.</p>
+            <p>Disclosure Agreements and Completion Records for your approved requests, ready to download as PDF.</p>
           </div>
         </section>
 
@@ -363,8 +363,8 @@ export default function DocumentsPage() {
               </span>
               <p className="doc-empty-title">No documents yet</p>
               <p className="doc-empty-hint">
-                Your Final Sheet will show up here once a request is approved. Your Completion Certificate comes after
-                the installation is done.
+                Your Disclosure Agreement will show up here once a request is approved. Your Completion Record comes
+                after the request is completed.
               </p>
               <Link to="/request-status" className="doc-btn-primary">
                 View Request Status
