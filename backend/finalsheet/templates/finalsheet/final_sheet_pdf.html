@@ -7,12 +7,12 @@
 <style>
   @page {
     size: A4;
-    margin: 1.5cm 1.7cm 2.2cm 1.7cm;
+    margin: 1.4cm 1.6cm 2.1cm 1.6cm;
     @frame footer_frame {
       -pdf-frame-content: page-footer;
-      left: 1.7cm;
-      right: 1.7cm;
-      bottom: 0.9cm;
+      left: 1.6cm;
+      right: 1.6cm;
+      bottom: 0.8cm;
       height: 0.9cm;
     }
   }
@@ -20,7 +20,7 @@
   body {
     font-family: Helvetica, Arial, sans-serif;
     color: #0f172a;
-    font-size: 9pt;
+    font-size: 8.5pt;
     line-height: 1.35;
   }
 
@@ -43,8 +43,8 @@
   }
 
   .header .logo-cell img {
-    width: 52pt;
-    height: 52pt;
+    width: 50pt;
+    height: 50pt;
   }
 
   .header .title-cell {
@@ -53,24 +53,30 @@
 
   .doc-title {
     color: #0d1f3c;
-    font-size: 21pt;
+    font-size: 20pt;
     font-weight: bold;
+  }
+
+  .doc-title-small {
+    color: #0d1f3c;
+    font-size: 13pt;
+    font-weight: bold;
+    line-height: 1.3;
   }
 
   .doc-sub {
     color: #64748b;
-    font-size: 7.5pt;
+    font-size: 7pt;
     padding-top: 2pt;
   }
 
   .doc-ticket {
     color: #b5651d;
-    font-size: 9.5pt;
+    font-size: 9pt;
     font-weight: bold;
     padding-top: 4pt;
   }
 
-  /* Navy line with a thin gold line under it */
   .rule-navy td {
     background-color: #0d1f3c;
     height: 2.5pt;
@@ -87,56 +93,54 @@
     padding: 0;
   }
 
-  /* ---------- Two columns ---------- */
+  /* ---------- Columns ---------- */
   .two-col .left {
     width: 50%;
-    padding-right: 9pt;
+    padding-right: 8pt;
   }
 
   .two-col .right {
     width: 50%;
-    padding-left: 9pt;
+    padding-left: 8pt;
   }
 
-  /* ---------- Small amber headings ---------- */
   .amber {
     color: #b5651d;
-    font-size: 8.5pt;
+    font-size: 8pt;
     font-weight: bold;
-    padding-top: 9pt;
+    padding-top: 8pt;
     padding-bottom: 2pt;
   }
 
   .big-name {
     color: #0d1f3c;
-    font-size: 12.5pt;
+    font-size: 12pt;
     font-weight: bold;
   }
 
   .small-text {
     color: #334155;
-    font-size: 8.5pt;
+    font-size: 8pt;
   }
 
   /* ---------- Navy bar headings ---------- */
   .bar-head td {
     background-color: #0d1f3c;
     color: #ffffff;
-    font-size: 8.5pt;
+    font-size: 8pt;
     font-weight: bold;
     padding: 5pt 8pt;
   }
 
   /* ---------- Label / value rows ---------- */
   .rows td {
-    padding: 4pt 8pt;
+    padding: 3.5pt 8pt;
     border-bottom: 0.5pt solid #e5e7eb;
-    font-size: 8.5pt;
+    font-size: 8pt;
   }
 
   .rows .k {
     color: #475569;
-    width: 46%;
   }
 
   .rows .v {
@@ -149,14 +153,8 @@
     background-color: #fff3b8;
     border-bottom: 0.5pt solid #f2d36b;
     color: #0d1f3c;
-    font-size: 10pt;
+    font-size: 9.5pt;
     font-weight: bold;
-  }
-
-  .rows .sub {
-    color: #94a3b8;
-    font-size: 7pt;
-    font-weight: normal;
   }
 
   .muted {
@@ -165,61 +163,77 @@
   }
 
   /* ---------- Payment terms ---------- */
-  .terms {
+  .terms td {
+    padding: 1.5pt 0;
+    font-size: 8pt;
+    font-weight: bold;
     color: #0f172a;
+  }
+
+  .terms .amt {
+    text-align: right;
+  }
+
+  .para {
+    color: #334155;
+    font-size: 8pt;
+    line-height: 1.45;
+  }
+
+  /* ---------- Notes (gray box, amber line) ---------- */
+  .note td {
+    background-color: #f1f3f7;
+    border-left: 2.5pt solid #b5651d;
+    padding: 5pt 8pt;
+    font-size: 8pt;
+    line-height: 1.45;
+    color: #334155;
+  }
+
+  /* ---------- Steps ---------- */
+  .steps td {
+    padding: 4pt 8pt;
+    border-bottom: 0.5pt solid #e5e7eb;
+    font-size: 8pt;
+    vertical-align: middle;
+  }
+
+  .steps .num {
+    width: 14pt;
+    background-color: #0d1f3c;
+    color: #ffffff;
+    font-weight: bold;
+    text-align: center;
+    padding: 4pt 0;
+  }
+
+  .steps .who {
+    width: 90pt;
+    text-align: right;
+    color: #b5651d;
+    font-weight: bold;
+  }
+
+  /* ---------- Closing statement ---------- */
+  .closing td {
+    border-top: 1pt solid #0d1f3c;
+    border-bottom: 1pt solid #0d1f3c;
+    background-color: #f1f3f7;
+    padding: 7pt 8pt;
+    text-align: center;
+    color: #0d1f3c;
     font-size: 8.5pt;
     font-weight: bold;
-    line-height: 1.5;
-  }
-
-  /* ---------- Photos ---------- */
-  .photos td.photo {
-    padding: 0 4pt;
-    text-align: center;
-  }
-
-  .photo-frame {
-    border: 1pt solid #e5e7eb;
-    padding: 4pt;
-  }
-
-  .photo-single img {
-    width: 220pt;
-    height: 128pt;
-  }
-
-  .photo-multi img {
-    width: 170pt;
-    height: 100pt;
-  }
-
-  .photo-caption {
-    color: #64748b;
-    font-size: 7.5pt;
-    padding-top: 3pt;
-  }
-
-  .empty-note {
-    border: 1pt solid #e5e7eb;
-    background-color: #f1f3f7;
-    padding: 10pt;
-    color: #94a3b8;
-    font-size: 8.5pt;
-    text-align: center;
   }
 
   /* ---------- Signatures ---------- */
-  .signatures {
-    margin-top: 26pt;
-  }
-
   .signatures td {
     width: 50%;
     text-align: center;
   }
 
   .signatures .gap {
-    width: 40pt;
+    width: 36pt;
   }
 
   .sign-line {
@@ -233,7 +247,37 @@
   .sign-sub {
     padding-top: 1pt;
     color: #94a3b8;
-    font-size: 7.5pt;
+    font-size: 7pt;
+  }
+
+  /* ---------- Terms and Conditions (page 2) ---------- */
+  .tc-head td {
+    background-color: #eef1f6;
+    border-left: 2.5pt solid #b5651d;
+    padding: 4pt 8pt;
+    color: #0d1f3c;
+    font-size: 8.5pt;
+    font-weight: bold;
+  }
+
+  .tc td {
+    padding: 2.5pt 0;
+    font-size: 8pt;
+    line-height: 1.4;
+    color: #1e293b;
+  }
+
+  .tc .no {
+    width: 24pt;
+    color: #b5651d;
+    font-weight: bold;
+    padding-left: 3pt;
+  }
+
+  .tc-space {
+    height: 8pt;
+    font-size: 1pt;
+    line-height: 1pt;
   }
 
   .no-break {
@@ -243,7 +287,7 @@
   /* ---------- Footer (every page) ---------- */
   #page-footer {
     color: #94a3b8;
-    font-size: 7.5pt;
+    font-size: 7pt;
   }
 
   #page-footer td {
@@ -254,7 +298,7 @@
 </head>
 <body>
 
-  <!-- ===================== Header ===================== -->
+  <!-- ===================== PAGE 1: Disclosure Agreement ===================== -->
   <table class="header">
     <tr>
       <td class="logo-cell">
@@ -265,19 +309,16 @@
         {% endif %}
       </td>
       <td class="title-cell">
-        <div class="doc-title">Final Sheet</div>
-        <div class="doc-sub">(Approved solar installation summary)</div>
-        <div class="doc-ticket">
-          Ticket No. {{ ticket.ticket_number }}
-          &middot; {% if ticket.status == 'COMPLETED' %}COMPLETED{% else %}APPROVED{% endif %}
-        </div>
+        <div class="doc-title">Disclosure Agreement</div>
+        <div class="doc-sub">(What to expect now that your request is approved)</div>
+        <div class="doc-ticket">Ticket No. {{ ticket.ticket_number }}</div>
       </td>
     </tr>
   </table>
-  <table style="margin-top: 8pt;" class="rule-navy"><tr><td>&nbsp;</td></tr></table>
+  <table style="margin-top: 6pt;" class="rule-navy"><tr><td>&nbsp;</td></tr></table>
   <table class="rule-gold" style="margin-top: 1.5pt;"><tr><td>&nbsp;</td></tr></table>
 
-  <!-- ===================== Customer + Provider ===================== -->
+  <!-- Customer + Provider -->
   <table class="two-col">
     <tr>
       <td class="left">
@@ -295,16 +336,90 @@
     </tr>
   </table>
 
-  <!-- ===================== Summary + Roof ===================== -->
-  <table class="two-col" style="margin-top: 12pt;">
+  <!-- Summary + Warranty / Notes -->
+  <table class="two-col" style="margin-top: 8pt;">
     <tr>
       <td class="left">
         <table class="bar-head"><tr><td>Request Summary</td></tr></table>
         <table class="rows">
           <tr class="hl">
-            <td class="k">Final Cost</td>
+            <td class="k">Final Price</td>
             <td class="v">PHP {{ final_sheet.final_cost|floatformat:2|intcomma }}</td>
           </tr>
+          <tr>
+            <td class="k">How You Pay</td>
+            <td class="v">At the Glomax office</td>
+          </tr>
+          <tr>
+            <td class="k">Installation Date</td>
+            <td class="v">To be scheduled</td>
+          </tr>
+          <tr>
+            <td class="k">Installed By</td>
+            <td class="v">Your Partner Installer</td>
+          </tr>
+        </table>
+
+        <div class="amber">Payment Terms:</div>
+        {% if payment_terms_lines %}
+          <table class="terms">
+            {% for line in payment_terms_lines %}
+              <tr>
+                <td>{{ forloop.counter }}. {{ line }}</td>
+              </tr>
+            {% endfor %}
+          </table>
+        {% else %}
+          <div class="small-text muted">No payment terms recorded.</div>
+        {% endif %}
+
+        <div class="amber">Installation Date:</div>
+        <div class="para">Glomax Staff will text you to confirm the date. Timing depends on your package and your property. Hybrid systems and tall houses may take longer.</div>
+      </td>
+
+      <td class="right">
+        <table class="bar-head"><tr><td>Warranty</td></tr></table>
+        <table class="rows">
+          <tr class="hl">
+            <td class="k">How Long</td>
+            <td class="v">1 year</td>
+          </tr>
+          <tr>
+            <td class="k">What It Covers</td>
+            <td class="v">Accidental damage to your whole solar system</td>
+          </tr>
+          <tr>
+            <td class="k">Not Covered</td>
+            <td class="v">Natural calamities</td>
+          </tr>
+          <tr>
+            <td class="k">When It Starts</td>
+            <td class="v">After the installation is finished</td>
+          </tr>
+          <tr>
+            <td class="k">Your Proof</td>
+            <td class="v">Official receipt and your text messages with Glomax Staff</td>
+          </tr>
+        </table>
+
+        <table class="bar-head" style="margin-top: 8pt;"><tr><td>Important Notes</td></tr></table>
+
+        <table class="note"><tr><td>
+          <strong>Estimates:</strong> Prices on our website are only estimates. Your final price is the amount shown in this agreement.<br />
+          <strong>Warranty concerns:</strong> Contact Glomax Staff first. If a service visit is needed, Staff arranges it with the Partner Installer and confirms the schedule with you.<br />
+          <strong>Contact Glomax Staff:</strong> {% if contact_phone %}{{ contact_phone }}{% endif %}{% if contact_email %} &middot; {{ contact_email }}{% endif %}{% if not contact_phone and not contact_email %}through the number you used for this request.{% endif %}
+        </td></tr></table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Package details -->
+  <div style="height: 6pt;">&nbsp;</div>
+  <table class="bar-head"><tr><td>Package Details</td></tr></table>
+  <table class="two-col">
+    <tr>
+      <td class="left" style="padding-right: 8pt;">
+        <table class="rows">
           <tr>
             <td class="k">Solar Package</td>
             <td class="v">{{ ticket.solar_package|default:"—" }}</td>
@@ -314,143 +429,148 @@
             <td class="v">{% if assessment %}{{ assessment.get_recommended_system_type_display }}{% else %}—{% endif %}</td>
           </tr>
           <tr>
-            <td class="k">Partner Installer</td>
-            <td class="v">{{ installer_name|default:"—" }}</td>
+            <td class="k">Roof Type</td>
+            <td class="v">{% if assessment %}{{ assessment.get_roof_type_display }}{% else %}—{% endif %}</td>
           </tr>
           <tr>
-            <td class="k">Request Date</td>
-            <td class="v">{{ ticket.created_at|date:"F j, Y" }}</td>
+            <td class="k">Roof Area</td>
+            <td class="v">{% if assessment %}{{ assessment.estimated_roof_area_sqm }} sqm{% else %}—{% endif %}</td>
           </tr>
         </table>
-
-        <div class="amber">Payment Terms:</div>
-        {% if payment_terms_lines %}
-          <div class="terms">{% for line in payment_terms_lines %}{{ forloop.counter }}. {{ line }}{% if not forloop.last %}<br />{% endif %}{% endfor %}</div>
-        {% else %}
-          <div class="small-text muted">No payment terms recorded.</div>
-        {% endif %}
       </td>
-      <td class="right">
-        <table class="bar-head"><tr><td>Roof Assessment</td></tr></table>
+      <td class="right" style="padding-left: 8pt;">
         <table class="rows">
-          {% if assessment %}
-            <tr>
-              <td class="k">Estimated Roof Area</td>
-              <td class="v">{{ assessment.estimated_roof_area_sqm }} sqm</td>
-            </tr>
-            <tr>
-              <td class="k">Roof Type</td>
-              <td class="v">{{ assessment.get_roof_type_display }}</td>
-            </tr>
-            <tr>
-              <td class="k">Recommended Package</td>
-              <td class="v">{{ assessment.recommended_package|default:"—" }}</td>
-            </tr>
-            <tr>
-              <td class="k">Rated Capacity</td>
-              <td class="v">{{ assessment.rated_capacity_kw }} kW</td>
-            </tr>
-            <tr>
-              <td class="k">Solar Panels</td>
-              <td class="v">{{ assessment.number_of_solar_panels }} panels</td>
-            </tr>
-            <tr>
-              <td class="k">Inverter Size</td>
-              <td class="v">{{ assessment.inverter_size_kw }} kW</td>
-            </tr>
-          {% else %}
-            <tr>
-              <td class="k muted" colspan="2">No roof assessment on file.</td>
-            </tr>
-          {% endif %}
+          <tr>
+            <td class="k">Rated Capacity</td>
+            <td class="v">{% if assessment %}{{ assessment.rated_capacity_kw }} kW{% else %}—{% endif %}</td>
+          </tr>
+          <tr>
+            <td class="k">Solar Panels</td>
+            <td class="v">{% if assessment %}{{ assessment.number_of_solar_panels }} panels{% else %}—{% endif %}</td>
+          </tr>
+          <tr>
+            <td class="k">Inverter Size</td>
+            <td class="v">{% if assessment %}{{ assessment.inverter_size_kw }} kW{% else %}—{% endif %}</td>
+          </tr>
+          <tr>
+            <td class="k">Installation Address</td>
+            <td class="v">{{ ticket.property_address|default:"—" }}</td>
+          </tr>
         </table>
       </td>
     </tr>
   </table>
 
-  <!-- ===================== Quotations ===================== -->
-  <div style="height: 12pt;">&nbsp;</div>
+  <!-- What happens next -->
+  <div style="height: 8pt;">&nbsp;</div>
   <div class="no-break">
-    <table class="bar-head"><tr><td>Quotation Summary</td></tr></table>
-    <table class="rows">
+    <table class="bar-head"><tr><td>What Happens Next</td></tr></table>
+    <table class="steps">
       <tr>
-        <td class="k">Initial Quotation</td>
-        <td class="v">
-          {% if initial_quotation %}
-            PHP {{ initial_quotation.estimated_cost|floatformat:2|intcomma }}
-            <span class="sub">&nbsp;Sent {{ initial_quotation.sent_at|date:"M j, Y" }}</span>
-          {% else %}
-            <span class="muted">Not recorded</span>
-          {% endif %}
-        </td>
+        <td class="num">1</td>
+        <td>Glomax Staff sends you a text message (SMS) to confirm your installation date.</td>
+        <td class="who">Glomax Staff</td>
       </tr>
       <tr>
-        <td class="k">Updated Quotation</td>
-        <td class="v">
-          {% if updated_quotation %}
-            PHP {{ updated_quotation.estimated_cost|floatformat:2|intcomma }}
-            <span class="sub">&nbsp;Sent {{ updated_quotation.sent_at|date:"M j, Y" }}</span>
-          {% else %}
-            <span class="muted">No changes</span>
-          {% endif %}
-        </td>
+        <td class="num">2</td>
+        <td>Your solar system is installed on the confirmed date.</td>
+        <td class="who">Partner Installer</td>
       </tr>
-      <tr class="hl">
-        <td class="k">Final Cost</td>
-        <td class="v">
-          PHP {{ final_sheet.final_cost|floatformat:2|intcomma }}
-          <span class="sub">&nbsp;Approved {{ final_sheet.approved_at|date:"M j, Y" }}</span>
-        </td>
+      <tr>
+        <td class="num">3</td>
+        <td>You pay at the Glomax office, following the payment terms, and keep your official receipt. You need it for your warranty.</td>
+        <td class="who">You and Glomax</td>
       </tr>
     </table>
   </div>
 
-  <!-- ===================== Photos ===================== -->
-  <div style="height: 12pt;">&nbsp;</div>
+  <!-- Closing statement + signatures -->
   <div class="no-break">
-    <table class="bar-head"><tr><td>Proof of Visit Photos</td></tr></table>
-    <div style="height: 6pt;">&nbsp;</div>
+    <table class="closing" style="margin-top: 10pt;">
+      <tr><td>I HAVE READ AND RECEIVED THIS DISCLOSURE AGREEMENT AND THE TERMS AND CONDITIONS.</td></tr>
+    </table>
 
-    {% if photos %}
-      <table class="photos">
-        <tr>
-          {% for photo in photos %}
-            <td class="photo {% if photos|length == 1 %}photo-single{% else %}photo-multi{% endif %}">
-              <div class="photo-frame">
-                <img src="{{ photo.image.url }}" />
-              </div>
-              <div class="photo-caption">Photo {{ forloop.counter }} &middot; taken by the Partner Installer</div>
-            </td>
-          {% endfor %}
-        </tr>
-      </table>
-    {% else %}
-      <div class="empty-note">No photos were uploaded for this visit.</div>
-    {% endif %}
-  </div>
-
-  <!-- ===================== Signatures ===================== -->
-  <div class="no-break">
-    <table class="signatures">
+    <table class="signatures" style="margin-top: 22pt;">
       <tr>
         <td class="sign-line">{{ approved_by_name|default:"Glomax Solar Enterprises" }}</td>
         <td class="gap">&nbsp;</td>
         <td class="sign-line">{{ customer_name }}</td>
       </tr>
       <tr>
-        <td class="sign-sub">Approved by &middot; {{ final_sheet.approved_at|date:"F j, Y g:i A" }}</td>
+        <td class="sign-sub">Approved by &middot; {{ final_sheet.approved_at|date:"F j, Y" }}</td>
         <td class="gap">&nbsp;</td>
-        <td class="sign-sub">Customer's signature over printed name</td>
+        <td class="sign-sub">Signature of Customer over printed name &middot; Date</td>
       </tr>
     </table>
   </div>
+
+  <!-- ===================== PAGE 2: Terms and Conditions ===================== -->
+  <pdf:nextpage />
+
+  <table class="header">
+    <tr>
+      <td class="logo-cell">
+        {% if logo_path %}
+          <img src="{{ logo_path }}" />
+        {% else %}
+          <img src="{% static 'finalsheet/logo.jpg' %}" />
+        {% endif %}
+      </td>
+      <td class="title-cell">
+        <div class="doc-title-small">SPECIFIC TERMS AND CONDITIONS<br />FOR SOLAR INSTALLATION</div>
+      </td>
+    </tr>
+  </table>
+  <table style="margin-top: 6pt;" class="rule-navy"><tr><td>&nbsp;</td></tr></table>
+  <table class="rule-gold" style="margin-top: 1.5pt;"><tr><td>&nbsp;</td></tr></table>
+  <div class="tc-space">&nbsp;</div>
+
+  <table class="tc-head" style="margin-top: 8pt;"><tr><td>1. ABOUT THIS DOCUMENT</td></tr></table>
+  <table class="tc">
+    <tr><td class="no">1.1</td><td>This Disclosure Agreement is made between Glomax Solar Enterprises ("Glomax") and the customer named in it (the "Customer") for the solar package under this ticket number.</td></tr>
+    <tr><td class="no">1.2</td><td>This document is a reference and agreement between Glomax and the Customer. The printed warranty and contract are handled at the installation, outside the system.</td></tr>
+    <tr><td class="no">1.3</td><td>It is based on the approved roof assessment and shows the final price and the payment terms. By signing, the Customer confirms that they have read this Disclosure Agreement and these Terms and Conditions.</td></tr>
+    <tr><td class="no">1.4</td><td>The GLOMAX system only handles the request, the roof assessment and the approval. Payment, installation and warranty are handled by Glomax outside the system.</td></tr>
+    <tr><td class="no">1.5</td><td>This agreement covers solar packages only. Materials-only purchases are handled by Glomax Staff outside the system.</td></tr>
+  </table>
+
+  <table class="tc-head" style="margin-top: 8pt;"><tr><td>2. SCOPE OF WORK</td></tr></table>
+  <table class="tc">
+    <tr><td class="no">2.1</td><td>Glomax is responsible for installing the solar package shown in the Disclosure Agreement at the property address in the request. The Partner Installer assigned to the Customer does the installation.</td></tr>
+    <tr><td class="no">2.2</td><td>The Partner Installer checked the roof and filled in the assessment sheet, including any notes about the roof. Glomax Staff and the Admin reviewed it before approval. The approved package and price are based on it.</td></tr>
+    <tr><td class="no">2.3</td><td>Installation time depends on the package and the property. Hybrid systems and tall houses may take longer.</td></tr>
+  </table>
+
+  <table class="tc-head" style="margin-top: 8pt;"><tr><td>3. PRICE AND PAYMENT</td></tr></table>
+  <table class="tc">
+    <tr><td class="no">3.1</td><td>Prices on the Glomax website are estimates. The final price is the amount in this Disclosure Agreement, confirmed after the roof assessment.</td></tr>
+    <tr><td class="no">3.2</td><td>The Customer pays Glomax at the Glomax office by cash, GCash or bank transfer, following the payment terms in this Disclosure Agreement. The GLOMAX system does not take or record payments.</td></tr>
+    <tr><td class="no">3.3</td><td>Glomax gives the Customer an original official receipt. The Customer should keep every receipt as proof of payment and of the warranty.</td></tr>
+  </table>
+
+  <table class="tc-head" style="margin-top: 8pt;"><tr><td>4. WARRANTY</td></tr></table>
+  <table class="tc">
+    <tr><td class="no">4.1</td><td>Glomax gives a 1-year warranty on the whole solar system. It covers accidental damage.</td></tr>
+    <tr><td class="no">4.2</td><td>The warranty starts after the installation is finished.</td></tr>
+    <tr><td class="no">4.3</td><td>The official receipt and the text messages between the Customer and Glomax Staff are the proof of purchase and of the warranty.</td></tr>
+    <tr><td class="no">4.4</td><td>For a warranty concern, the Customer shall contact Glomax Staff first. If a service visit is needed, Glomax Staff arranges it with the Partner Installer and confirms the schedule with the Customer.</td></tr>
+    <tr><td class="no">4.5</td><td>Damage from natural calamities is not covered by the warranty. For this kind of damage, the Customer pays for the labor, materials and service fee.</td></tr>
+  </table>
+
+  <table class="tc-head" style="margin-top: 8pt;"><tr><td>5. OTHER TERMS</td></tr></table>
+  <table class="tc">
+    <tr><td class="no">5.1</td><td>Glomax uses the Customer's name, mobile number, email, address and the photos taken at the property only for this request. These are shared with the assigned Partner Installer. Glomax may send messages about the request by SMS and email, and may email price updates if the Customer turned on Email Updates. Glomax handles this information under the Data Privacy Act of 2012 (Republic Act No. 10173).</td></tr>
+    <tr><td class="no">5.2</td><td>Any complaint about the installation or the solar system shall be raised with Glomax Staff first, who shall arrange the needed work with the Partner Installer.</td></tr>
+    <tr><td class="no">5.3</td><td>When the Customer signs the Disclosure Agreement, the Customer confirms that they have read and received a copy of these Terms and Conditions.</td></tr>
+    <tr><td class="no">5.4</td><td>For any question or concern, contact Glomax Staff{% if contact_phone %} at {{ contact_phone }}{% endif %}{% if contact_email %} or {{ contact_email }}{% endif %}.</td></tr>
+  </table>
 
   <!-- ===================== Footer (every page) ===================== -->
   <div id="page-footer">
     <table>
       <tr>
-        <td style="text-align: left;">Glomax Solar Enterprises &middot; Final Sheet {{ ticket.ticket_number }}</td>
-        <td style="text-align: right;">Generated {% now "F j, Y" %} &middot; Page <pdf:pagenumber /> of <pdf:pagecount /></td>
+        <td style="text-align: left;">Glomax Solar Enterprises &middot; Disclosure Agreement {{ ticket.ticket_number }}</td>
+        <td style="text-align: right;">Page <pdf:pagenumber /> of <pdf:pagecount /></td>
       </tr>
     </table>
   </div>
