@@ -86,8 +86,8 @@ def _email_html(heading, paragraphs, rows, button_text, button_link, attachment_
         for p in paragraphs
     )
     rows_html = ''.join(
-        f'<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;width:38%;">{escape(label)}</td>'
-        f'<td style="padding:6px 0;color:#0d1f3c;font-size:13px;font-weight:bold;">{escape(value)}</td></tr>'
+        f'<tr><td style="padding:9px 14px 9px 0;border-bottom:1px solid #f1f3f6;color:#6b7280;font-size:13px;width:40%;vertical-align:top;">{escape(label)}</td>'
+        f'<td style="padding:9px 0;border-bottom:1px solid #f1f3f6;color:#0d1f3c;font-size:13px;font-weight:bold;vertical-align:top;line-height:1.45;">{escape(value)}</td></tr>'
         for label, value in rows
     )
     note_html = (
@@ -116,7 +116,7 @@ def _email_html(heading, paragraphs, rows, button_text, button_link, attachment_
           <td style="padding:32px;">
             <h2 style="margin:0 0 14px;color:#0d1f3c;font-size:20px;">{escape(heading)}</h2>
             {paragraph_html}
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border-top:1px solid #f1f3f6;border-bottom:1px solid #f1f3f6;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border-top:1px solid #f1f3f6;">
               {rows_html}
             </table>
             {note_html}
