@@ -5,6 +5,7 @@ import {
   Inbox,
   History,
   Star,
+  Tag,
   Settings,
   LogOut,
   ChevronDown,
@@ -36,6 +37,10 @@ const NAV_GROUPS = [
       { to: '/partner-installer/incoming-tickets', label: 'Incoming Tickets', icon: Inbox },
       { to: '/partner-installer/ticket-history', label: 'Ticket History', icon: History },
     ],
+  },
+  {
+    label: 'Reference',
+    items: [{ to: '/partner-installer/active-prices', label: 'Active Prices', icon: Tag }],
   },
   {
     label: 'Performance',

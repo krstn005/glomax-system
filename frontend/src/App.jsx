@@ -39,6 +39,7 @@ import PITicketHistoryPage from './portals/partner-installer/pages/PITicketHisto
 import PIMyRatingsPage from './portals/partner-installer/pages/PIMyRatingsPage';
 import PISettingsPage from './portals/partner-installer/pages/PISettingsPage';
 import PICalendarPage from './portals/partner-installer/pages/PICalendarPage';
+import PIActivePricesPage from './portals/partner-installer/pages/PIActivePricesPage';
 
 import AdminDashboardPage from './portals/admin/pages/AdminDashboardPage';
 import AdminRequestsPage from './portals/admin/pages/AdminRequestsPage';
@@ -121,6 +122,7 @@ function App() {
       <Route path="/partner-installer/my-ratings" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PIMyRatingsPage /></ProtectedRoute>} />
       <Route path="/partner-installer/settings" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PISettingsPage /></ProtectedRoute>} />
       <Route path="/partner-installer/calendar" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PICalendarPage /></ProtectedRoute>} />
+      <Route path="/partner-installer/active-prices" element={<ProtectedRoute allowedRoles={["PARTNER_INSTALLER"]}><PIActivePricesPage /></ProtectedRoute>} />
 
       {/* Protected - Admin only */}
       <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminDashboardPage /></ProtectedRoute>} />
