@@ -1,6 +1,17 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Send, RefreshCw } from "lucide-react";
+import {
+  Send,
+  RefreshCw,
+  Clock,
+  MessageCircle,
+  FileText,
+  UserPlus,
+  ClipboardCheck,
+  Home,
+  ShieldCheck,
+  Check,
+} from "lucide-react";
 import { getPublicInquiryThread, sendPublicInquiryReply } from "../../../api/inquiries";
 import logo from "../../../assets/images/logo.jpg";
 import "../styles/inquiry-reply.css";
@@ -108,6 +119,10 @@ function Shell({ children }) {
         <div className="inqreply-top-inner">
           <img src={logo} alt="" className="inqreply-logo" />
           <span className="inqreply-brand">Glomax Solar Enterprises</span>
+          <span className="inqreply-secure">
+            <ShieldCheck size={14} />
+            Private link
+          </span>
         </div>
       </header>
 
@@ -374,15 +389,52 @@ export default function InquiryReplyPage() {
 
   // ---------- The conversation ----------
 
-  const firstName = thread.full_name.trim().split(/\s+/)[0];
+  const rawFirstName = thread.full_name.trim().split(/\s+/)[0];
+  const firstName = rawFirstName.charAt(0).toUpperCase() + rawFirstName.slice(1);
   const initial = firstName.charAt(0).toUpperCase();
+  const talkItems = items.filter((item) => item.kind !== "quotation");
+  const lastIsStaff = talkItems[talkItems.length - 1]?.kind === "staff";
+
+  // The Register page fills in the name (and email, if we have it) by itself
+  const registerParams = new URLSearchParams();
+  registerParams.set("name", thread.full_name.trim());
+  if (thread.email) registerParams.set("email", thread.email);
+  const registerLink = `/register?${registerParams.toString()}`;
 
   return (
     <Shell>
       <section className="inqreply-hello">
+        <div className="inqreply-hello-glow" aria-hidden="true" />
+        <p className="inqreply-hello-eyebrow">Your conversation</p>
         <h1>Hi {firstName}, here is your conversation with Glomax Solar</h1>
-        <p className="inqreply-topic">About: {thread.subject_display}</p>
-        <p className="inqreply-status" role="status">{getStatusText(items)}</p>
+        <p className="inqreply-topic">
+          <FileText size={14} />
+          About: {thread.subject_display}
+        </p>
+
+        <p className={`inqreply-status ${lastIsStaff ? "replied" : ""}`} role="status">
+          <span className="inqreply-status-icon">
+            {lastIsStaff ? <MessageCircle size={20} /> : <Clock size={20} />}
+          </span>
+          <span>{getStatusText(items)}</span>
+        </p>
+
+        <ol className="inqreply-track" aria-label="Where you are">
+          <li className="done">
+            <span className="inqreply-track-dot"><Check size={14} strokeWidth={3} /></span>
+            <span className="inqreply-track-label">Inquiry received</span>
+          </li>
+          <li className={thread.quotation_sent ? "done" : "current"}>
+            <span className="inqreply-track-dot">
+              {thread.quotation_sent ? <Check size={14} strokeWidth={3} /> : "2"}
+            </span>
+            <span className="inqreply-track-label">Quotation sent</span>
+          </li>
+          <li className={thread.quotation_sent ? "current" : "todo"}>
+            <span className="inqreply-track-dot">3</span>
+            <span className="inqreply-track-label">Request a roof check</span>
+          </li>
+        </ol>
       </section>
 
       {thread.quotation_sent && (
@@ -415,6 +467,10 @@ export default function InquiryReplyPage() {
               <p>{thread.quotation_message_to_customer}</p>
             </div>
           )}
+
+          <p className="inqreply-quote-foot">
+            The final price is confirmed after our installer checks your roof.
+          </p>
         </section>
       )}
 
@@ -486,22 +542,28 @@ export default function InquiryReplyPage() {
 
       <section className="inqreply-next" aria-labelledby="inqreply-next-title">
         <h2 id="inqreply-next-title">Ready to go ahead?</h2>
+        <p className="inqreply-next-sub">It only takes three steps.</p>
+
         <ol className="inqreply-steps">
           <li>
-            <span className="inqreply-step-num">1</span>
-            <span>Create an account on our website.</span>
+            <span className="inqreply-step-icon"><UserPlus size={22} /></span>
+            <span className="inqreply-step-title">1. Create an account</span>
+            <span className="inqreply-step-text">Sign up on our website. It is free.</span>
           </li>
           <li>
-            <span className="inqreply-step-num">2</span>
-            <span>Send a request for a roof assessment.</span>
+            <span className="inqreply-step-icon"><ClipboardCheck size={22} /></span>
+            <span className="inqreply-step-title">2. Request a roof check</span>
+            <span className="inqreply-step-text">Send a request and choose a visit date.</span>
           </li>
           <li>
-            <span className="inqreply-step-num">3</span>
-            <span>Our installer visits your home to check the roof.</span>
+            <span className="inqreply-step-icon"><Home size={22} /></span>
+            <span className="inqreply-step-title">3. We visit your home</span>
+            <span className="inqreply-step-text">Our installer checks your roof.</span>
           </li>
         </ol>
+
         <div className="inqreply-next-actions">
-          <Link to="/register" className="inqreply-cta">Create an account</Link>
+          <Link to={registerLink} className="inqreply-cta gold">Create an account</Link>
           <Link to="/login" className="inqreply-login-link">I already have an account</Link>
         </div>
       </section>
