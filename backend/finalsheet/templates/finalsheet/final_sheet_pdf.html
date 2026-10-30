@@ -261,7 +261,7 @@
   }
 
   .tc td {
-    padding: 2.5pt 0;
+    padding: 1.4pt 0;
     font-size: 8pt;
     line-height: 1.4;
     color: #1e293b;
@@ -272,12 +272,6 @@
     color: #b5651d;
     font-weight: bold;
     padding-left: 3pt;
-  }
-
-  .tc-space {
-    height: 8pt;
-    font-size: 1pt;
-    line-height: 1pt;
   }
 
   .no-break {
@@ -484,26 +478,6 @@
     </table>
   </div>
 
-  <!-- Closing statement + signatures -->
-  <div class="no-break">
-    <table class="closing" style="margin-top: 10pt;">
-      <tr><td>I HAVE READ AND RECEIVED THIS DISCLOSURE AGREEMENT AND THE TERMS AND CONDITIONS.</td></tr>
-    </table>
-
-    <table class="signatures" style="margin-top: 22pt;">
-      <tr>
-        <td class="sign-line">{{ approved_by_name|default:"Glomax Solar Enterprises" }}</td>
-        <td class="gap">&nbsp;</td>
-        <td class="sign-line">{{ customer_name }}</td>
-      </tr>
-      <tr>
-        <td class="sign-sub">Approved by &middot; {{ final_sheet.approved_at|date:"F j, Y" }}</td>
-        <td class="gap">&nbsp;</td>
-        <td class="sign-sub">Signature of Customer over printed name &middot; Date</td>
-      </tr>
-    </table>
-  </div>
-
   <!-- ===================== PAGE 2: Terms and Conditions ===================== -->
   <pdf:nextpage />
 
@@ -523,9 +497,8 @@
   </table>
   <table style="margin-top: 6pt;" class="rule-navy"><tr><td>&nbsp;</td></tr></table>
   <table class="rule-gold" style="margin-top: 1.5pt;"><tr><td>&nbsp;</td></tr></table>
-  <div class="tc-space">&nbsp;</div>
 
-  <table class="tc-head" style="margin-top: 8pt;"><tr><td>1. ABOUT THIS DOCUMENT</td></tr></table>
+  <table class="tc-head" style="margin-top: 6pt;"><tr><td>1. ABOUT THIS DOCUMENT</td></tr></table>
   <table class="tc">
     <tr><td class="no">1.1</td><td>This Disclosure Agreement is made between Glomax Solar Enterprises ("Glomax") and the customer named in it (the "Customer") for the solar package under this ticket number.</td></tr>
     <tr><td class="no">1.2</td><td>This document is a reference and agreement between Glomax and the Customer. The printed warranty and contract are handled at the installation, outside the system.</td></tr>
@@ -534,21 +507,21 @@
     <tr><td class="no">1.5</td><td>This agreement covers solar packages only. Materials-only purchases are handled by Glomax Staff outside the system.</td></tr>
   </table>
 
-  <table class="tc-head" style="margin-top: 8pt;"><tr><td>2. SCOPE OF WORK</td></tr></table>
+  <table class="tc-head" style="margin-top: 6pt;"><tr><td>2. SCOPE OF WORK</td></tr></table>
   <table class="tc">
     <tr><td class="no">2.1</td><td>Glomax is responsible for installing the solar package shown in the Disclosure Agreement at the property address in the request. The Partner Installer assigned to the Customer does the installation.</td></tr>
     <tr><td class="no">2.2</td><td>The Partner Installer checked the roof and filled in the assessment sheet, including any notes about the roof. Glomax Staff and the Admin reviewed it before approval. The approved package and price are based on it.</td></tr>
     <tr><td class="no">2.3</td><td>Installation time depends on the package and the property. Hybrid systems and tall houses may take longer.</td></tr>
   </table>
 
-  <table class="tc-head" style="margin-top: 8pt;"><tr><td>3. PRICE AND PAYMENT</td></tr></table>
+  <table class="tc-head" style="margin-top: 6pt;"><tr><td>3. PRICE AND PAYMENT</td></tr></table>
   <table class="tc">
     <tr><td class="no">3.1</td><td>Prices on the Glomax website are estimates. The final price is the amount in this Disclosure Agreement, confirmed after the roof assessment.</td></tr>
     <tr><td class="no">3.2</td><td>The Customer pays Glomax at the Glomax office by cash, GCash or bank transfer, following the payment terms in this Disclosure Agreement. The GLOMAX system does not take or record payments.</td></tr>
     <tr><td class="no">3.3</td><td>Glomax gives the Customer an original official receipt. The Customer should keep every receipt as proof of payment and of the warranty.</td></tr>
   </table>
 
-  <table class="tc-head" style="margin-top: 8pt;"><tr><td>4. WARRANTY</td></tr></table>
+  <table class="tc-head" style="margin-top: 6pt;"><tr><td>4. WARRANTY</td></tr></table>
   <table class="tc">
     <tr><td class="no">4.1</td><td>Glomax gives a 1-year warranty on the whole solar system. It covers accidental damage.</td></tr>
     <tr><td class="no">4.2</td><td>The warranty starts after the installation is finished.</td></tr>
@@ -557,13 +530,33 @@
     <tr><td class="no">4.5</td><td>Damage from natural calamities is not covered by the warranty. For this kind of damage, the Customer pays for the labor, materials and service fee.</td></tr>
   </table>
 
-  <table class="tc-head" style="margin-top: 8pt;"><tr><td>5. OTHER TERMS</td></tr></table>
+  <table class="tc-head" style="margin-top: 6pt;"><tr><td>5. OTHER TERMS</td></tr></table>
   <table class="tc">
     <tr><td class="no">5.1</td><td>Glomax uses the Customer's name, mobile number, email, address and the photos taken at the property only for this request. These are shared with the assigned Partner Installer. Glomax may send messages about the request by SMS and email, and may email price updates if the Customer turned on Email Updates. Glomax handles this information under the Data Privacy Act of 2012 (Republic Act No. 10173).</td></tr>
     <tr><td class="no">5.2</td><td>Any complaint about the installation or the solar system shall be raised with Glomax Staff first, who shall arrange the needed work with the Partner Installer.</td></tr>
     <tr><td class="no">5.3</td><td>When the Customer signs the Disclosure Agreement, the Customer confirms that they have read and received a copy of these Terms and Conditions.</td></tr>
     <tr><td class="no">5.4</td><td>For any question or concern, contact Glomax Staff{% if contact_phone %} at {{ contact_phone }}{% endif %}{% if contact_email %} or {{ contact_email }}{% endif %}.</td></tr>
   </table>
+
+  <!-- Closing statement + signatures: the very end of the document -->
+  <div class="no-break">
+    <table class="closing" style="margin-top: 10pt;">
+      <tr><td>I HAVE READ AND RECEIVED THIS DISCLOSURE AGREEMENT AND THE TERMS AND CONDITIONS.</td></tr>
+    </table>
+
+    <table class="signatures" style="margin-top: 22pt;">
+      <tr>
+        <td class="sign-line">{{ approved_by_name|default:"Glomax Solar Enterprises" }}</td>
+        <td class="gap">&nbsp;</td>
+        <td class="sign-line">{{ customer_name }}</td>
+      </tr>
+      <tr>
+        <td class="sign-sub">Approved by &middot; {{ final_sheet.approved_at|date:"F j, Y" }}</td>
+        <td class="gap">&nbsp;</td>
+        <td class="sign-sub">Signature of Customer over printed name &middot; Date</td>
+      </tr>
+    </table>
+  </div>
 
   <!-- ===================== Footer (every page) ===================== -->
   <div id="page-footer">
