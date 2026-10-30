@@ -359,6 +359,8 @@ class TicketRescheduleDecisionView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsStaff]
 
     def patch(self, request, pk, reschedule_id):
+        from .utils import send_reschedule_decision_email
+
         try:
             ticket = Ticket.objects.get(pk=pk)
         except Ticket.DoesNotExist:
@@ -396,12 +398,29 @@ class TicketRescheduleDecisionView(APIView):
 
         reschedule.save()
 
+        # Email the Customer too. The bell message says so only if it was sent.
+        approved = decision == 'APPROVE'
+        if send_reschedule_decision_email(ticket, reschedule, approved):
+            message += " We also sent the details to your email."
+
         Notification.objects.create(
             recipient=ticket.customer,
             kind=Notification.Kind.RESCHEDULE_DECISION,
             message=message,
             link="/request-status",
         )
+
+        # The Partner Installer must know when their visit date moves
+        if approved and ticket.partner_installer_id:
+            Notification.objects.create(
+                recipient=ticket.partner_installer,
+                kind=Notification.Kind.RESCHEDULE_DECISION,
+                message=(
+                    f"The visit date for {ticket.ticket_number} was changed to "
+                    f"{reschedule.requested_date.strftime('%B %d, %Y')}."
+                ),
+                link=f"/partner-installer/incoming-tickets/{ticket.id}",
+            )
 
         return Response(TicketSerializer(ticket).data)
 

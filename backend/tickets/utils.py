@@ -323,3 +323,47 @@ def send_completion_email(ticket):
     return _send_customer_email(
         ticket, f'Your request is completed: {ticket.ticket_number}', plain, html, files
     )
+
+
+def send_reschedule_decision_email(ticket, reschedule, approved):
+    """
+    Customer asked for a new visit date and Staff answered. Tells the
+    Customer if the new date was approved or declined. Returns True if
+    the email was sent, False if not.
+    """
+    name = _customer_name(ticket)
+    link = _portal_link('/request-status')
+
+    rows = [('Ticket #', ticket.ticket_number), ('Property Address', ticket.property_address)]
+    if approved:
+        subject = f'Your new visit date is approved: {ticket.ticket_number}'
+        heading = 'Your new visit date is approved'
+        paragraphs = [
+            f'Hi {name},',
+            'Good news! Staff approved your request to change the visit date.',
+        ]
+        rows.append(('New Visit Date', reschedule.requested_date.strftime('%B %d, %Y')))
+    else:
+        subject = f'Your reschedule request was declined: {ticket.ticket_number}'
+        heading = 'Your reschedule request was declined'
+        paragraphs = [
+            f'Hi {name},',
+            'Staff could not approve your request to change the visit date, so the visit date stays the same.',
+        ]
+        if ticket.visit_date:
+            rows.append(('Visit Date', ticket.visit_date.strftime('%B %d, %Y')))
+        rows.append(('Date You Asked For', reschedule.requested_date.strftime('%B %d, %Y')))
+
+    staff_note = (reschedule.staff_response_note or '').strip()
+    if staff_note:
+        rows.append(('Note from Staff', staff_note))
+
+    plain = (
+        '\n\n'.join(paragraphs) + '\n\n'
+        + ''.join(f"{label}: {value}\n" for label, value in rows)
+        + f"\nView your request: {link}\n\n"
+        "Best regards,\nGlomax Solar Enterprises"
+    )
+    html = _email_html(heading, paragraphs, rows, 'View My Request', link)
+
+    return _send_customer_email(ticket, subject, plain, html)
