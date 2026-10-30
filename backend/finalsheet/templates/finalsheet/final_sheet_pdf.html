@@ -95,21 +95,71 @@
 
   /* ---------- Columns ---------- */
   .two-col .left {
-    width: 50%;
-    padding-right: 8pt;
+    width: 44%;
+    padding-right: 10pt;
   }
 
   .two-col .right {
-    width: 50%;
-    padding-left: 8pt;
+    width: 56%;
+    padding-left: 10pt;
   }
 
   .amber {
     color: #b5651d;
-    font-size: 8pt;
+    font-size: 7.5pt;
     font-weight: bold;
-    padding-top: 8pt;
-    padding-bottom: 2pt;
+    letter-spacing: 0.5pt;
+    padding-top: 9pt;
+    padding-bottom: 3pt;
+  }
+
+  /* ---------- Customer / Provider cards ---------- */
+  .party td {
+    background-color: #f5f7fb;
+    border-left: 2.5pt solid #b5651d;
+    padding: 3pt 10pt 7pt 10pt;
+  }
+
+  .party .navy-line {
+    border-left: 2.5pt solid #0d1f3c;
+  }
+
+  .party-gap {
+    width: 12pt;
+  }
+
+  /* ---------- Final price band ---------- */
+  .price-band td {
+    background-color: #0d1f3c;
+    border-bottom: 2.5pt solid #f2b705;
+    padding: 7pt 14pt;
+    vertical-align: middle;
+  }
+
+  .price-label {
+    color: #f2b705;
+    font-size: 7pt;
+    font-weight: bold;
+    letter-spacing: 1pt;
+  }
+
+  .price-value {
+    color: #ffffff;
+    font-size: 18pt;
+    font-weight: bold;
+    padding-top: 1pt;
+  }
+
+  .price-side {
+    text-align: right;
+    color: #cbd5e1;
+    font-size: 8pt;
+    line-height: 1.5;
+  }
+
+  .price-side strong {
+    color: #ffffff;
+    font-size: 9pt;
   }
 
   .big-name {
@@ -134,7 +184,7 @@
 
   /* ---------- Label / value rows ---------- */
   .rows td {
-    padding: 3.5pt 8pt;
+    padding: 3.8pt 8pt;
     border-bottom: 0.5pt solid #e5e7eb;
     font-size: 8pt;
   }
@@ -177,22 +227,44 @@
   .para {
     color: #334155;
     font-size: 8pt;
-    line-height: 1.45;
+    line-height: 1.55;
+  }
+
+  /* ---------- Package details grid ---------- */
+  .grid td {
+    padding: 4pt 8pt;
+    border-bottom: 0.5pt solid #e5e7eb;
+    font-size: 8pt;
+  }
+
+  .grid .k {
+    width: 21%;
+    color: #64748b;
+  }
+
+  .grid .v {
+    width: 29%;
+    color: #0f172a;
+    font-weight: bold;
   }
 
   /* ---------- Notes (gray box, amber line) ---------- */
   .note td {
     background-color: #f1f3f7;
     border-left: 2.5pt solid #b5651d;
-    padding: 5pt 8pt;
+    padding: 5pt 10pt;
     font-size: 8pt;
     line-height: 1.45;
     color: #334155;
   }
 
+  .note .item {
+    padding-bottom: 3pt;
+  }
+
   /* ---------- Steps ---------- */
   .steps td {
-    padding: 4pt 8pt;
+    padding: 4.5pt 8pt;
     border-bottom: 0.5pt solid #e5e7eb;
     font-size: 8pt;
     vertical-align: middle;
@@ -204,7 +276,7 @@
     color: #ffffff;
     font-weight: bold;
     text-align: center;
-    padding: 4pt 0;
+    padding: 4.5pt 0;
   }
 
   .steps .who {
@@ -261,7 +333,7 @@
   }
 
   .tc td {
-    padding: 1.4pt 0;
+    padding: 1.5pt 0;
     font-size: 8pt;
     line-height: 1.4;
     color: #1e293b;
@@ -313,33 +385,43 @@
   <table class="rule-gold" style="margin-top: 1.5pt;"><tr><td>&nbsp;</td></tr></table>
 
   <!-- Customer + Provider -->
-  <table class="two-col">
+  <table class="party" style="margin-top: 8pt;">
     <tr>
-      <td class="left">
-        <div class="amber">Customer:</div>
+      <td style="width: 49%;">
+        <div class="amber" style="padding-top: 5pt;">CUSTOMER</div>
         <div class="big-name">{{ customer_name }}</div>
-        <div class="small-text">{{ ticket.contact_number|default:"—" }}</div>
+        <div class="small-text" style="padding-top: 2pt;">{{ ticket.contact_number|default:"—" }}</div>
         <div class="small-text">{{ ticket.property_address|default:"—" }}</div>
       </td>
-      <td class="right">
-        <div class="amber">Provider:</div>
+      <td class="party-gap" style="background-color: #ffffff; border-left: none; padding: 0;">&nbsp;</td>
+      <td class="navy-line" style="width: 49%;">
+        <div class="amber" style="padding-top: 5pt;">PROVIDER</div>
         <div class="big-name">Glomax Solar Enterprises</div>
-        <div class="small-text">Manila, Philippines</div>
+        <div class="small-text" style="padding-top: 2pt;">Manila, Philippines</div>
         <div class="small-text">Approved on {{ final_sheet.approved_at|date:"F j, Y" }}</div>
       </td>
     </tr>
   </table>
 
+  <!-- Final price band -->
+  <table class="price-band" style="margin-top: 9pt;">
+    <tr>
+      <td>
+        <div class="price-label">FINAL PRICE</div>
+        <div class="price-value">PHP {{ final_sheet.final_cost|floatformat:2|intcomma }}</div>
+      </td>
+      <td class="price-side">
+        Pay at the<br /><strong>Glomax office</strong>
+      </td>
+    </tr>
+  </table>
+
   <!-- Summary + Warranty / Notes -->
-  <table class="two-col" style="margin-top: 8pt;">
+  <table class="two-col" style="margin-top: 9pt;">
     <tr>
       <td class="left">
         <table class="bar-head"><tr><td>Request Summary</td></tr></table>
         <table class="rows">
-          <tr class="hl">
-            <td class="k">Final Price</td>
-            <td class="v">PHP {{ final_sheet.final_cost|floatformat:2|intcomma }}</td>
-          </tr>
           <tr>
             <td class="k">How You Pay</td>
             <td class="v">At the Glomax office</td>
@@ -354,7 +436,7 @@
           </tr>
         </table>
 
-        <div class="amber">Payment Terms:</div>
+        <div class="amber">PAYMENT TERMS</div>
         {% if payment_terms_lines %}
           <table class="terms">
             {% for line in payment_terms_lines %}
@@ -367,7 +449,7 @@
           <div class="small-text muted">No payment terms recorded.</div>
         {% endif %}
 
-        <div class="amber">Installation Date:</div>
+        <div class="amber">INSTALLATION DATE</div>
         <div class="para">Glomax Staff will text you to confirm the date. Timing depends on your package and your property. Hybrid systems and tall houses may take longer.</div>
       </td>
 
@@ -396,62 +478,48 @@
           </tr>
         </table>
 
-        <table class="bar-head" style="margin-top: 8pt;"><tr><td>Important Notes</td></tr></table>
+        <table class="bar-head" style="margin-top: 9pt;"><tr><td>Important Notes</td></tr></table>
 
         <table class="note"><tr><td>
-          <strong>Estimates:</strong> Prices on our website are only estimates. Your final price is the amount shown in this agreement.<br />
-          <strong>Warranty concerns:</strong> Contact Glomax Staff first. If a service visit is needed, Staff arranges it with the Partner Installer and confirms the schedule with you.<br />
-          <strong>Contact Glomax Staff:</strong> {% if contact_phone %}{{ contact_phone }}{% endif %}{% if contact_email %} &middot; {{ contact_email }}{% endif %}{% if not contact_phone and not contact_email %}through the number you used for this request.{% endif %}
+          <div class="item"><strong>Estimates:</strong> Prices on our website are only estimates. Your final price is the amount shown in this agreement.</div>
+          <div class="item"><strong>Warranty concerns:</strong> Contact Glomax Staff first. If a service visit is needed, Staff arranges it with the Partner Installer and confirms the schedule with you.</div>
+          <div><strong>Contact Glomax Staff:</strong> {% if contact_phone %}{{ contact_phone }}{% endif %}{% if contact_email %} &middot; {{ contact_email }}{% endif %}{% if not contact_phone and not contact_email %}through the number you used for this request.{% endif %}</div>
         </td></tr></table>
       </td>
     </tr>
   </table>
 
   <!-- Package details -->
-  <div style="height: 6pt;">&nbsp;</div>
+  <div style="height: 8pt;">&nbsp;</div>
   <table class="bar-head"><tr><td>Package Details</td></tr></table>
-  <table class="two-col">
+  <table class="grid">
     <tr>
-      <td class="left" style="padding-right: 8pt;">
-        <table class="rows">
-          <tr>
-            <td class="k">Solar Package</td>
-            <td class="v">{{ ticket.solar_package|default:"—" }}</td>
-          </tr>
-          <tr>
-            <td class="k">System Type</td>
-            <td class="v">{% if assessment %}{{ assessment.get_recommended_system_type_display }}{% else %}—{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="k">Roof Type</td>
-            <td class="v">{% if assessment %}{{ assessment.get_roof_type_display }}{% else %}—{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="k">Roof Area</td>
-            <td class="v">{% if assessment %}{{ assessment.estimated_roof_area_sqm }} sqm{% else %}—{% endif %}</td>
-          </tr>
-        </table>
-      </td>
-      <td class="right" style="padding-left: 8pt;">
-        <table class="rows">
-          <tr>
-            <td class="k">Rated Capacity</td>
-            <td class="v">{% if assessment %}{{ assessment.rated_capacity_kw }} kW{% else %}—{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="k">Solar Panels</td>
-            <td class="v">{% if assessment %}{{ assessment.number_of_solar_panels }} panels{% else %}—{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="k">Inverter Size</td>
-            <td class="v">{% if assessment %}{{ assessment.inverter_size_kw }} kW{% else %}—{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="k">Installation Address</td>
-            <td class="v">{{ ticket.property_address|default:"—" }}</td>
-          </tr>
-        </table>
-      </td>
+      <td class="k">Solar Package</td>
+      <td class="v">{{ ticket.solar_package|default:"—" }}</td>
+      <td class="k">System Type</td>
+      <td class="v">{% if assessment %}{{ assessment.get_recommended_system_type_display }}{% else %}—{% endif %}</td>
+    </tr>
+    <tr>
+      <td class="k">Rated Capacity</td>
+      <td class="v">{% if assessment %}{{ assessment.rated_capacity_kw }} kW{% else %}—{% endif %}</td>
+      <td class="k">Solar Panels</td>
+      <td class="v">{% if assessment %}{{ assessment.number_of_solar_panels }} panels{% else %}—{% endif %}</td>
+    </tr>
+    <tr>
+      <td class="k">Inverter Size</td>
+      <td class="v">{% if assessment %}{{ assessment.inverter_size_kw }} kW{% else %}—{% endif %}</td>
+      <td class="k">Roof Type</td>
+      <td class="v">{% if assessment %}{{ assessment.get_roof_type_display }}{% else %}—{% endif %}</td>
+    </tr>
+    <tr>
+      <td class="k">Roof Area</td>
+      <td class="v">{% if assessment %}{{ assessment.estimated_roof_area_sqm }} sqm{% else %}—{% endif %}</td>
+      <td class="k">Site Visit</td>
+      <td class="v">{% if ticket.visit_date %}{{ ticket.visit_date|date:"F j, Y" }}{% else %}—{% endif %}</td>
+    </tr>
+    <tr>
+      <td class="k">Installation Address</td>
+      <td class="v" colspan="3">{{ ticket.property_address|default:"—" }}</td>
     </tr>
   </table>
 
