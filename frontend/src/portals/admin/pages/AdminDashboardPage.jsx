@@ -22,7 +22,6 @@ import {
   Sunrise,
   Moon,
   LayoutDashboard,
-  Activity,
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { getAdminTickets } from '../../../api/adminTickets';
@@ -41,17 +40,6 @@ const STAT_CARDS = [
   { key: 'OPEN', label: 'Open Requests', note: 'Still in progress', statuses: OPEN_STATUSES, icon: Inbox, tone: 'blue' },
   { key: 'APPROVED', label: 'Approved', note: 'Waiting to be completed', statuses: ['APPROVED'], icon: CheckCircle2, tone: 'green' },
   { key: 'COMPLETED', label: 'Completed', note: 'All time', statuses: ['COMPLETED'], icon: Award, tone: 'navy' },
-];
-
-// The stages of a request, shown as one bar. Each stage also filters the table.
-const PIPELINE = [
-  { key: 'S_NEW', label: 'New', statuses: ['REQUEST_SUBMITTED'], tone: 'violet' },
-  { key: 'S_ASSIGNED', label: 'Installer assigned', statuses: ['PI_ASSIGNED'], tone: 'blue' },
-  { key: 'S_ASSESSED', label: 'Assessment in', statuses: ['ASSESSMENT_SUBMITTED', 'STAFF_REVIEW'], tone: 'sky' },
-  { key: 'S_ADMIN', label: 'Admin review', statuses: ['ADMIN_REVIEW'], tone: 'gold' },
-  { key: 'S_APPROVED', label: 'Approved', statuses: ['APPROVED'], tone: 'green' },
-  { key: 'S_DONE', label: 'Completed', statuses: ['COMPLETED'], tone: 'ink' },
-  { key: 'S_CLOSED', label: 'Closed', statuses: ['WITHDRAWN', 'NC_CANNOT_PROCEED', 'NC_CAN_REAPPLY'], tone: 'gray' },
 ];
 
 // Badge look for each ticket status
@@ -110,7 +98,6 @@ function DashboardSkeleton() {
           <div key={c.key} className="admd-skel admd-skel-stat" />
         ))}
       </div>
-      <div className="admd-skel admd-skel-pipeline" />
       <div className="admd-skel admd-skel-list" />
     </div>
   );
@@ -167,7 +154,7 @@ export default function AdminDashboardPage() {
     setReloadKey((k) => k + 1);
   }
 
-  // Click a card or a stage to filter the table. Click it again to show everything.
+  // Click a card to filter the table. Click it again to show everything.
   function toggleFilter(key) {
     setActiveFilter((current) => (current === key ? 'ALL' : key));
   }
@@ -191,13 +178,7 @@ export default function AdminDashboardPage() {
     counts[c.key] = tickets.filter((t) => c.statuses.includes(t.status)).length;
   });
 
-  const stageCounts = {};
-  PIPELINE.forEach((s) => {
-    stageCounts[s.key] = tickets.filter((t) => s.statuses.includes(t.status)).length;
-  });
-
-  const currentCard = STAT_CARDS.find((c) => c.key === activeFilter) || PIPELINE.find((s) => s.key === activeFilter);
-  const stageFilterOn = PIPELINE.some((s) => s.key === activeFilter);
+  const currentCard = STAT_CARDS.find((c) => c.key === activeFilter);
   const filtered = currentCard ? tickets.filter((t) => currentCard.statuses.includes(t.status)) : tickets;
   const shown = [...filtered]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -315,50 +296,6 @@ export default function AdminDashboardPage() {
               })}
             </div>
 
-            {/* ---------- Request pipeline ---------- */}
-            <section className="admd-card admd-pipeline-card">
-              <div className="admd-card-head">
-                <div className="admd-card-head-text">
-                  <h2>
-                    <Activity size={18} />
-                    Request Pipeline
-                  </h2>
-                  <p>Where all {total} request{total === 1 ? '' : 's'} are right now. Click a stage to filter the table.</p>
-                </div>
-              </div>
-
-              <div className="admd-pipeline-body">
-                <div className={`admd-pipe-bar ${stageFilterOn ? 'has-filter' : ''} ${total === 0 ? 'empty' : ''}`}>
-                  {PIPELINE.filter((s) => stageCounts[s.key] > 0).map((s) => (
-                    <button
-                      type="button"
-                      key={s.key}
-                      className={`admd-pipe-seg tone-${s.tone} ${activeFilter === s.key ? 'active' : ''}`}
-                      style={{ flexGrow: stageCounts[s.key] }}
-                      onClick={() => toggleFilter(s.key)}
-                      title={`${s.label}: ${stageCounts[s.key]}`}
-                      aria-label={`${s.label}: ${stageCounts[s.key]}`}
-                    />
-                  ))}
-                </div>
-
-                <div className="admd-pipe-legend">
-                  {PIPELINE.map((s) => (
-                    <button
-                      type="button"
-                      key={s.key}
-                      className={`admd-pipe-item tone-${s.tone} ${activeFilter === s.key ? 'active' : ''}`}
-                      onClick={() => toggleFilter(s.key)}
-                    >
-                      <span className="admd-pipe-dot" />
-                      <span className="admd-pipe-label">{s.label}</span>
-                      <span className="admd-pipe-count">{stageCounts[s.key]}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </section>
-
             {/* ---------- Requests table ---------- */}
             <section className="admd-card admd-list-card" ref={listRef}>
               <div className="admd-card-head">
@@ -392,7 +329,7 @@ export default function AdminDashboardPage() {
                   </p>
                   <p className="admd-empty-hint">
                     {currentCard
-                      ? 'Pick another card or stage above, or show all requests.'
+                      ? 'Pick another card above, or show all requests.'
                       : 'New customer requests will show up here.'}
                   </p>
                   {currentCard && (

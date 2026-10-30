@@ -22,11 +22,8 @@
 
 /* Shared colour tones */
 .admd-page .tone-navy { --tone-bg: #eef1f6; --tone-fg: #0d1f3c; --tone-solid: #0d1f3c; }
-.admd-page .tone-ink { --tone-bg: #e2e8f0; --tone-fg: #0d1f3c; --tone-solid: #0d1f3c; }
 .admd-page .tone-gold { --tone-bg: #fef9c3; --tone-fg: #854d0e; --tone-solid: #eab308; }
 .admd-page .tone-blue { --tone-bg: #dbeafe; --tone-fg: #1e40af; --tone-solid: #3b82f6; }
-.admd-page .tone-sky { --tone-bg: #e0f2fe; --tone-fg: #0369a1; --tone-solid: #38bdf8; }
-.admd-page .tone-violet { --tone-bg: #ede9fe; --tone-fg: #5b21b6; --tone-solid: #8b5cf6; }
 .admd-page .tone-green { --tone-bg: #dcfce7; --tone-fg: #166534; --tone-solid: #16a34a; }
 .admd-page .tone-red { --tone-bg: #fee2e2; --tone-fg: #991b1b; --tone-solid: #dc2626; }
 .admd-page .tone-gray { --tone-bg: #f1f5f9; --tone-fg: #64748b; --tone-solid: #94a3b8; }
@@ -413,115 +410,6 @@
 .admd-clear-filter:hover {
   border-color: #facc15;
   background: #fef3c7;
-}
-
-/* ---------- Request pipeline ---------- */
-
-.admd-pipeline-body {
-  padding: 20px 22px 22px;
-}
-
-.admd-pipe-bar {
-  display: flex;
-  gap: 3px;
-  height: 18px;
-  padding: 3px;
-  border-radius: 999px;
-  background: #f1f5f9;
-}
-
-.admd-pipe-bar.empty {
-  background: repeating-linear-gradient(135deg, #f1f5f9, #f1f5f9 8px, #e8edf3 8px, #e8edf3 16px);
-}
-
-.admd-pipe-seg {
-  flex-basis: 0;
-  min-width: 14px;
-  height: 100%;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: var(--tone-solid);
-  cursor: pointer;
-  transition: opacity 0.18s ease, transform 0.18s ease, filter 0.18s ease;
-}
-
-.admd-pipe-seg:hover {
-  filter: brightness(1.08);
-  transform: scaleY(1.25);
-}
-
-.admd-pipe-seg:focus-visible {
-  outline: 3px solid rgba(250, 204, 21, 0.7);
-  outline-offset: 1px;
-}
-
-/* When one stage is picked, the others fade a little */
-.admd-pipe-bar.has-filter .admd-pipe-seg:not(.active) {
-  opacity: 0.3;
-}
-
-.admd-pipe-legend {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
-  margin-top: 18px;
-}
-
-.admd-pipe-item {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-  padding: 9px 12px;
-  border: 1.5px solid #eef2f7;
-  border-radius: 12px;
-  background: #ffffff;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-}
-
-.admd-pipe-item:hover {
-  border-color: var(--tone-solid);
-  background: var(--tone-bg);
-  transform: translateY(-1px);
-}
-
-.admd-pipe-item:focus-visible {
-  outline: 3px solid rgba(250, 204, 21, 0.6);
-  outline-offset: 2px;
-}
-
-.admd-pipe-item.active {
-  border-color: var(--tone-solid);
-  background: var(--tone-bg);
-}
-
-.admd-pipe-dot {
-  width: 10px;
-  height: 10px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--tone-solid);
-  box-shadow: 0 0 0 3px var(--tone-bg);
-}
-
-.admd-pipe-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #334155;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.admd-pipe-count {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--tone-fg);
 }
 
 /* ---------- List ---------- */
@@ -993,11 +881,6 @@
   border-radius: 18px;
 }
 
-.admd-skel-pipeline {
-  height: 150px;
-  border-radius: 20px;
-}
-
 .admd-skel-list {
   height: 480px;
   border-radius: 20px;
@@ -1033,14 +916,6 @@
   .admd-stat {
     flex: 0 0 190px;
     scroll-snap-align: start;
-  }
-
-  .admd-pipeline-body {
-    padding: 16px;
-  }
-
-  .admd-pipe-legend {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
