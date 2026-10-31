@@ -63,7 +63,7 @@ function badgeTone(status) {
 
 // Shown to customers who haven't submitted anything yet
 const HOW_IT_WORKS = [
-  { icon: FileText, title: 'Submit a request', text: 'Tell us your address, preferred visit date, and package.' },
+  { icon: FileText, title: 'Submit a request', text: 'Tell us your address and the package you want.' },
   { icon: HardHat, title: 'Site assessment', text: 'A Partner Installer visits and checks your roof.' },
   { icon: ClipboardCheck, title: 'Review & approval', text: 'Our team reviews the results and confirms your final price.' },
   { icon: Sun, title: 'Request completed', text: 'Your request is marked as completed and you can leave feedback.' },

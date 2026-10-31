@@ -28,7 +28,6 @@ import { createTicket, getMyTickets, reapplyTicket } from '../../../api/tickets'
 import { sanitizePhoneNumber } from '../../../utils/phone';
 import { formatCurrency } from '../../../utils/currency';
 import { getServerErrorMessage } from '../../../utils/profileHelpers';
-import VisitCalendar, { toDateKey } from '../../../components/VisitCalendar';
 import CustomerLayout from '../components/CustomerLayout';
 import '../styles/new-request.css';
 
@@ -94,18 +93,6 @@ const STATUS_TONE = {
 
 // Philippine mobile number: 11 digits starting with 09
 const PH_MOBILE = /^09\d{9}$/;
-
-function tomorrowKey() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return toDateKey(d);
-}
-
-function formatKey(key) {
-  if (!key) return '';
-  const [y, m, d] = key.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-}
 
 function formatDate(value) {
   if (!value) return '—';
@@ -255,7 +242,6 @@ export default function NewRequestPage() {
   const [activeTicket, setActiveTicket] = useState(null);
   // The old ticket being used again (Withdrawn or Not Compatible - Can Reapply)
   const [reapplyFrom, setReapplyFrom] = useState(null);
-  const [dateCleared, setDateCleared] = useState(false);
   const [result, setResult] = useState({ reapplied: false, attempt: 1 });
 
   const [step, setStep] = useState(1);
@@ -272,7 +258,6 @@ export default function NewRequestPage() {
     fullName: '',
     contactNumber: '',
     address: '',
-    preferredDate: '',
     packageId: '',
   });
 
@@ -305,18 +290,12 @@ export default function NewRequestPage() {
       const source = canReapply(fromLink) ? fromLink : canReapply(newestFirst[0]) ? newestFirst[0] : null;
       if (!source) return;
 
-      // An old preferred date that has already passed can't be used again
-      const oldDate = (source.preferred_date || '').slice(0, 10);
-      const dateStillOk = oldDate && oldDate >= tomorrowKey();
-      setDateCleared(Boolean(oldDate) && !dateStillOk);
-
       setReapplyFrom(source);
       setForm((prev) => ({
         ...prev,
         fullName: source.full_name || prev.fullName,
         contactNumber: source.contact_number || prev.contactNumber,
         address: source.property_address || prev.address,
-        preferredDate: dateStillOk ? oldDate : '',
         packageId: findPackageId(source.solar_package) || prev.packageId,
       }));
     }
@@ -379,7 +358,6 @@ export default function NewRequestPage() {
       errors.contactNumber = 'Please enter an 11-digit mobile number starting with 09.';
     }
     if (!form.address.trim()) errors.address = 'Please enter your address.';
-    if (!form.preferredDate) errors.preferredDate = 'Please pick a preferred date.';
 
     setFieldErrors(errors);
     if (Object.keys(errors).length === 0) setStep(2);
@@ -398,7 +376,6 @@ export default function NewRequestPage() {
         full_name: form.fullName.trim(),
         property_address: form.address.trim(),
         contact_number: form.contactNumber.replace(/\D/g, ''),
-        preferred_date: form.preferredDate,
         solar_package: selectedPackage.label,
         system_type: selectedPackage.systemType,
       };
@@ -484,14 +461,13 @@ export default function NewRequestPage() {
                   <p>
                     We filled in your details from your last try. Change anything you need. You'll keep the same
                     reference number, and your last try is saved in its history.
-                    {dateCleared && ' Your old preferred date has passed, so please pick a new one.'}
                   </p>
                 </div>
               </div>
             )}
 
             <form onSubmit={goToStep2} noValidate>
-              <div className="nr-info-layout">
+              <div>
                 <div className="nr-info-fields">
                   <div className="nr-field">
                     <label htmlFor="nr-name">Full Name *</label>
@@ -556,22 +532,11 @@ export default function NewRequestPage() {
                         {prefilled && !reapplyFrom && (
                           <li>We filled in your phone and address from your profile. You can change them here.</li>
                         )}
-                        <li>A Partner Installer will visit on or close to your preferred date.</li>
+                        <li>Our team will set your visit date and let you know.</li>
                         <li>You'll get a notification once your visit is confirmed.</li>
                       </ul>
                     </div>
                   </div>
-                </div>
-
-                <div className="nr-info-date">
-                  <p className="nr-field-title">Preferred Visit Date *</p>
-                  <p className="nr-field-hint nr-date-hint">Pick any day starting tomorrow.</p>
-                  <VisitCalendar
-                    value={form.preferredDate}
-                    onChange={(key) => updateField('preferredDate', key)}
-                    minDate={tomorrowKey()}
-                  />
-                  {fieldErrors.preferredDate && <p className="nr-field-error">{fieldErrors.preferredDate}</p>}
                 </div>
               </div>
 
@@ -671,7 +636,6 @@ export default function NewRequestPage() {
               <SummaryField icon={User} label="Full Name" value={form.fullName} />
               <SummaryField icon={Phone} label="Phone Number" value={form.contactNumber} />
               <SummaryField icon={MapPin} label="Property Address" value={form.address} />
-              <SummaryField icon={CalendarDays} label="Preferred Visit Date" value={formatKey(form.preferredDate)} />
               <SummaryField icon={Package} label="Preferred Package" value={selectedPackage.label} />
               <SummaryField icon={Zap} label="System Type" value={selectedPackage.tag} />
             </div>

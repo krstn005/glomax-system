@@ -47,7 +47,9 @@ class Ticket(models.Model):
     full_name = models.CharField(max_length=150, blank=True, default='')
     property_address = models.CharField(max_length=255)
     contact_number = models.CharField(max_length=20)
-    preferred_date = models.DateField()  # requested by the Customer at submission
+    # No longer asked from the Customer. Staff sets visit_date instead.
+    # Kept (optional) so older tickets still show their saved date.
+    preferred_date = models.DateField(null=True, blank=True)
     solar_package = models.CharField(max_length=100)
     system_type = models.CharField(
         max_length=20,
