@@ -824,4 +824,4 @@ class InstallerTicketCalendarView(generics.ListAPIView):
         if month and year:
             queryset = queryset.filter(visit_date__year=year, visit_date__month=month)
 
-        return queryset.order_by('visit_date')s
+        return queryset.order_by('visit_date')

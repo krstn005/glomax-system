@@ -32,29 +32,16 @@ import '../styles/admin-requests.css';
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 400;
 
-const IN_PROGRESS_STATUSES = ['PI_ASSIGNED', 'ASSESSMENT_SUBMITTED', 'STAFF_REVIEW'];
-
-const ALL_STATUSES = [
-  'REQUEST_SUBMITTED',
-  ...IN_PROGRESS_STATUSES,
-  'ADMIN_REVIEW',
-  'APPROVED',
-  'COMPLETED',
-  'NC_CANNOT_PROCEED',
-  'NC_CAN_REAPPLY',
-  'WITHDRAWN',
-];
+// Admin only sees requests that Staff sent to them
+const ALL_STATUSES = ['ADMIN_REVIEW', 'STAFF_REVIEW', 'APPROVED', 'COMPLETED'];
 
 // Choices in the Filter drop-down. "group" puts them under a small heading.
 const FILTERS = [
   { key: 'ALL', group: null, label: 'All Requests', short: 'All', statuses: ALL_STATUSES, icon: Layers, tone: 'navy' },
   { key: 'APPROVAL', group: 'Needs your action', label: 'Awaiting Your Approval', short: 'Approval', statuses: ['ADMIN_REVIEW'], icon: ShieldCheck, tone: 'gold' },
-  { key: 'NEW', group: 'Still in progress', label: 'New Requests', short: 'New', statuses: ['REQUEST_SUBMITTED'], icon: Clock, tone: 'navy' },
-  { key: 'IN_PROGRESS', group: 'Still in progress', label: 'In Progress', short: 'In Progress', statuses: IN_PROGRESS_STATUSES, icon: ClipboardList, tone: 'blue' },
-  { key: 'APPROVED', group: 'Still in progress', label: 'Approved', short: 'Approved', statuses: ['APPROVED'], icon: CheckCircle2, tone: 'green' },
-  { key: 'COMPLETED', group: 'Closed', label: 'Completed', short: 'Completed', statuses: ['COMPLETED'], icon: Award, tone: 'navy' },
-  { key: 'NOT_COMPATIBLE', group: 'Closed', label: 'Not Compatible', short: 'Not Compatible', statuses: ['NC_CANNOT_PROCEED', 'NC_CAN_REAPPLY'], icon: XCircle, tone: 'red' },
-  { key: 'WITHDRAWN', group: 'Closed', label: 'Withdrawn', short: 'Withdrawn', statuses: ['WITHDRAWN'], icon: MinusCircle, tone: 'gray' },
+  { key: 'RETURNED', group: 'With Staff', label: 'Returned to Staff', short: 'Returned', statuses: ['STAFF_REVIEW'], icon: ClipboardList, tone: 'blue' },
+  { key: 'APPROVED', group: 'Done by you', label: 'Approved', short: 'Approved', statuses: ['APPROVED'], icon: CheckCircle2, tone: 'green' },
+  { key: 'COMPLETED', group: 'Done by you', label: 'Completed', short: 'Completed', statuses: ['COMPLETED'], icon: Award, tone: 'navy' },
 ];
 
 // Badge look for each ticket status
@@ -76,7 +63,7 @@ const NEXT_STEP = {
   REQUEST_SUBMITTED: { text: 'Waiting for installer assignment' },
   PI_ASSIGNED: { text: 'Waiting for site visit' },
   ASSESSMENT_SUBMITTED: { text: 'Staff reviewing assessment' },
-  STAFF_REVIEW: { text: 'Staff reviewing assessment' },
+  STAFF_REVIEW: { text: 'Returned to Staff for fixes' },
   ADMIN_REVIEW: { text: 'Approve assessment', action: true },
   APPROVED: { text: 'Waiting for installation' },
   COMPLETED: { text: 'Done', muted: true },
@@ -448,20 +435,20 @@ export default function AdminRequestsPage() {
   const urgent = approvalCount > 0;
 
   let heroText;
-  if (totalCount === undefined) heroText = 'Every installation request from customers, newest first.';
+  if (totalCount === undefined) heroText = 'Every request Staff has sent to you, newest first.';
   else if (urgent)
-    heroText = `${approvalCount} request${approvalCount === 1 ? ' is' : 's are'} waiting for your approval · ${totalCount} in total.`;
-  else heroText = `${totalCount} request${totalCount === 1 ? '' : 's'} in total. Nothing needs your approval right now.`;
+    heroText = `${approvalCount} request${approvalCount === 1 ? ' is' : 's are'} waiting for your approval · ${totalCount} sent to you in total.`;
+  else heroText = `${totalCount} request${totalCount === 1 ? '' : 's'} sent to you. Nothing needs your approval right now.`;
 
   return (
-    <AdminLayout pageTitle="Requests" pageSubtitle="All installation requests from customers">
+    <AdminLayout pageTitle="Requests" pageSubtitle="Requests Staff has sent to you for approval">
       <div className="admr-page">
         {/* ---------- Banner ---------- */}
         <section className={`admr-hero ${urgent ? 'urgent' : ''}`}>
           <div className="admr-hero-glow" aria-hidden="true" />
           <div className="admr-hero-icon">{urgent ? <ShieldCheck size={26} /> : <Inbox size={26} />}</div>
           <div className="admr-hero-text">
-            <h1>Customer Requests</h1>
+            <h1>Requests for Approval</h1>
             <p>{heroText}</p>
           </div>
           <div className="admr-hero-actions">
@@ -537,12 +524,12 @@ export default function AdminRequestsPage() {
                 <Inbox size={26} />
               </span>
               <p className="admr-empty-title">
-                {hasActiveFilters ? 'No requests match your search or filter' : 'No requests yet'}
+                {hasActiveFilters ? 'No requests match your search or filter' : 'No requests sent to you yet'}
               </p>
               <p className="admr-empty-hint">
                 {hasActiveFilters
                   ? 'Try a different name, ticket number, address, or filter.'
-                  : 'New customer requests will show up here.'}
+                  : 'Requests show up here once Staff sends them to you.'}
               </p>
               {hasActiveFilters && (
                 <button type="button" className="admr-btn-secondary" onClick={clearAll}>

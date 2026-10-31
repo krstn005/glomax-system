@@ -484,7 +484,7 @@ export default function AdminTicketDetailPage() {
           <StateCard
             icon={SearchX}
             title="Ticket not found"
-            hint="This ticket may have been removed, or the link is wrong."
+            hint="This request may not have been sent to you yet, or the link is wrong."
           >
             <button type="button" className="admtd-btn-primary" onClick={goBack}>
               Back to Requests

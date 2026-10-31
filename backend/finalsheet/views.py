@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, NotFound
 from xhtml2pdf import pisa
 
+from django.db.models import Q
 from django.utils import timezone
 from tickets.models import Ticket
 from .models import Feedback
@@ -287,21 +288,31 @@ class AdminReportsPDFView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
     STATUS_GROUPS = [
-        ('New Requests', ['REQUEST_SUBMITTED'], '#f59e0b'),
-        ('Under Assessment', ['PI_ASSIGNED', 'ASSESSMENT_SUBMITTED', 'STAFF_REVIEW', 'ADMIN_REVIEW'], '#3b82f6'),
+        ('Awaiting Approval', ['ADMIN_REVIEW'], '#f59e0b'),
+        ('Returned to Staff', ['STAFF_REVIEW'], '#3b82f6'),
         ('Approved', ['APPROVED'], '#22c55e'),
         ('Completed', ['COMPLETED'], '#eab308'),
-        ('Not Compatible', ['NC_CANNOT_PROCEED', 'NC_CAN_REAPPLY'], '#ef4444'),
-        ('Withdrawn', ['WITHDRAWN'], '#94a3b8'),
     ]
 
     # Tickets an installer is still working on
-    WORKER_ACTIVE = ['PI_ASSIGNED', 'ASSESSMENT_SUBMITTED', 'STAFF_REVIEW', 'ADMIN_REVIEW', 'APPROVED']
+    WORKER_ACTIVE = ['STAFF_REVIEW', 'ADMIN_REVIEW', 'APPROVED']
 
     def get(self, request):
         from accounts.models import User
 
-        tickets = list(Ticket.objects.all())
+        # Admin only sees requests that Staff sent to them (same rule as
+        # the Admin portal): waiting for approval, approved, completed,
+        # or returned to Staff by the Admin.
+        returned_to_staff = (
+            Q(status='STAFF_REVIEW')
+            & Q(admin_revision_notes__isnull=False)
+            & ~Q(admin_revision_notes='')
+        )
+        tickets = list(
+            Ticket.objects.filter(
+                Q(status__in=['ADMIN_REVIEW', 'APPROVED', 'COMPLETED']) | returned_to_staff
+            )
+        )
         total = len(tickets)
 
         def final_cost(t):
