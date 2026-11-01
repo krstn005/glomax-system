@@ -427,8 +427,6 @@ export default function AdminRequestsPage() {
   }
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
-  const rangeStart = count === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(page * PAGE_SIZE, count);
   const hasActiveFilters = activeFilter !== 'ALL' || Boolean(searchTerm);
   const totalCount = filterCounts.ALL;
   const approvalCount = filterCounts.APPROVAL || 0;
@@ -546,12 +544,9 @@ export default function AdminRequestsPage() {
                 ))}
               </div>
 
-              <div className="admr-pagination">
-                <span className="admr-pagination-info">
-                  Showing <strong>{rangeStart}–{rangeEnd}</strong> of <strong>{count}</strong> request
-                  {count === 1 ? '' : 's'}
-                </span>
-                {totalPages > 1 && (
+              {/* Page buttons only show when there's more than one page */}
+              {totalPages > 1 && (
+                <div className="admr-pagination" style={{ justifyContent: 'center' }}>
                   <div className="admr-pagination-controls">
                     <button
                       type="button"
@@ -586,8 +581,8 @@ export default function AdminRequestsPage() {
                       <ChevronRight size={16} />
                     </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
         </section>
