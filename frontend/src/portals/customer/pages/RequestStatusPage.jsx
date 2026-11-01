@@ -92,6 +92,39 @@ function tomorrowKey() {
   return toDateKey(d);
 }
 
+// "Today", "Tomorrow", "In 3 days" for the visit date. Past dates return null.
+function visitCountdown(dateStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = String(dateStr).slice(0, 10).split('-').map(Number);
+  const visit = new Date(y, m - 1, d);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((visit - today) / 86400000);
+  if (days < 0) return null;
+  if (days === 0) return { text: 'Today', soon: true };
+  if (days === 1) return { text: 'Tomorrow', soon: true };
+  return { text: `In ${days} days`, soon: days <= 3 };
+}
+
+function dateParts(dateStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = String(dateStr).slice(0, 10).split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return {
+    month: dt.toLocaleDateString('en-US', { month: 'short' }),
+    day: d,
+    weekday: dt.toLocaleDateString('en-US', { weekday: 'long' }),
+    year: y,
+  };
+}
+
+function getInitials(name) {
+  const parts = (name || '?').trim().split(/[\s._-]+/);
+  const first = parts[0]?.[0] || '?';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : parts[0]?.[1] || '';
+  return (first + last).toUpperCase();
+}
+
 // Newest Updated Quotation first, then the Initial one
 function getLatestQuote(quotations = []) {
   const updated = quotations
@@ -301,18 +334,56 @@ function SectionTitle({ icon: Icon, tone, children }) {
   );
 }
 
-// One detail tile. "pending" shows the value in light gray italics.
-// "highlight" gives the tile a gold look (used for the price).
-function InfoField({ icon: Icon, label, value, pending = false, highlight = false }) {
+// One row in a details list: small icon, label, and value.
+// "pending" shows the value in light gray italics.
+function DetailRow({ icon: Icon, label, value, pending = false }) {
   return (
-    <div className={`rs-info-field ${highlight ? 'highlight' : ''}`}>
-      <span className="rs-info-icon">
+    <div className="rs-row">
+      <span className="rs-row-icon">
         <Icon size={16} />
       </span>
-      <div className="rs-info-text">
-        <p className="rs-info-label">{label}</p>
-        <p className={`rs-info-value ${pending ? 'pending' : ''}`}>{value}</p>
+      <div className="rs-row-text">
+        <p className="rs-row-label">{label}</p>
+        <p className={`rs-row-value ${pending ? 'pending' : ''}`}>{value}</p>
       </div>
+    </div>
+  );
+}
+
+// Calendar-style tile for the visit date, with a countdown chip
+function VisitDateTile({ date }) {
+  const parts = dateParts(date);
+  const countdown = visitCountdown(date);
+
+  if (!parts) {
+    return (
+      <div className="rs-visit rs-visit-empty">
+        <span className="rs-visit-tile empty">
+          <CalendarDays size={22} />
+        </span>
+        <div className="rs-visit-text">
+          <p className="rs-row-label">Visit date</p>
+          <p className="rs-visit-main pending">Not yet scheduled</p>
+          <p className="rs-visit-sub">We'll let you know once it is set.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rs-visit">
+      <span className="rs-visit-tile">
+        <span className="rs-visit-month">{parts.month}</span>
+        <span className="rs-visit-day">{parts.day}</span>
+      </span>
+      <div className="rs-visit-text">
+        <p className="rs-row-label">Visit date</p>
+        <p className="rs-visit-main">{parts.weekday}</p>
+        <p className="rs-visit-sub">
+          {parts.month} {parts.day}, {parts.year}
+        </p>
+      </div>
+      {countdown && <span className={`rs-countdown ${countdown.soon ? 'soon' : ''}`}>{countdown.text}</span>}
     </div>
   );
 }
@@ -441,10 +512,9 @@ function StatusSkeleton() {
             </div>
           ))}
         </div>
-        <div className="rs-info-grid">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <span key={i} className="rs-skel rs-skel-tile" />
-          ))}
+        <div className="rs-split">
+          <span className="rs-skel rs-skel-panel" />
+          <span className="rs-skel rs-skel-panel" />
         </div>
       </div>
     </div>
@@ -742,6 +812,11 @@ export default function RequestStatusPage() {
     const isNotCompatible = ['NC_CANNOT_PROCEED', 'NC_CAN_REAPPLY'].includes(ticket.status);
     const hasFinalSheet = ['APPROVED', 'COMPLETED'].includes(ticket.status);
     const timeline = buildTimeline(ticket);
+    const isStopped = timeline.some((step) => step.state === 'stopped');
+    const doneCount = timeline.filter((step) => step.state === 'done').length;
+    const progressPercent = isStopped
+      ? Math.max(8, Math.round((doneCount / timeline.length) * 100))
+      : Math.min(100, Math.round(((doneCount + (timeline.some((s2) => s2.state === 'current') ? 0.5 : 0)) / timeline.length) * 100));
 
     const latestQuote = getLatestQuote(ticket.quotations || []);
     const priceValue = ticket.final_sheet?.final_cost || latestQuote?.estimated_cost;
@@ -822,52 +897,82 @@ export default function RequestStatusPage() {
             </div>
           )}
 
-          <ol className="rs-stepper" aria-label="Request progress">
-            {timeline.map((step, index) => (
-              <li key={step.key} className={`rs-step ${step.state}`}>
-                <span className="rs-step-circle">
-                  {step.state === 'done' && <Check size={16} />}
-                  {step.state === 'stopped' && <X size={16} />}
-                  {(step.state === 'current' || step.state === 'todo') && index + 1}
-                </span>
-                <span className="rs-step-label">{step.label}</span>
-                <span className="rs-step-date">{step.date ? formatShortDate(step.date) : ''}</span>
-              </li>
-            ))}
-          </ol>
+          <section className="rs-progress" aria-label="Request progress">
+            <div className="rs-progress-head">
+              <p className="rs-progress-title">Progress</p>
+              <p className="rs-progress-count">
+                {isStopped ? 'Closed' : <><strong>{doneCount}</strong> of {timeline.length} steps done</>}
+              </p>
+            </div>
+            <div className="rs-progress-bar" aria-hidden="true">
+              <span
+                className={`rs-progress-fill ${isStopped ? 'stopped' : ''}`}
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <ol className="rs-stepper">
+              {timeline.map((step, index) => (
+                <li key={step.key} className={`rs-step ${step.state}`}>
+                  <span className="rs-step-circle">
+                    {step.state === 'done' && <Check size={16} />}
+                    {step.state === 'stopped' && <X size={16} />}
+                    {(step.state === 'current' || step.state === 'todo') && index + 1}
+                  </span>
+                  <span className="rs-step-label">{step.label}</span>
+                  <span className="rs-step-date">{step.date ? formatShortDate(step.date) : ''}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
 
           {!isNotCompatible && !isWithdrawn && (
-            <section className="rs-section">
-              <SectionTitle icon={ClipboardList} tone="navy">Request Details</SectionTitle>
-              <div className="rs-info-grid">
-                <InfoField icon={Package} label="Package" value={ticket.solar_package || '—'} />
-                <InfoField
-                  icon={Zap}
-                  label="System Type"
-                  value={ticket.system_type === 'ON_GRID' ? 'On-Grid' : 'Hybrid'}
-                />
-                <InfoField icon={MapPin} label="Address" value={ticket.property_address || '—'} />
-                <InfoField
-                  icon={HardHat}
-                  label="Partner Installer"
-                  value={ticket.partner_installer_username || 'Not yet assigned'}
-                  pending={!ticket.partner_installer_username}
-                />
-                <InfoField
-                  icon={CalendarDays}
-                  label="Visit Date"
-                  value={ticket.visit_date ? formatDate(ticket.visit_date) : 'Not yet scheduled'}
-                  pending={!ticket.visit_date}
-                />
-                <InfoField
-                  icon={Wallet}
-                  label={hasFinalSheet ? 'Total Price' : 'Estimated Price'}
-                  value={priceValue ? formatCurrency(priceValue) : 'Waiting for quotation'}
-                  pending={!priceValue}
-                  highlight={Boolean(priceValue)}
-                />
-              </div>
-            </section>
+            <div className="rs-split">
+              <section className="rs-panel">
+                <SectionTitle icon={ClipboardList} tone="navy">Your Request</SectionTitle>
+                <div className="rs-rows">
+                  <DetailRow icon={Package} label="Package" value={ticket.solar_package || '—'} />
+                  <DetailRow
+                    icon={Zap}
+                    label="System type"
+                    value={ticket.system_type === 'ON_GRID' ? 'On-Grid' : 'Hybrid'}
+                  />
+                  <DetailRow icon={MapPin} label="Address" value={ticket.property_address || '—'} />
+                </div>
+              </section>
+
+              <section className="rs-panel rs-panel-visit">
+                <SectionTitle icon={CalendarDays} tone="gold">Visit &amp; Price</SectionTitle>
+                <VisitDateTile date={ticket.visit_date} />
+
+                <div className="rs-installer">
+                  <span className={`rs-installer-avatar ${ticket.partner_installer_username ? '' : 'empty'}`}>
+                    {ticket.partner_installer_username ? (
+                      getInitials(ticket.partner_installer_username)
+                    ) : (
+                      <HardHat size={16} />
+                    )}
+                  </span>
+                  <div className="rs-row-text">
+                    <p className="rs-row-label">Partner Installer</p>
+                    <p className={`rs-row-value ${ticket.partner_installer_username ? '' : 'pending'}`}>
+                      {ticket.partner_installer_username || 'Not yet assigned'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={`rs-price ${priceValue ? 'has-price' : ''}`}>
+                  <span className="rs-price-icon">
+                    <Wallet size={16} />
+                  </span>
+                  <div className="rs-row-text">
+                    <p className="rs-row-label">{hasFinalSheet ? 'Total price' : 'Estimated price'}</p>
+                    <p className={`rs-price-value ${priceValue ? '' : 'pending'}`}>
+                      {priceValue ? formatCurrency(priceValue) : 'Waiting for quotation'}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </div>
           )}
 
           {canRequestReschedule && (
