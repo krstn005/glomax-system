@@ -1,4 +1,3 @@
-import uuid
 import logging
 
 from django.conf import settings
@@ -12,6 +11,7 @@ from google.auth.transport import requests as google_requests
 
 from .serializers import (
     RegisterSerializer,
+    make_customer_username,
     UserSerializer,
     GlomaxTokenObtainPairSerializer,
     StaffPartnerInstallerCreateSerializer,
@@ -362,15 +362,19 @@ class GoogleLoginView(APIView):
             # can't just be the email (User.username has its own
             # uniqueness/format elsewhere) so we base it on the email's
             # local part plus a short random suffix to avoid collisions.
-            base_username = email.split('@')[0][:20]
-            username = f"{base_username}_{uuid.uuid4().hex[:6]}"
             user = User.objects.create_user(
-                username=username,
+                username=make_customer_username(email),
+                full_name=(payload.get('name') or '')[:150],
                 email=email,
                 role=User.Role.CUSTOMER,
             )
             user.set_unusable_password()
             user.save()
+
+        # Older Google accounts made before Full Name existed: fill it in
+        if user.role == User.Role.CUSTOMER and not user.full_name and payload.get('name'):
+            user.full_name = payload['name'][:150]
+            user.save(update_fields=['full_name'])
 
         if not user.is_active:
             return Response({"detail": "This account is deactivated."}, status=403)

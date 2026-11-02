@@ -95,7 +95,7 @@ export default function LoginPage() {
       setChallenge(res.data);
     } catch (err) {
       if (err?.response?.status === 401) {
-        setError('Wrong email/username or password. Please try again.');
+        setError('Wrong email, full name or password. Please try again.');
       } else {
         setError(getApiError(err, 'Sign in failed. Please try again.'));
       }
@@ -188,7 +188,7 @@ export default function LoginPage() {
                 </span>
                 <div>
                   <h1 className="cl-title">Welcome</h1>
-                  <p className="cl-subtitle">Sign in with your email or username</p>
+                  <p className="cl-subtitle">Sign in with your email or full name</p>
                 </div>
               </div>
 
@@ -215,13 +215,13 @@ export default function LoginPage() {
 
               <form onSubmit={handleSubmit} className="cl-form">
                 <label className="cl-field">
-                  <span className="cl-label">Email or Username</span>
+                  <span className="cl-label">Email or Full Name</span>
                   <span className="cl-input-wrap">
                     <UserRound size={17} className="cl-input-icon" />
                     <input
                       id="usernameOrEmail"
                       type="text"
-                      placeholder="juan@email.com"
+                                            placeholder="juan@email.com or Juan Dela Cruz"
                       value={usernameOrEmail}
                       onChange={(e) => setUsernameOrEmail(e.target.value)}
                       autoComplete="username"

@@ -56,7 +56,7 @@ export default function RegisterPage() {
   // so the form comes already filled in (they can still change it).
   const [searchParams] = useSearchParams();
   const [form, setForm] = useState({
-    username: (searchParams.get('name') || '').slice(0, 100),
+    full_name: (searchParams.get('name') || '').slice(0, 100),
     email: (searchParams.get('email') || '').slice(0, 150),
     phone_number: '',
     address: '',
@@ -106,6 +106,7 @@ export default function RegisterPage() {
     localStorage.setItem('refresh_token', data.refresh);
     localStorage.setItem('role', data.role);
     localStorage.setItem('username', data.username);
+    if (data.full_name) localStorage.setItem('full_name', data.full_name);
     if (data.user_id !== undefined && data.user_id !== null) {
       localStorage.setItem('user_id', data.user_id);
     }
@@ -137,7 +138,7 @@ export default function RegisterPage() {
     try {
       await register({
         ...form,
-        username: form.username.trim(),
+        full_name: form.full_name.trim().replace(/\s+/g, ' '),
         email: form.email.trim(),
         address: form.address.trim(),
       });
@@ -273,22 +274,23 @@ export default function RegisterPage() {
               <span className="cl-input-wrap">
                 <UserRound size={17} className="cl-input-icon" />
                 <input
-                  id="username"
-                  name="username"
+                  id="full_name"
+                  name="full_name"
                   type="text"
                   placeholder="Juan Dela Cruz"
-                  value={form.username}
+                  value={form.full_name}
                   onChange={handleChange}
                   autoComplete="name"
-                  className={inputClass('username')}
+                  maxLength={150}
+                  className={inputClass('full_name')}
                   autoFocus
                   required
                 />
               </span>
-              {fieldErrors.username && (
+              {fieldErrors.full_name && (
                 <span className="cl-field-error">
                   <AlertCircle size={13} />
-                  {fieldErrors.username}
+                  {fieldErrors.full_name}
                 </span>
               )}
             </label>

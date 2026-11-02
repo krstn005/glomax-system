@@ -1,3 +1,6 @@
+import re
+import uuid
+
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from .models import User
@@ -34,17 +37,43 @@ class VerifyPasswordChangeOtpSerializer(serializers.Serializer):
 
 
 
+def make_customer_username(email):
+    """
+    Customers do not type a username. The system makes one behind the
+    scenes from the start of their email plus a short random ending, so
+    it is always unique. Customers sign in with their email instead.
+    """
+    base = re.sub(r'[^A-Za-z0-9]', '', (email or '').split('@')[0])[:20] or 'customer'
+    return f"{base}_{uuid.uuid4().hex[:6]}"
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     """
     Handles new Customer registration - matches the Customer Register Page
     (Full Name, Email, Phone Number, Address, Password, Confirm Password).
+    There is no username box. Full Name and Email are required, and the
+    username is made automatically (see make_customer_username).
     """
+    full_name = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
     password = serializers.CharField(write_only=True, validators=[validate_password])
     confirm_password = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone_number', 'address', 'password', 'confirm_password']
+        fields = ['full_name', 'email', 'phone_number', 'address', 'password', 'confirm_password']
+
+    def validate_full_name(self, value):
+        value = ' '.join(value.split())
+        if len(value) < 2:
+            raise serializers.ValidationError("Please enter your full name.")
+        return value
+
+    def validate_email(self, value):
+        value = value.strip()
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("An account with this email already exists. Please sign in instead.")
+        return value
 
     def validate(self, data):
         if data['password'] != data['confirm_password']:
@@ -54,8 +83,9 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('confirm_password')
         user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data.get('email', ''),
+            username=make_customer_username(validated_data['email']),
+            full_name=validated_data['full_name'],
+            email=validated_data['email'],
             phone_number=validated_data.get('phone_number', ''),
             address=validated_data.get('address', ''),
             password=validated_data['password'],
@@ -76,6 +106,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'username',
+            'full_name',
             'email',
             'phone_number',
             'address',
@@ -123,6 +154,20 @@ class GlomaxTokenObtainPairSerializer(TokenObtainPairSerializer):
                 pass  # fall through - normal invalid-credentials error will fire
             except User.MultipleObjectsReturned:
                 pass  # ambiguous email match - fall through to normal error too
+
+        elif submitted_value and not User.objects.filter(username=submitted_value).exists():
+            # Not an email and not a username: try the Full Name instead.
+            # Full names are not unique, so it only works when exactly one
+            # active account has that name.
+            matches = list(
+                User.objects.filter(full_name__iexact=submitted_value.strip(), is_active=True)[:2]
+            )
+            if len(matches) == 1:
+                attrs[login_field] = matches[0].username
+            elif len(matches) > 1:
+                raise serializers.ValidationError({
+                    "detail": "More than one account has this name. Please sign in with your email instead."
+                })
 
         data = super().validate(attrs)
         data['role'] = self.user.role
