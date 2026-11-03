@@ -1,16 +1,20 @@
-from email.mime.image import MIMEImage
 from urllib.parse import urlencode
 
-from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
-from django.utils.html import escape
 
-COMPANY_ADDRESS = "8000 Plaza Residences Plaza, Brgy. 303, Lacson St., Sta. Cruz, Manila"
-
-# Reuses the same logo asset already used in the Final Sheet PDF -
-# keeps the same visual identity across every document/email the
-# system sends.
-LOGO_PATH = settings.BASE_DIR / "finalsheet" / "static" / "finalsheet" / "logo.jpg"
+from glomax_backend.email_design import (
+    COMPANY_ADDRESS,
+    attach_logo,
+    build_email,
+    button,
+    button_html,
+    centered,
+    details,
+    link_line,
+    p,
+    quote,
+    wrap_html,
+)
 
 
 def _get_reply_link(inquiry):
@@ -46,250 +50,70 @@ def _get_site_links(inquiry):
     }
 
 
+# --- The email design now lives in glomax_backend/email_design.py, so
+# every email in the system looks the same. These small helpers are
+# kept so other files that still import them keep working.
+
 def _attach_logo(email):
-    """
-    Embeds the company logo inline in the HTML email using a
-    Content-ID, so it displays as an actual image in Gmail (not a
-    separate downloadable attachment). Silently skips embedding if the
-    logo file isn't found, so a missing asset never breaks email
-    sending - the email still goes out, just without the logo.
-    """
-    try:
-        with open(LOGO_PATH, "rb") as f:
-            logo = MIMEImage(f.read())
-            logo.add_header("Content-ID", "<company_logo>")
-            logo.add_header("Content-Disposition", "inline", filename="logo.jpg")
-            email.attach(logo)
-    except FileNotFoundError:
-        pass
+    attach_logo(email)
 
 
 def _email_wrapper_html(inner_html):
-    """
-    Shared HTML shell used by every email this app sends. No border
-    around the main container - the white card just sits on the
-    light gray page background, reading as an ordinary company email
-    rather than a boxed/templated look.
-    """
-    return f"""\
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="margin:0; padding:0; background-color:#f3f4f6; font-family:Arial, Helvetica, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6; padding:24px 0;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px; background-color:#ffffff;">
-
-          <tr>
-            <td style="background-color:#0d1f3c; padding:18px 24px;">
-              <table role="presentation" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="padding-right:10px; vertical-align:middle;">
-                    <img src="cid:company_logo" width="32" height="32" style="display:block;" alt="Glomax Solar" />
-                  </td>
-                  <td style="vertical-align:middle;">
-                    <span style="color:#ffffff; font-size:14px; font-weight:bold;">Glomax Solar Enterprises</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:24px;">
-              {inner_html}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:14px 24px; border-top:1px solid #e5e7eb;">
-              <p style="margin:0; font-size:11px; color:#9ca3af; line-height:1.5;">
-                Glomax Solar Enterprises &middot; {COMPANY_ADDRESS}
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-"""
+    return wrap_html(inner_html)
 
 
 def _reply_button_html(reply_link, label="Reply to this Inquiry"):
-    """
-    Plain rectangular button, centered using align="center" on its
-    own full-width table row - the most reliable way to center a
-    button across different email clients (Gmail, Outlook, etc.)
-    without relying on flexbox/CSS that many clients strip out.
-    """
-    return f"""\
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 10px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="background-color:#0d1f3c;">
-                <a href="{reply_link}" target="_blank"
-                   style="display:inline-block; padding:10px 20px; font-size:13px; font-weight:bold; color:#ffffff; text-decoration:none;">
-                  {label}
-                </a>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-    <p style="margin:0; font-size:12px; color:#9ca3af; text-align:center;">
-      Please do not reply directly to this email.
-    </p>
-"""
+    return button_html(label, reply_link, 'navy')
 
 
 def _cta_button_html(link, label):
-    """
-    The main "do this next" button. Gold, so it stands out from the
-    navy Reply button. Same centered-table method as the reply button,
-    so it works in Gmail, Outlook and phone mail apps.
-    """
-    return f"""\
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="background-color:#facc15;">
-                <a href="{link}" target="_blank"
-                   style="display:inline-block; padding:12px 26px; font-size:14px; font-weight:bold; color:#0d1f3c; text-decoration:none;">
-                  {label}
-                </a>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-"""
+    return button_html(label, link, 'gold')
 
 
 def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms, notes):
     """
     Sends the Initial Quotation to whoever submitted the inquiry.
     This can only be sent once per inquiry (enforced in the view).
-    The email now includes the Reply Link, so the customer can
-    continue the conversation inside the system (via the public
-    reply-link page) instead of replying directly to this email or
-    submitting a brand new, disconnected inquiry.
+    The email includes the Reply Link, so the customer can continue
+    the conversation inside the system (via the public reply-link
+    page) instead of replying directly to this email or submitting a
+    brand new, disconnected inquiry.
 
     Anything typed by a person (name, package, cost, terms, notes) is
-    escaped before it goes into the HTML part, so typed HTML or
-    symbols can never change how the email looks or works.
+    escaped by the shared email design, so typed HTML or symbols can
+    never change how the email looks or works.
     """
-    subject = "Your Glomax Solar Quotation"
     reply_link = _get_reply_link(inquiry)
     site_links = _get_site_links(inquiry)
-    safe_register_link = escape(site_links["register"])
 
-    # Safe versions for the HTML part only. The plain-text part below
-    # keeps the original text.
-    safe_name = escape(inquiry.full_name)
-    safe_package = escape(package_details)
-    safe_cost = escape(estimated_cost)
-    safe_terms = escape(payment_terms)
-    safe_notes = escape(notes) if notes else ""
-
-    # Plain-text version - unchanged in content, still sent as the
-    # fallback for email clients that don't render HTML.
-    text_message = (
-        f"Hi {inquiry.full_name},\n\n"
-        f"Thank you for your inquiry with Glomax Solar Enterprises. "
-        f"Here is your initial quotation:\n\n"
-        f"Package Details: {package_details}\n"
-        f"Estimated Cost: {estimated_cost}\n"
-        f"Payment Terms: {payment_terms}\n"
-    )
+    blocks = [
+        p(f"Hi {inquiry.full_name},"),
+        p("Thank you for your inquiry with Glomax Solar Enterprises. Here is your initial quotation:"),
+        details([
+            ("Package Details", package_details),
+            ("Estimated Cost", estimated_cost),
+            ("Payment Terms", payment_terms),
+        ]),
+    ]
     if notes:
-        text_message += f"\nMessage from our team:\n{notes}\n"
-    text_message += (
-        "\nIf you'd like to proceed, please register an account on our "
-        "website and submit a schedule request for a roof assessment.\n\n"
-        f"Create your account: {site_links['register']}\n"
-        f"Already have an account? Sign in: {site_links['login']}\n\n"
-        "Best regards,\n"
-        "Glomax Solar Enterprises\n\n"
-        "----\n"
-        "To continue this conversation, please click the link below:\n"
-        f"{reply_link}\n\n"
-        "Please do not reply directly to this email.\n\n"
-        f"{COMPANY_ADDRESS}"
+        blocks.append(quote(notes, label="Message from our team"))
+    blocks += [
+        p(
+            "If you'd like to proceed, please register an account on our website "
+            "and submit a schedule request for a roof assessment."
+        ),
+        button("Create My Account", site_links["register"], 'gold'),
+        link_line("Already have an account?", "Sign in", site_links["login"]),
+        centered("Have a follow-up question?"),
+        button("Reply to this Inquiry", reply_link, 'navy'),
+    ]
+
+    email = build_email(
+        "Your Glomax Solar Quotation",
+        inquiry.email,
+        "Your quotation",
+        blocks,
     )
-
-    notes_html = ""
-    if notes:
-        notes_html = f"""\
-    <p style="margin:14px 0 0; font-size:13px; color:#374151; line-height:1.5;">
-      <strong>Message from our team:</strong><br /><span style="white-space:pre-wrap;">{safe_notes}</span>
-    </p>
-"""
-
-    # Quotation details shown as plain label/value rows on a light
-    # gray background, separated only by spacing - no border outline
-    # around the box, keeps it reading as ordinary email content
-    # rather than a "designed" card.
-    inner_html = f"""\
-    <p style="margin:0 0 14px; font-size:14px; color:#111827;">Hi {safe_name},</p>
-    <p style="margin:0 0 18px; font-size:14px; color:#374151; line-height:1.5;">
-      Thank you for your inquiry with Glomax Solar Enterprises. Here is your
-      initial quotation:
-    </p>
-
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;">
-      <tr>
-        <td style="padding:16px 18px 8px;">
-          <p style="margin:0 0 3px; font-size:11px; color:#6b7280;">Package Details</p>
-          <p style="margin:0; font-size:14px; font-weight:bold; color:#111827;">{safe_package}</p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:8px 18px;">
-          <p style="margin:0 0 3px; font-size:11px; color:#6b7280;">Estimated Cost</p>
-          <p style="margin:0; font-size:15px; font-weight:bold; color:#0d1f3c;">{safe_cost}</p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:8px 18px 16px;">
-          <p style="margin:0 0 3px; font-size:11px; color:#6b7280;">Payment Terms</p>
-          <p style="margin:0; font-size:14px; font-weight:bold; color:#111827;">{safe_terms}</p>
-        </td>
-      </tr>
-    </table>
-{notes_html}
-    <p style="margin:18px 0 16px; font-size:14px; color:#374151; line-height:1.5;">
-      If you'd like to proceed, please register an account on our website and
-      submit a schedule request for a roof assessment.
-    </p>
-{_cta_button_html(safe_register_link, "Create My Account")}
-    <p style="margin:0 0 22px; font-size:12px; color:#6b7280; text-align:center;">
-      Already have an account?
-      <a href="{site_links["login"]}" target="_blank" style="color:#0d1f3c; font-weight:bold;">Sign in</a>
-    </p>
-
-    <p style="margin:0 0 4px; font-size:14px; color:#111827; font-weight:bold; text-align:center;">Have a follow-up question?</p>
-{_reply_button_html(reply_link)}
-"""
-
-    email = EmailMultiAlternatives(
-        subject=subject,
-        body=text_message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[inquiry.email],
-    )
-    email.attach_alternative(_email_wrapper_html(inner_html), "text/html")
-    email.mixed_subtype = "related"
-    _attach_logo(email)
     email.send(fail_silently=False)
 
 
@@ -298,58 +122,21 @@ def send_reply_email(inquiry, staff_message_content):
     Sends Staff's follow-up reply to the customer's email. Includes
     the same Reply Link again so the customer can keep the
     conversation going as many times as needed.
-
-    The name and Staff's message are escaped before they go into the
-    HTML part, same as in the quotation email.
     """
-    subject = "New Reply to Your Glomax Solar Inquiry"
     reply_link = _get_reply_link(inquiry)
 
-    safe_name = escape(inquiry.full_name)
-    safe_message = escape(staff_message_content)
+    blocks = [
+        p(f"Hi {inquiry.full_name},"),
+        p("You have a new reply from Glomax Solar Enterprises regarding your inquiry:"),
+        quote(staff_message_content),
+        centered("Want to continue the conversation?"),
+        button("View Conversation & Reply", reply_link, 'gold'),
+    ]
 
-    text_message = (
-        f"Hi {inquiry.full_name},\n\n"
-        f"You have a new reply from Glomax Solar Enterprises regarding "
-        f"your inquiry:\n\n"
-        f"\"{staff_message_content}\"\n\n"
-        "----\n"
-        "To view the full conversation or continue asking questions, "
-        "please click the link below:\n"
-        f"{reply_link}\n\n"
-        "Please do not reply directly to this email.\n\n"
-        "Best regards,\n"
-        "Glomax Solar Enterprises\n\n"
-        f"{COMPANY_ADDRESS}"
+    email = build_email(
+        "New Reply to Your Glomax Solar Inquiry",
+        inquiry.email,
+        "You have a new reply",
+        blocks,
     )
-
-    # Staff's message shown on a light gray background with just a
-    # left color bar for emphasis - no full outline around it.
-    inner_html = f"""\
-    <p style="margin:0 0 14px; font-size:14px; color:#111827;">Hi {safe_name},</p>
-    <p style="margin:0 0 14px; font-size:14px; color:#374151; line-height:1.5;">
-      You have a new reply from Glomax Solar Enterprises regarding your inquiry:
-    </p>
-
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb; border-left:3px solid #0d1f3c;">
-      <tr>
-        <td style="padding:14px 18px;">
-          <p style="margin:0; font-size:14px; color:#111827; line-height:1.5; white-space:pre-wrap;">{safe_message}</p>
-        </td>
-      </tr>
-    </table>
-
-    <p style="margin:18px 0 4px; font-size:14px; color:#111827; font-weight:bold; text-align:center;">Want to continue the conversation?</p>
-{_reply_button_html(reply_link, label="View Conversation & Reply")}
-"""
-
-    email = EmailMultiAlternatives(
-        subject=subject,
-        body=text_message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[inquiry.email],
-    )
-    email.attach_alternative(_email_wrapper_html(inner_html), "text/html")
-    email.mixed_subtype = "related"
-    _attach_logo(email)
     email.send(fail_silently=False)

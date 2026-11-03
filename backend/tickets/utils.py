@@ -1,833 +1,258 @@
-import json
+import logging
+from urllib.parse import urljoin
 
-from django.core.serializers.json import DjangoJSONEncoder
-from django.db import transaction
-from django.db.models import Q
-from django.utils import timezone
-from rest_framework import generics, permissions, status
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
+from django.conf import settings
 
-from .models import Ticket, CompletionPhoto, RescheduleRequest, TicketAttempt
-from .quotation_linking import link_initial_quotation_to_ticket
-from .serializers import (
-    TicketCreateSerializer,
-    TicketSerializer,
-    TicketCalendarSerializer,
-    TicketAssignSerializer,
-    TicketDecisionSerializer,
-    TicketApproveSerializer,
-    TicketReturnForRevisionSerializer,
-    RescheduleRequestCreateSerializer,
-    REAPPLY_STATUSES,
-)
-from accounts.permissions import (
-    IsCustomer,
-    IsAccountOwner,
-    IsStaff,
-    IsStaffOrAdmin,
-    IsPartnerInstaller,
-    IsAdmin,
-)
-from accounts.models import User
-from notifications.models import Notification
-from adminconfig.sms_notify import send_ticket_sms
+from glomax_backend.email_design import build_email, button, details, note, p
+
+logger = logging.getLogger(__name__)
 
 
-def notify_new_request(ticket, reapplied=False):
-    """
-    Tells every active Staff and Admin account that a customer just
-    submitted a new request, so it doesn't sit unnoticed. Staff are
-    the ones who assign a Partner Installer next; Admins get it too
-    so they can keep an eye on incoming work. Each role's link opens
-    the ticket in their own portal.
+def _portal_link(path):
+    base = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:5173')
+    return urljoin(base.rstrip('/') + '/', path.lstrip('/'))
 
-    reapplied=True means the customer reapplied using an old ticket,
-    so the message says so (with the try number).
-    """
+
+def _customer_name(ticket):
     customer = ticket.customer
-    customer_name = (
-        (ticket.full_name or '').strip()
+    return (
+        (getattr(ticket, 'full_name', '') or '').strip()
         or (getattr(customer, 'full_name', '') or '').strip()
+        or (customer.get_full_name() or '').strip()
         or customer.username
     )
 
-    if reapplied:
-        what = f"{ticket.ticket_number} was reapplied by {customer_name} (try {ticket.attempt_number})"
+
+def send_assignment_email(ticket):
+    """
+    Notifies the assigned Partner Installer by email once Staff assigns
+    them to a ticket. Uses the shared Glomax email design (same as every
+    other email). Failures here are logged but never block the
+    assignment itself from succeeding - a missed notification email
+    shouldn't undo a real ticket update.
+    """
+    installer = ticket.partner_installer
+    if not installer or not installer.email:
+        return
+
+    name = (getattr(installer, 'full_name', '') or '').strip() or installer.username
+    visit_date = ticket.visit_date.strftime('%B %d, %Y') if ticket.visit_date else 'To be confirmed'
+
+    blocks = [
+        p(f'Hi {name},'),
+        p('You have been assigned a new roof assessment visit. Here are the details:'),
+        details([
+            ('Ticket #', ticket.ticket_number),
+            ('Customer', _customer_name(ticket)),
+            ('Property Address', ticket.property_address),
+            ('Contact Number', ticket.contact_number),
+            ('Visit Date', visit_date),
+        ]),
+        p('Please open the Partner Installer Portal to see the full details.'),
+        button('Open This Visit', _portal_link(f'/partner-installer/incoming-tickets/{ticket.id}')),
+    ]
+
+    try:
+        build_email(
+            f'New Assignment: {ticket.ticket_number}',
+            installer.email,
+            'New roof assessment visit',
+            blocks,
+        ).send(fail_silently=True)
+    except Exception:
+        # Assignment already succeeded in the database by the time
+        # this runs - a broken email send should not surface as an
+        # error to Staff or roll back the assignment.
+        logger.exception("Could not send the assignment email for %s", ticket.ticket_number)
+
+
+# ---------------------------------------------------------------------
+# Emails to the Customer (with PDF)
+# ---------------------------------------------------------------------
+# These emails go out when the final result of a request is known:
+#   - Approved             -> Disclosure Agreement PDF attached
+#   - Not Compatible       -> short explanation, no PDF
+#   - Completed            -> Completion Certificate PDF attached
+#   - Reschedule decision  -> new visit date approved or declined
+# Each one returns True if the email was sent, and False if not (no
+# email address, or sending failed). A failed email is written to the
+# server log, but it never undoes the ticket update that already
+# happened. All of them use the shared Glomax email design.
+
+
+def _send_customer_email(ticket, subject, heading, blocks, pdf_files=()):
+    """
+    Sends one email to the Customer. pdf_files is a list of
+    (file name, PDF bytes). Returns True if sent, False if not.
+    """
+    customer = ticket.customer
+    if not customer or not customer.email:
+        logger.info("No email on file for the customer of %s - email skipped.", ticket.ticket_number)
+        return False
+
+    try:
+        build_email(subject, customer.email, heading, blocks, pdf_files).send()
+        return True
+    except Exception:
+        logger.exception("Could not send the email for %s", ticket.ticket_number)
+        return False
+
+
+def send_approval_email(ticket):
+    """
+    Customer's request was approved by the Admin. Sends the Disclosure
+    Agreement PDF. If the PDF can't be made, the email still goes out
+    and tells the customer to download it from the portal.
+    """
+    from finalsheet.models import FinalSheet
+    from finalsheet.pdf_builders import build_final_sheet_pdf
+
+    try:
+        pdf = build_final_sheet_pdf(ticket)
+    except Exception:
+        logger.exception("Could not make the Disclosure Agreement PDF for %s", ticket.ticket_number)
+        pdf = None
+
+    final_sheet = FinalSheet.objects.filter(ticket=ticket).first()
+    name = _customer_name(ticket)
+    link = _portal_link('/request-status')
+
+    rows = [('Ticket #', ticket.ticket_number), ('Property Address', ticket.property_address)]
+    if final_sheet and final_sheet.final_cost is not None:
+        rows.append(('Final Cost', f'PHP {final_sheet.final_cost:,.2f}'))
+
+    if pdf:
+        note_text = 'Your Disclosure Agreement is attached to this email as a PDF. Please read it carefully.'
+        files = [(f'{ticket.ticket_number}-disclosure-agreement.pdf', pdf)]
     else:
-        what = f"New request {ticket.ticket_number} from {customer_name}"
+        note_text = 'You can download your Disclosure Agreement anytime from Request Status in the Customer Portal.'
+        files = []
 
-    for staff_user in User.objects.filter(role='STAFF', is_active=True):
-        Notification.objects.create(
-            recipient=staff_user,
-            kind=Notification.Kind.NEW_REQUEST,
-            message=f"{what}. Assign a Partner Installer.",
-            link=f"/staff/manage-tickets/{ticket.id}",
-        )
-
-    for admin_user in User.objects.filter(role='ADMIN', is_active=True):
-        Notification.objects.create(
-            recipient=admin_user,
-            kind=Notification.Kind.NEW_REQUEST,
-            message=f"{what}.",
-            link=f"/admin/requests/{ticket.id}",
-        )
-
-
-def find_active_ticket(customer, exclude_id=None):
-    """The customer's ticket that is still being worked on, if any."""
-    queryset = Ticket.objects.filter(customer=customer).exclude(
-        status__in=TicketListCreateView.RESOLVED_STATUSES
-    )
-    if exclude_id:
-        queryset = queryset.exclude(pk=exclude_id)
-    return queryset.order_by('-created_at').first()
-
-
-def link_initial_quotation(ticket):
-    """
-    If this ticket's Customer previously submitted a public
-    Inquiry (same email) that already had an Initial Quotation
-    sent via the Email Inquiries page, copy it onto this ticket.
-    """
-    from inquiries.models import Inquiry
-
-    inquiry = (
-        Inquiry.objects.filter(
-            email__iexact=ticket.customer.email,
-            quotation_sent=True,
-            subject=Inquiry.Subject.ROOF_ASSESSMENT,
-        )
-        .order_by('-quotation_sent_at')
-        .first()
-    )
-    if inquiry:
-        link_initial_quotation_to_ticket(ticket, inquiry)
-
-
-@transaction.atomic
-def reapply_ticket(ticket, new_details):
-    """
-    Reuses an old ticket (Withdrawn or Not Compatible - Can Reapply)
-    for a new try, instead of making a brand-new ticket.
-
-    1. Saves the old try as a TicketAttempt (a full snapshot, so the
-       old assessment, quotations, installer and dates are kept).
-    2. Clears what belonged to the old try (assessment, quotations,
-       reschedule requests, installer, visit date, notes).
-    3. Puts in the new details and sets the ticket back to
-       Request Submitted, as if it was just sent.
-    """
-    now = timezone.now()
-
-    # 1. Save the old try
-    snapshot = TicketSerializer(ticket, context={'skip_attempts': True}).data
-    snapshot = json.loads(json.dumps(snapshot, cls=DjangoJSONEncoder))
-    snapshot.pop('attempts', None)
-    TicketAttempt.objects.create(
-        ticket=ticket,
-        attempt_number=ticket.attempt_number,
-        status=ticket.status,
-        snapshot=snapshot,
-        started_at=ticket.created_at,
-        ended_at=ticket.withdrawn_at or ticket.completed_at or ticket.updated_at,
+    blocks = [
+        p(f'Hi {name},'),
+        p('Good news! Your roof assessment was reviewed and your request has been approved.'),
+        details(rows),
+        note(note_text),
+        button('View My Request', link),
+    ]
+    return _send_customer_email(
+        ticket, f'Your request is approved: {ticket.ticket_number}', 'Your request is approved', blocks, files
     )
 
-    # 2. Clear the old try. The assessment is one-per-ticket, so it has
-    # to go for the Partner Installer to submit a new one. Its photo
-    # files stay on the server, so the links in the snapshot still work.
-    assessment = getattr(ticket, 'assessment', None)
-    if assessment is not None:
-        assessment.delete()
-    ticket.quotations.all().delete()
-    ticket.reschedule_requests.all().delete()
 
-    ticket.partner_installer = None
-    ticket.visit_date = None
-    ticket.admin_revision_notes = None
-    ticket.assigned_at = None
-    ticket.withdrawn_at = None
-    ticket.completed_at = None
-
-    # 3. New details and a fresh start
-    for field, value in new_details.items():
-        setattr(ticket, field, value)
-    ticket.status = Ticket.Status.REQUEST_SUBMITTED
-    ticket.attempt_number += 1
-    ticket.created_at = now
-    ticket.save()
-
-    # Same as a new request: copy the Initial Quotation from an
-    # Inquiry if there is one
-    link_initial_quotation(ticket)
-
-    # Load it again, so the old (now deleted) assessment isn't still
-    # remembered on this object
-    return Ticket.objects.get(pk=ticket.pk)
-
-
-# --- Stage 1 views (Customer) ---
-
-class TicketListCreateView(generics.ListCreateAPIView):
+def send_not_compatible_email(ticket, can_reapply):
     """
-    GET  /api/tickets/  - list the logged-in Customer's own tickets
-    POST /api/tickets/  - submit a new Schedule Request. Blocked while
-         the Customer already has an active (still in-progress)
-         ticket. Notifies Staff and Admins once it's created.
+    Customer's request was marked Not Compatible by Staff.
+    can_reapply=True  -> tells them they can send a new request.
+    can_reapply=False -> tells them the request can't go ahead.
     """
-    permission_classes = [permissions.IsAuthenticated, IsCustomer]
+    name = _customer_name(ticket)
+    link = _portal_link('/request-status')
 
-    RESOLVED_STATUSES = [
-        Ticket.Status.APPROVED,
-        Ticket.Status.COMPLETED,
-        Ticket.Status.WITHDRAWN,
-        Ticket.Status.NOT_COMPATIBLE_CANNOT_PROCEED,
-        Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY,
+    rows = [('Ticket #', ticket.ticket_number), ('Property Address', ticket.property_address)]
+    subject = f'Update on your request: {ticket.ticket_number}'
+
+    if can_reapply:
+        heading = 'Your request is not compatible for now'
+        paragraphs = [
+            f'Hi {name},',
+            'We reviewed the roof assessment for your property. Right now it is not compatible, '
+            'so we cannot go ahead with this request.',
+            'You are welcome to reapply. You can send your request again from the Customer Portal, '
+            'under Request Status.',
+        ]
+        button_text = 'Reapply in the Portal'
+    else:
+        heading = 'Your request is not compatible'
+        paragraphs = [
+            f'Hi {name},',
+            'We reviewed the roof assessment for your property. We are sorry, but it is not '
+            'compatible, so we cannot go ahead with this request.',
+            'If you have questions, please contact Glomax Solar Enterprises. Thank you for your interest.',
+        ]
+        button_text = 'View My Request'
+
+    blocks = [p(text) for text in paragraphs] + [details(rows), button(button_text, link)]
+    return _send_customer_email(ticket, subject, heading, blocks)
+
+
+def send_completion_email(ticket):
+    """
+    Customer's request was marked Completed. Sends the Completion
+    Certificate PDF. If the PDF can't be made, the email still goes out
+    and tells the customer to download it from the portal.
+    """
+    from finalsheet.models import FinalSheet
+    from finalsheet.pdf_builders import build_completion_certificate_pdf
+
+    try:
+        pdf = build_completion_certificate_pdf(ticket)
+    except Exception:
+        logger.exception("Could not make the Completion Certificate PDF for %s", ticket.ticket_number)
+        pdf = None
+
+    final_sheet = FinalSheet.objects.filter(ticket=ticket).first()
+    name = _customer_name(ticket)
+    link = _portal_link('/request-status')
+
+    rows = [('Ticket #', ticket.ticket_number), ('Property Address', ticket.property_address)]
+    if final_sheet and final_sheet.final_cost is not None:
+        rows.append(('Final Cost', f'PHP {final_sheet.final_cost:,.2f}'))
+    if ticket.completed_at:
+        rows.append(('Completed On', ticket.completed_at.strftime('%B %d, %Y')))
+
+    if pdf:
+        note_text = 'Your Completion Certificate is attached to this email as a PDF.'
+        files = [(f'{ticket.ticket_number}-completion-certificate.pdf', pdf)]
+    else:
+        note_text = 'You can download your Completion Certificate anytime from Request Status in the Customer Portal.'
+        files = []
+
+    blocks = [
+        p(f'Hi {name},'),
+        p('Your request is now completed. Thank you for choosing Glomax Solar Enterprises!'),
+        p('We would also love to hear about your experience. Please leave your feedback in the Customer Portal.'),
+        details(rows),
+        note(note_text),
+        button('View My Request', link),
     ]
-
-    def get_queryset(self):
-        return Ticket.objects.filter(customer=self.request.user).order_by('-created_at')
-
-    def get_serializer_class(self):
-        if self.request.method == 'POST':
-            return TicketCreateSerializer
-        return TicketSerializer
-
-    def perform_create(self, serializer):
-        serializer.save(customer=self.request.user)
-
-    def create(self, request, *args, **kwargs):
-        active_ticket = find_active_ticket(request.user)
-        if active_ticket:
-            return Response(
-                {
-                    "detail": (
-                        f"You already have an active request ({active_ticket.ticket_number}). "
-                        "You can submit a new one once it's completed, withdrawn, or marked "
-                        "Not Compatible."
-                    ),
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        # If the customer's latest ticket was Withdrawn or marked
-        # Not Compatible - Can Reapply, reuse it instead of making a
-        # new ticket (so they keep one ticket number).
-        latest = Ticket.objects.filter(customer=request.user).order_by('-created_at').first()
-        if latest and latest.status in REAPPLY_STATUSES:
-            ticket = reapply_ticket(latest, serializer.validated_data)
-            notify_new_request(ticket, reapplied=True)
-            send_ticket_sms(ticket, '05')
-            data = TicketSerializer(ticket).data
-            data['reapplied'] = True
-            return Response(data, status=status.HTTP_200_OK)
-
-        self.perform_create(serializer)
-        ticket = serializer.instance
-
-        link_initial_quotation(ticket)
-        notify_new_request(ticket)
-        send_ticket_sms(ticket, '05')
-
-        data = TicketSerializer(ticket).data
-        data['reapplied'] = False
-        return Response(data, status=status.HTTP_201_CREATED)
+    return _send_customer_email(
+        ticket, f'Your request is completed: {ticket.ticket_number}', 'Your request is completed', blocks, files
+    )
 
 
-class TicketReapplyView(APIView):
+def send_reschedule_decision_email(ticket, reschedule, approved):
     """
-    POST /api/tickets/<id>/reapply/  - Customer's Reapply button on an
-    old ticket. Uses the same ticket again for a new try (see
-    reapply_ticket). Only works on the Customer's own ticket, only
-    while it's Withdrawn or Not Compatible - Can Reapply, and only if
-    they don't have another request in progress.
-
-    Body: the same fields as the Schedule Request form. Any field left
-    out keeps the ticket's old value.
+    Customer asked for a new visit date and Staff answered. Tells the
+    Customer if the new date was approved or declined. Returns True if
+    the email was sent, False if not.
     """
-    permission_classes = [permissions.IsAuthenticated, IsCustomer]
-
-    def post(self, request, pk):
-        try:
-            ticket = Ticket.objects.get(pk=pk, customer=request.user)
-        except Ticket.DoesNotExist:
-            return Response({"detail": "Ticket not found."}, status=404)
-
-        if ticket.status not in REAPPLY_STATUSES:
-            return Response(
-                {"detail": "Only withdrawn tickets, or tickets marked Not Compatible - Can Reapply, can be reapplied."},
-                status=400,
-            )
-
-        active_ticket = find_active_ticket(request.user, exclude_id=ticket.id)
-        if active_ticket:
-            return Response(
-                {
-                    "detail": (
-                        f"You already have an active request ({active_ticket.ticket_number}). "
-                        "You can reapply once it's completed, withdrawn, or marked Not Compatible."
-                    ),
-                },
-                status=400,
-            )
-
-        serializer = TicketCreateSerializer(ticket, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-
-        ticket = reapply_ticket(ticket, serializer.validated_data)
-        notify_new_request(ticket, reapplied=True)
-        send_ticket_sms(ticket, '05')
-
-        data = TicketSerializer(ticket).data
-        data['reapplied'] = True
-        return Response(data)
-
-
-class TicketDetailView(generics.RetrieveAPIView):
-    """
-    GET /api/tickets/<id>/  - view one ticket's full details.
-    """
-    queryset = Ticket.objects.all()
-    serializer_class = TicketSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAccountOwner]
-
-
-class TicketWithdrawView(APIView):
-    """
-    PATCH /api/tickets/<id>/withdraw/  - Withdraw button action.
-    Only allowed while status is REQUEST_SUBMITTED.
-    """
-    permission_classes = [permissions.IsAuthenticated, IsCustomer]
-
-    def patch(self, request, pk):
-        try:
-            ticket = Ticket.objects.get(pk=pk, customer=request.user)
-        except Ticket.DoesNotExist:
-            return Response({"detail": "Ticket not found."}, status=404)
-
-        if ticket.partner_installer is not None or ticket.status != Ticket.Status.REQUEST_SUBMITTED:
-            return Response(
-                {"detail": "This ticket can no longer be withdrawn."},
-                status=400,
-            )
-
-        ticket.status = Ticket.Status.WITHDRAWN
-        ticket.withdrawn_at = timezone.now()
-        ticket.save()
-
-        send_ticket_sms(ticket, '14')
-
-        return Response(TicketSerializer(ticket).data)
-
-
-class TicketRescheduleRequestView(APIView):
-    """
-    POST /api/tickets/<id>/reschedule/  - Customer's "Request
-    Reschedule" button on the Request Status page. Only works on the
-    Customer's own ticket, only while PI_ASSIGNED, and only if no
-    PENDING request already exists. Notifies Staff so it shows up for
-    them to Approve or Decline.
-    """
-    permission_classes = [permissions.IsAuthenticated, IsCustomer]
-
-    def post(self, request, pk):
-        try:
-            ticket = Ticket.objects.get(pk=pk, customer=request.user)
-        except Ticket.DoesNotExist:
-            return Response({"detail": "Ticket not found."}, status=404)
-
-        serializer = RescheduleRequestCreateSerializer(data=request.data, context={'ticket': ticket})
-        serializer.is_valid(raise_exception=True)
-
-        reschedule = RescheduleRequest.objects.create(
-            ticket=ticket,
-            requested_date=serializer.validated_data['requested_date'],
-            reason=serializer.validated_data.get('reason', ''),
-        )
-
-        for staff_user in User.objects.filter(role='STAFF'):
-            Notification.objects.create(
-                recipient=staff_user,
-                kind=Notification.Kind.RESCHEDULE_REQUESTED,
-                message=f"{ticket.ticket_number}'s customer requested a new visit date.",
-                link=f"/staff/manage-tickets/{ticket.id}",
-            )
-
-        return Response(TicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
-
-
-class TicketRescheduleDecisionView(APIView):
-    """
-    PATCH /api/tickets/<id>/reschedule/<reschedule_id>/  - Staff's
-    Approve/Decline action on a pending reschedule request.
-    """
-    permission_classes = [permissions.IsAuthenticated, IsStaff]
-
-    def patch(self, request, pk, reschedule_id):
-        from .utils import send_reschedule_decision_email
-
-        try:
-            ticket = Ticket.objects.get(pk=pk)
-        except Ticket.DoesNotExist:
-            return Response({"detail": "Ticket not found."}, status=404)
-
-        try:
-            reschedule = RescheduleRequest.objects.get(pk=reschedule_id, ticket=ticket)
-        except RescheduleRequest.DoesNotExist:
-            return Response({"detail": "Reschedule request not found."}, status=404)
-
-        if reschedule.status != RescheduleRequest.Status.PENDING:
-            return Response(
-                {"detail": "This reschedule request has already been resolved."},
-                status=400,
-            )
-
-        decision = request.data.get('decision')
-        if decision not in ('APPROVE', 'DECLINE'):
-            return Response({"detail": "decision must be APPROVE or DECLINE."}, status=400)
-
-        reschedule.staff_response_note = request.data.get('staff_response_note', '')
-        reschedule.resolved_at = timezone.now()
-
-        if decision == 'APPROVE':
-            reschedule.status = RescheduleRequest.Status.APPROVED
-            ticket.visit_date = reschedule.requested_date
-            ticket.save()
-            message = (
-                f"Your reschedule request for {ticket.ticket_number} was approved. "
-                f"New visit date: {reschedule.requested_date.strftime('%B %d, %Y')}."
-            )
-        else:
-            reschedule.status = RescheduleRequest.Status.DECLINED
-            message = f"Your reschedule request for {ticket.ticket_number} was declined."
-
-        reschedule.save()
-
-        # Email the Customer too. The bell message says so only if it was sent.
-        approved = decision == 'APPROVE'
-        if send_reschedule_decision_email(ticket, reschedule, approved):
-            message += " We also sent the details to your email."
-
-        Notification.objects.create(
-            recipient=ticket.customer,
-            kind=Notification.Kind.RESCHEDULE_DECISION,
-            message=message,
-            link="/request-status",
-        )
-
-        # Text message to the Customer
-        if approved:
-            send_ticket_sms(
-                ticket, '08',
-                new_visit_date=reschedule.requested_date.strftime('%B %d, %Y'),
-            )
-        else:
-            send_ticket_sms(ticket, '09')
-
-        # The Partner Installer must know when their visit date moves
-        if approved and ticket.partner_installer_id:
-            Notification.objects.create(
-                recipient=ticket.partner_installer,
-                kind=Notification.Kind.RESCHEDULE_DECISION,
-                message=(
-                    f"The visit date for {ticket.ticket_number} was changed to "
-                    f"{reschedule.requested_date.strftime('%B %d, %Y')}."
-                ),
-                link=f"/partner-installer/incoming-tickets/{ticket.id}",
-            )
-
-        return Response(TicketSerializer(ticket).data)
-
-
-# --- Stage 2 views (Staff) ---
-
-class OptionalPageNumberPagination(PageNumberPagination):
-    """
-    Only paginates when the request explicitly asks for a page (via
-    ?page=N).
-    """
-    page_size = 20
-    page_query_param = 'page'
-
-    def paginate_queryset(self, queryset, request, view=None):
-        if request.query_params.get(self.page_query_param) is None:
-            return None
-        return super().paginate_queryset(queryset, request, view)
-
-
-class StaffTicketListView(generics.ListAPIView):
-    """
-    GET /api/tickets/staff/  - Staff/Admin view of ALL tickets.
-    Supports ?status=, ?search=, ?has_assessment=, ?ordering=, ?page=
-    all together.
-    """
-    serializer_class = TicketSerializer
-    permission_classes = [permissions.IsAuthenticated, IsStaffOrAdmin]
-    pagination_class = OptionalPageNumberPagination
-
-    def get_queryset(self):
-        queryset = Ticket.objects.all().order_by('-created_at')
-
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            status_list = [s.strip() for s in status_filter.split(',') if s.strip()]
-            queryset = queryset.filter(status__in=status_list)
-
-        has_assessment = self.request.query_params.get('has_assessment')
-        if has_assessment == 'true':
-            queryset = queryset.filter(assessment__isnull=False)
-
-        search_term = self.request.query_params.get('search')
-        if search_term:
-            queryset = queryset.filter(
-                Q(ticket_number__icontains=search_term) |
-                Q(full_name__icontains=search_term) |
-                Q(customer__full_name__icontains=search_term) |
-                Q(customer__username__icontains=search_term)
-            )
-
-        ordering = self.request.query_params.get('ordering')
-        if ordering == 'oldest_assessment':
-            queryset = queryset.order_by('assessment__submitted_at')
-
-        return queryset
-
-
-class StaffTicketCalendarView(generics.ListAPIView):
-    """
-    GET /api/tickets/staff/calendar/?month=9&year=2026  - Staff
-    Calendar page. Returns every ticket that has a scheduled
-    visit_date landing in the given month, so Staff can see all
-    Partner Installer visits at a glance instead of scrolling a
-    table. Withdrawn and Not Compatible tickets are left out, since
-    there's no real visit left to show for them.
-
-    Always returns a plain list (no pagination), since a calendar
-    needs the whole month's tickets at once, not one page at a time.
-    """
-    serializer_class = TicketCalendarSerializer
-    permission_classes = [permissions.IsAuthenticated, IsStaffOrAdmin]
-    pagination_class = None
-
-    EXCLUDED_STATUSES = [
-        Ticket.Status.WITHDRAWN,
-        Ticket.Status.NOT_COMPATIBLE_CANNOT_PROCEED,
-        Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY,
-    ]
-
-    def get_queryset(self):
-        queryset = Ticket.objects.filter(visit_date__isnull=False).exclude(
-            status__in=self.EXCLUDED_STATUSES
-        )
-
-        month = self.request.query_params.get('month')
-        year = self.request.query_params.get('year')
-        if month and year:
-            queryset = queryset.filter(visit_date__year=year, visit_date__month=month)
-
-        return queryset.order_by('visit_date')
-
-
-class TicketAssignView(APIView):
-    """
-    PATCH /api/tickets/<id>/assign/  - Assign Partner Installer page.
-    """
-    permission_classes = [permissions.IsAuthenticated, IsStaff]
-
-    def patch(self, request, pk):
-        from .utils import send_assignment_email
-
-        try:
-            ticket = Ticket.objects.get(pk=pk)
-        except Ticket.DoesNotExist:
-            return Response({"detail": "Ticket not found."}, status=404)
-
-        serializer = TicketAssignSerializer(data=request.data, context={'ticket': ticket})
-        serializer.is_valid(raise_exception=True)
-
-        ticket.partner_installer = serializer.validated_data['partner_installer']
-        ticket.visit_date = serializer.validated_data['visit_date']
-        ticket.status = Ticket.Status.PARTNER_INSTALLER_ASSIGNED
-        ticket.assigned_at = timezone.now()
-        ticket.save()
-
-        send_assignment_email(ticket)
-        send_ticket_sms(ticket, '06')
-
-        Notification.objects.create(
-            recipient=ticket.partner_installer,
-            kind=Notification.Kind.TICKET_ASSIGNED,
-            message=f"You've been assigned to {ticket.ticket_number}.",
-            link=f"/partner-installer/incoming-tickets/{ticket.id}",
-        )
-
-        return Response(TicketSerializer(ticket).data)
-
-
-class TicketDecisionView(APIView):
-    """
-    PATCH /api/tickets/<id>/decision/  - Assessment Review page.
-    """
-    permission_classes = [permissions.IsAuthenticated, IsStaff]
-
-    def patch(self, request, pk):
-        from .utils import send_not_compatible_email
-
-        try:
-            ticket = Ticket.objects.get(pk=pk)
-        except Ticket.DoesNotExist:
-            return Response({"detail": "Ticket not found."}, status=404)
-
-        serializer = TicketDecisionSerializer(data=request.data, context={'ticket': ticket})
-        serializer.is_valid(raise_exception=True)
-        decision = serializer.validated_data['decision']
-
-        if decision == 'FORWARD_TO_ADMIN':
-            ticket.status = Ticket.Status.ADMIN_REVIEW
-            ticket.admin_revision_notes = None
-            ticket.save()
-
-            for admin_user in User.objects.filter(role='ADMIN'):
-                Notification.objects.create(
-                    recipient=admin_user,
-                    kind=Notification.Kind.ADMIN_REVIEW_READY,
-                    message=f"{ticket.ticket_number} is ready for your review.",
-                    link=f"/admin/requests/{ticket.id}",
-                )
-        elif decision == 'NOT_COMPATIBLE_CANNOT':
-            ticket.status = Ticket.Status.NOT_COMPATIBLE_CANNOT_PROCEED
-            ticket.completed_at = timezone.now()
-            ticket.save()
-
-            message = f"Your request {ticket.ticket_number} was marked as Not Compatible."
-            if send_not_compatible_email(ticket, can_reapply=False):
-                message += " We also sent the details to your email."
-
-            Notification.objects.create(
-                recipient=ticket.customer,
-                kind=Notification.Kind.TICKET_DECISION,
-                message=message,
-                link="/request-status",
-            )
-            send_ticket_sms(ticket, '12', pref='notify_request_rejection')
-        elif decision == 'NOT_COMPATIBLE_CAN_REAPPLY':
-            ticket.status = Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY
-            ticket.completed_at = timezone.now()
-            ticket.save()
-
-            message = f"Your request {ticket.ticket_number} was marked as Not Compatible, but you can reapply."
-            if send_not_compatible_email(ticket, can_reapply=True):
-                message += " We also sent the details to your email."
-
-            Notification.objects.create(
-                recipient=ticket.customer,
-                kind=Notification.Kind.TICKET_DECISION,
-                message=message,
-                link="/request-status",
-            )
-            send_ticket_sms(ticket, '13', pref='notify_request_rejection')
-        else:
-            ticket.save()
-
-        return Response(TicketSerializer(ticket).data)
-
-
-# --- Stage 3 views (Partner Installer) ---
-
-class InstallerTicketListView(generics.ListAPIView):
-    """
-    GET /api/tickets/installer/  - tickets assigned to the logged-in
-    Partner Installer.
-    """
-    serializer_class = TicketSerializer
-    permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller]
-
-    def get_queryset(self):
-        queryset = Ticket.objects.filter(partner_installer=self.request.user).order_by('-created_at')
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-        return queryset
-
-
-class TicketCompleteView(APIView):
-    """
-    PATCH /api/tickets/<id>/complete/  - Partner Installer's "Mark
-    Service Completed" action. The installation itself is handled
-    outside the system; this only closes the request with photos.
-    """
-    permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def patch(self, request, pk):
-        from .utils import send_completion_email
-
-        try:
-            ticket = Ticket.objects.get(pk=pk, partner_installer=request.user)
-        except Ticket.DoesNotExist:
-            return Response({"detail": "Ticket not found, or not assigned to you."}, status=404)
-
-        if ticket.status != Ticket.Status.APPROVED:
-            return Response(
-                {"detail": "This ticket can only be marked complete while it's Approved."},
-                status=400,
-            )
-
-        photos = request.FILES.getlist('photos')
-        if not photos:
-            return Response(
-                {"detail": "Please attach at least one completion photo."},
-                status=400,
-            )
-
-        for photo in photos:
-            CompletionPhoto.objects.create(ticket=ticket, image=photo)
-
-        ticket.status = Ticket.Status.COMPLETED
-        ticket.completed_at = timezone.now()
-        ticket.save()
-
-        message = f"Your request {ticket.ticket_number} is completed!"
-        if send_completion_email(ticket):
-            message += " We sent your Completion Certificate to your email."
-
-        Notification.objects.create(
-            recipient=ticket.customer,
-            kind=Notification.Kind.INSTALLATION_COMPLETED,
-            message=message,
-            link="/request-status",
-        )
-
-        send_ticket_sms(ticket, '15')
-
-        return Response(TicketSerializer(ticket).data)
-
-
-# --- Stage 4 views (Admin) ---
-
-class AdminTicketListView(generics.ListAPIView):
-    """
-    GET /api/tickets/admin/  - Admin's Pending Approval queue.
-    """
-    serializer_class = TicketSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
-
-    def get_queryset(self):
-        queryset = Ticket.objects.all().order_by('-created_at')
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-        return queryset
-
-
-class TicketApproveView(APIView):
-    """
-    PATCH /api/tickets/<id>/approve/  - Pending Approval page's
-    Approve action.
-    """
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
-
-    def patch(self, request, pk):
-        from finalsheet.models import FinalSheet
-        from .utils import send_approval_email
-
-        try:
-            ticket = Ticket.objects.get(pk=pk)
-        except Ticket.DoesNotExist:
-            return Response({"detail": "Ticket not found."}, status=404)
-
-        serializer = TicketApproveSerializer(data=request.data, context={'ticket': ticket})
-        serializer.is_valid(raise_exception=True)
-
-        FinalSheet.objects.create(
-            ticket=ticket,
-            approved_by=request.user,
-            final_cost=serializer.validated_data['final_cost'],
-            payment_terms_summary=serializer.validated_data['payment_terms_summary'],
-        )
-
-        ticket.status = Ticket.Status.APPROVED
-        ticket.save()
-
-        message = f"Your request {ticket.ticket_number} has been approved!"
-        if send_approval_email(ticket):
-            message += " We sent your Disclosure Agreement to your email."
-
-        Notification.objects.create(
-            recipient=ticket.customer,
-            kind=Notification.Kind.TICKET_APPROVED,
-            message=message,
-            link="/request-status",
-        )
-
-        send_ticket_sms(ticket, '11', pref='notify_request_approval')
-
-        return Response(TicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
-
-
-class TicketReturnForRevisionView(APIView):
-    """
-    PATCH /api/tickets/<id>/return-for-revision/  - Pending Approval
-    page's Return for Revision action.
-    """
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
-
-    def patch(self, request, pk):
-        try:
-            ticket = Ticket.objects.get(pk=pk)
-        except Ticket.DoesNotExist:
-            return Response({"detail": "Ticket not found."}, status=404)
-
-        serializer = TicketReturnForRevisionSerializer(data=request.data, context={'ticket': ticket})
-        serializer.is_valid(raise_exception=True)
-
-        ticket.status = Ticket.Status.STAFF_REVIEW
-        ticket.admin_revision_notes = serializer.validated_data['notes']
-        ticket.save()
-
-        for staff_user in User.objects.filter(role='STAFF'):
-            Notification.objects.create(
-                recipient=staff_user,
-                kind=Notification.Kind.TICKET_RETURNED,
-                message=f"{ticket.ticket_number} was returned for revision by Admin.",
-                link=f"/staff/manage-tickets/{ticket.id}",
-            )
-
-        return Response(TicketSerializer(ticket).data)
-
-
-class InstallerTicketCalendarView(generics.ListAPIView):
-    """
-    GET /api/tickets/installer/calendar/?month=9&year=2026  - PI
-    Calendar page. Same idea as StaffTicketCalendarView, but scoped
-    to only the logged-in Partner Installer's own assigned tickets,
-    since a PI should only ever see their own schedule, not everyone
-    else's.
-    """
-    serializer_class = TicketCalendarSerializer
-    permission_classes = [permissions.IsAuthenticated, IsPartnerInstaller]
-    pagination_class = None
-
-    EXCLUDED_STATUSES = [
-        Ticket.Status.WITHDRAWN,
-        Ticket.Status.NOT_COMPATIBLE_CANNOT_PROCEED,
-        Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY,
-    ]
-
-    def get_queryset(self):
-        queryset = Ticket.objects.filter(
-            partner_installer=self.request.user,
-            visit_date__isnull=False,
-        ).exclude(status__in=self.EXCLUDED_STATUSES)
-
-        month = self.request.query_params.get('month')
-        year = self.request.query_params.get('year')
-        if month and year:
-            queryset = queryset.filter(visit_date__year=year, visit_date__month=month)
-
-        return queryset.order_by('visit_date')
+    name = _customer_name(ticket)
+    link = _portal_link('/request-status')
+
+    rows = [('Ticket #', ticket.ticket_number), ('Property Address', ticket.property_address)]
+    if approved:
+        subject = f'Your new visit date is approved: {ticket.ticket_number}'
+        heading = 'Your new visit date is approved'
+        paragraphs = [
+            f'Hi {name},',
+            'Good news! Staff approved your request to change the visit date.',
+        ]
+        rows.append(('New Visit Date', reschedule.requested_date.strftime('%B %d, %Y')))
+    else:
+        subject = f'Your reschedule request was declined: {ticket.ticket_number}'
+        heading = 'Your reschedule request was declined'
+        paragraphs = [
+            f'Hi {name},',
+            'Staff could not approve your request to change the visit date, so the visit date stays the same.',
+        ]
+        if ticket.visit_date:
+            rows.append(('Visit Date', ticket.visit_date.strftime('%B %d, %Y')))
+        rows.append(('Date You Asked For', reschedule.requested_date.strftime('%B %d, %Y')))
+
+    staff_note = (reschedule.staff_response_note or '').strip()
+    if staff_note:
+        rows.append(('Note from Staff', staff_note))
+
+    blocks = [p(text) for text in paragraphs] + [details(rows), button('View My Request', link)]
+    return _send_customer_email(ticket, subject, heading, blocks)

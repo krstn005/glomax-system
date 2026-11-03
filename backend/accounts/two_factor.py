@@ -17,15 +17,14 @@ The flow in plain words:
 Text messages are sent through Semaphore (see sms.py).
 """
 import logging
-import os
 from datetime import timedelta
-from email.mime.image import MIMEImage
 
 from django.conf import settings
 from django.contrib.auth.models import update_last_login
-from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 from rest_framework.response import Response
+
+from glomax_backend.email_design import build_email, code_box, p, small
 
 from .models import User, LoginChallenge, BackupCode, TrustedDevice
 from .sms import mask_phone, normalize_ph_mobile, send_otp_sms
@@ -128,81 +127,19 @@ def sent_to_hint(challenge):
 
 def send_code_email(user, code, subject, heading, intro, minutes):
     """
-    Sends a 6-digit code in the same Glomax email design used for the
-    password change code. Raises an exception if the email can't be
-    sent, so the caller can show a clear message.
+    Sends a 6-digit code in the shared Glomax email design (the same
+    look as every other email). Raises an exception if the email can't
+    be sent, so the caller can show a clear message.
     """
-    plain_message = (
-        f'Your verification code is {code}. It expires in {minutes} minutes. '
-        f"If you didn't request this, you can safely ignore this email."
-    )
-
-    html_message = f"""
-    <div style="background-color:#f3f4f6;padding:32px 16px;font-family:Arial, Helvetica, sans-serif;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
-        <tr>
-          <td style="background-color:#0d1f3c;padding:20px 32px;">
-            <table role="presentation" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="vertical-align:middle;padding-right:10px;">
-                  <img src="cid:glomax_logo" width="32" height="32" style="display:block;border-radius:6px;" />
-                </td>
-                <td style="vertical-align:middle;">
-                  <span style="color:#ffffff;font-size:17px;font-weight:bold;">Glomax Solar Enterprises</span>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:32px;">
-            <h2 style="margin:0 0 12px;color:#0d1f3c;font-size:20px;">{heading}</h2>
-            <p style="margin:0 0 24px;color:#374151;font-size:14px;line-height:1.6;">
-              {intro}
-            </p>
-            <div style="text-align:center;margin:0 0 24px;">
-              <span style="display:inline-block;background-color:#fef9c3;border:1.5px solid #eab308;border-radius:10px;padding:16px 32px;font-size:32px;font-weight:bold;letter-spacing:8px;color:#0d1f3c;">
-                {code}
-              </span>
-            </div>
-            <p style="margin:0 0 8px;color:#6b7280;font-size:13px;line-height:1.6;">
-              This code will expire in <strong>{minutes} minutes</strong>.
-            </p>
-            <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;">
-              If you didn't request this, you can safely ignore this email.
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="background-color:#f9fafb;padding:16px 32px;border-top:1px solid #f1f3f6;">
-            <p style="margin:0;color:#9ca3af;font-size:11.5px;">
-              This is an automated message from Glomax Solar Enterprises. Please do not reply to this email.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </div>
-    """
-
-    email = EmailMultiAlternatives(
-        subject=subject,
-        body=plain_message,
-        from_email=None,  # uses DEFAULT_FROM_EMAIL
-        to=[user.email],
-    )
-    email.attach_alternative(html_message, "text/html")
-
-    logo_path = os.path.join(settings.BASE_DIR, 'finalsheet', 'static', 'finalsheet', 'logo.jpg')
-    try:
-        with open(logo_path, 'rb') as f:
-            logo_image = MIMEImage(f.read())
-            logo_image.add_header('Content-ID', '<glomax_logo>')
-            logo_image.add_header('Content-Disposition', 'inline', filename='logo.jpg')
-            email.attach(logo_image)
-    except FileNotFoundError:
-        pass  # email still sends fine without the logo
-
-    email.send()
+    name = (user.full_name or '').strip() or user.username
+    blocks = [
+        p(f'Hi {name},'),
+        p(intro),
+        code_box(code),
+        small(f'This code will expire in {minutes} minutes.'),
+        small("If you didn't request this, you can safely ignore this email."),
+    ]
+    build_email(subject, user.email, heading, blocks).send()
 
 
 # ---------- Sending a code (SMS or email) ----------

@@ -11,18 +11,16 @@ In plain words:
     token (made with the project's SECRET_KEY), so no migration is needed.
 """
 import hmac
-import os
 import re
-from email.mime.image import MIMEImage
 from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core import signing
 from django.core.exceptions import ValidationError
-from django.core.mail import EmailMultiAlternatives
 from django.utils.crypto import salted_hmac
-from django.utils.html import escape
+
+from glomax_backend.email_design import build_email, button, details, p, small
 
 from .models import User
 
@@ -103,93 +101,24 @@ def build_setup_link(user):
 
 def send_password_link(user):
     """
-    Emails the one-time link to the worker. Raises an error if the email
-    can't be sent, so the caller can show a clear message.
+    Emails the one-time link to the worker, in the shared Glomax email
+    design. Raises an error if the email can't be sent, so the caller
+    can show a clear message.
     """
     link = build_setup_link(user)
-    name = escape(user.full_name or user.username)
-    username = escape(user.username)
+    name = (user.full_name or '').strip() or user.username
 
-    plain_message = (
-        f'Hi {user.full_name or user.username},\n\n'
-        'The Glomax Admin asked you to set your own password.\n\n'
-        f'Your username: {user.username}\n\n'
-        f'Open this link and choose your password:\n{link}\n\n'
-        f'The link can be used once and expires in {LINK_HOURS} hours.\n'
-        "If you did not expect this email, you can ignore it.\n\n"
-        'Glomax Solar Enterprises'
-    )
-
-    html_message = f"""
-    <div style="background-color:#f3f4f6;padding:32px 16px;font-family:Arial, Helvetica, sans-serif;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
-        <tr>
-          <td style="background-color:#0d1f3c;padding:20px 32px;">
-            <table role="presentation" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="vertical-align:middle;padding-right:10px;">
-                  <img src="cid:glomax_logo" width="32" height="32" style="display:block;border-radius:6px;" />
-                </td>
-                <td style="vertical-align:middle;">
-                  <span style="color:#ffffff;font-size:17px;font-weight:bold;">Glomax Solar Enterprises</span>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:32px;">
-            <h2 style="margin:0 0 12px;color:#0d1f3c;font-size:20px;">Set your password</h2>
-            <p style="margin:0 0 16px;color:#374151;font-size:14px;line-height:1.6;">
-              Hi {name}, the Glomax Admin asked you to set your own password. Press the button below and choose a password that only you know.
-            </p>
-            <p style="margin:0 0 24px;color:#374151;font-size:14px;line-height:1.6;">
-              Your username: <strong>{username}</strong>
-            </p>
-            <div style="text-align:center;margin:0 0 24px;">
-              <a href="{link}" style="display:inline-block;background-color:#facc15;color:#0d1f3c;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 28px;border-radius:10px;">
-                Set My Password
-              </a>
-            </div>
-            <p style="margin:0 0 8px;color:#6b7280;font-size:13px;line-height:1.6;">
-              This link can be used <strong>once</strong> and expires in <strong>{LINK_HOURS} hours</strong>.
-            </p>
-            <p style="margin:0 0 8px;color:#6b7280;font-size:13px;line-height:1.6;">
-              If the button does not work, copy this address into your browser:<br />
-              <span style="word-break:break-all;color:#1e40af;">{link}</span>
-            </p>
-            <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;">
-              If you did not expect this email, you can ignore it.
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="background-color:#f9fafb;padding:16px 32px;border-top:1px solid #f1f3f6;">
-            <p style="margin:0;color:#9ca3af;font-size:11.5px;">
-              This is an automated message from Glomax Solar Enterprises. Please do not reply to this email.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </div>
-    """
-
-    email = EmailMultiAlternatives(
-        subject='Set your Glomax password',
-        body=plain_message,
-        from_email=None,  # uses DEFAULT_FROM_EMAIL
-        to=[user.email],
-    )
-    email.attach_alternative(html_message, 'text/html')
-
-    logo_path = os.path.join(settings.BASE_DIR, 'finalsheet', 'static', 'finalsheet', 'logo.jpg')
-    try:
-        with open(logo_path, 'rb') as f:
-            logo_image = MIMEImage(f.read())
-            logo_image.add_header('Content-ID', '<glomax_logo>')
-            logo_image.add_header('Content-Disposition', 'inline', filename='logo.jpg')
-            email.attach(logo_image)
-    except FileNotFoundError:
-        pass  # the email still sends fine without the logo
-
-    email.send()
+    blocks = [
+        p(f'Hi {name},'),
+        p(
+            'The Glomax Admin asked you to set your own password. Press the button below '
+            'and choose a password that only you know.'
+        ),
+        details([('Your username', user.username)]),
+        button('Set My Password', link, 'gold'),
+        small(f'This link can be used once and expires in {LINK_HOURS} hours.'),
+        small('If the button does not work, copy this address into your browser:'),
+        small(link),
+        small('If you did not expect this email, you can ignore it.'),
+    ]
+    build_email('Set your Glomax password', user.email, 'Set your password', blocks).send()
