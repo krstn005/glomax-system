@@ -376,6 +376,7 @@ export default function AdminTicketDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Returns the latest version of this ticket (or undefined if it could not load)
   async function load(showSkeleton = false) {
     if (showSkeleton) setLoading(true);
     try {
@@ -383,11 +384,41 @@ export default function AdminTicketDetailPage() {
       const found = data.find((t) => String(t.id) === String(id));
       setTicket(found || null);
       setError('');
+      return found || null;
     } catch {
-      setError('Could not load this ticket. Please try again.');
+      // A quiet refresh that fails keeps what is on screen
+      if (showSkeleton) setError('Could not load this ticket. Please try again.');
+      return undefined;
     } finally {
       setLoading(false);
     }
+  }
+
+  // Get the newest data when the Admin comes back to this tab, so the page
+  // does not show an old status (for example after Staff or another tab changed it)
+  useEffect(() => {
+    function refreshIfIdle() {
+      if (document.visibilityState !== 'visible') return;
+      if (showApproveModal || showReturnModal || approving || returning) return;
+      load();
+    }
+    document.addEventListener('visibilitychange', refreshIfIdle);
+    window.addEventListener('focus', refreshIfIdle);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshIfIdle);
+      window.removeEventListener('focus', refreshIfIdle);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, showApproveModal, showReturnModal, approving, returning]);
+
+  // The server said "wrong status": the ticket was changed since this page loaded
+  function handleStaleTicket() {
+    setShowApproveModal(false);
+    setShowReturnModal(false);
+    setToast({
+      message: 'This ticket was already updated. The page was refreshed with the latest status.',
+      type: 'error',
+    });
   }
 
   const goBack = () => navigate('/admin/requests');
@@ -400,20 +431,35 @@ export default function AdminTicketDetailPage() {
   const systemType = ticket ? SYSTEM_TYPE_LABEL[ticket.system_type] || ticket.system_type_display || '—' : '—';
 
   // Opens the Approve popup with the latest quotation filled in
-  function openApprove() {
+  async function ticketStillWaiting() {
+    const latest = await load();
+    if (latest && latest.status !== 'ADMIN_REVIEW') {
+      setToast({
+        message: 'This ticket was already updated. The page was refreshed with the latest status.',
+        type: 'error',
+      });
+      return false;
+    }
+    return true;
+  }
+
+  async function openApprove() {
+    if (!(await ticketStillWaiting())) return;
     setFinalCost(latestQuotation?.estimated_cost ? String(Number(latestQuotation.estimated_cost)) : '');
     setPaymentTermsSummary(latestQuotation?.payment_terms_description || '');
     setApproveError('');
     setShowApproveModal(true);
   }
 
-  function openReturn() {
+  async function openReturn() {
+    if (!(await ticketStillWaiting())) return;
     setRevisionNotes('');
     setReturnError('');
     setShowReturnModal(true);
   }
 
   async function handleApprove() {
+    if (approving) return;
     if (!finalCost || !paymentTermsSummary.trim()) {
       setApproveError('Please enter both a final cost and payment terms summary.');
       return;
@@ -432,13 +478,19 @@ export default function AdminTicketDetailPage() {
       setFinalCost('');
       setPaymentTermsSummary('');
     } catch (err) {
-      setApproveError(err.response?.data?.non_field_errors?.[0] || 'Could not approve this ticket.');
+      if (err.response?.status === 400 && err.response?.data?.non_field_errors?.length) {
+        await load();
+        handleStaleTicket();
+      } else {
+        setApproveError('Could not approve this ticket. Please try again.');
+      }
     } finally {
       setApproving(false);
     }
   }
 
   async function handleReturn() {
+    if (returning) return;
     if (!revisionNotes.trim()) {
       setReturnError('Please explain what needs revising.');
       return;
@@ -452,7 +504,12 @@ export default function AdminTicketDetailPage() {
       setShowReturnModal(false);
       setRevisionNotes('');
     } catch (err) {
-      setReturnError(err.response?.data?.non_field_errors?.[0] || 'Could not return this ticket.');
+      if (err.response?.status === 400 && err.response?.data?.non_field_errors?.length) {
+        await load();
+        handleStaleTicket();
+      } else {
+        setReturnError('Could not return this ticket. Please try again.');
+      }
     } finally {
       setReturning(false);
     }
@@ -707,8 +764,8 @@ export default function AdminTicketDetailPage() {
                 <section className="admtd-card admtd-side-card">
                   <p className="admtd-side-label">Customer</p>
 
-                  <InfoRow icon={User} label="Username">
-                    @{ticket.customer_username || '—'}
+                  <InfoRow icon={User} label="Name">
+                    {name || '—'}
                   </InfoRow>
                   <InfoRow icon={Phone} label="Contact">
                     {ticket.contact_number ? (
