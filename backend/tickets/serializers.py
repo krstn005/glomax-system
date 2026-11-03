@@ -11,6 +11,20 @@ REAPPLY_STATUSES = [
 ]
 
 
+def customer_display_name(ticket):
+    """
+    The customer's real name: the name on the request, then the name on
+    their account, and only then the username (made automatically for
+    customers, so it is the last choice).
+    """
+    customer = ticket.customer
+    return (
+        (ticket.full_name or '').strip()
+        or (getattr(customer, 'full_name', '') or '').strip()
+        or customer.username
+    )
+
+
 class CompletionPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompletionPhoto
@@ -91,7 +105,7 @@ class TicketSerializer(serializers.ModelSerializer):
     """
     ticket_number = serializers.ReadOnlyField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    customer_username = serializers.CharField(source='customer.username', read_only=True)
+    customer_username = serializers.SerializerMethodField()
     partner_installer_username = serializers.CharField(
         source='partner_installer.username', read_only=True, default=None
     )
@@ -137,6 +151,10 @@ class TicketSerializer(serializers.ModelSerializer):
             'completed_at',
         ]
         read_only_fields = fields
+
+    def get_customer_username(self, obj):
+        # Customers no longer pick a username, so show their real name
+        return customer_display_name(obj)
 
     def get_assessment(self, obj):
         from assessments.serializers import AssessmentSerializer
@@ -184,7 +202,7 @@ class TicketCalendarSerializer(serializers.ModelSerializer):
     """
     ticket_number = serializers.ReadOnlyField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    customer_username = serializers.CharField(source='customer.username', read_only=True)
+    customer_username = serializers.SerializerMethodField()
     partner_installer_username = serializers.CharField(
         source='partner_installer.username', read_only=True, default=None
     )
@@ -202,6 +220,10 @@ class TicketCalendarSerializer(serializers.ModelSerializer):
             'status_display',
         ]
         read_only_fields = fields
+
+    def get_customer_username(self, obj):
+        # Customers no longer pick a username, so show their real name
+        return customer_display_name(obj)
 
 
 class TicketAssignSerializer(serializers.Serializer):
