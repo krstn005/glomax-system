@@ -86,6 +86,18 @@ function formatKey(key) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+// "12 days left" for the last day to reapply ("YYYY-MM-DD")
+function reapplyDaysLeft(key) {
+  if (!key) return '';
+  const [y, m, d] = key.split('-').map(Number);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((new Date(y, m - 1, d) - today) / 86400000);
+  if (days <= 0) return 'today is the last day';
+  if (days === 1) return '1 day left';
+  return `${days} days left`;
+}
+
 function tomorrowKey() {
   const d = new Date();
   d.setDate(d.getDate() + 1);
@@ -869,6 +881,18 @@ export default function RequestStatusPage() {
               <div className="rs-alert-text">
                 <p className="rs-alert-title">This property is not compatible</p>
                 {ticket.admin_revision_notes && <p>Reason: {ticket.admin_revision_notes}</p>}
+                {ticket.status === 'NC_CAN_REAPPLY' && ticket.reapply_until && !ticket.reapply_expired && (
+                  <p>
+                    You can reapply until <strong>{formatKey(ticket.reapply_until)}</strong> (
+                    {reapplyDaysLeft(ticket.reapply_until)}).
+                  </p>
+                )}
+                {ticket.status === 'NC_CAN_REAPPLY' && ticket.reapply_expired && (
+                  <p>
+                    The time to reapply ended on <strong>{formatKey(ticket.reapply_until)}</strong>. If you still
+                    want to apply, please contact Glomax Solar Enterprises and our team can turn it on again.
+                  </p>
+                )}
               </div>
               {ticket.status === 'NC_CAN_REAPPLY' && showReapply && (
                 <Link to={reapplyLink} className="rs-btn-primary rs-alert-btn">
