@@ -1,5 +1,10 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
+
+# How long a customer can reapply after Staff marks a ticket
+# "Not Compatible - Can Reapply". Staff can pick another number of days.
+DEFAULT_REAPPLY_DAYS = 30
 
 
 class Ticket(models.Model):
@@ -84,6 +89,12 @@ class Ticket(models.Model):
     # The older tries are saved in TicketAttempt.
     attempt_number = models.PositiveIntegerField(default=1)
 
+    # Last day the Customer can reapply after "Not Compatible - Can
+    # Reapply". Set by Staff (30 days by default, they can change it).
+    # After this day the Reapply button is gone until Staff turns
+    # reapply on again. Empty on older tickets (they stay open).
+    reapply_until = models.DateField(null=True, blank=True)
+
     # --- Timestamps for the status timeline ---
     # On a reapply this is moved to the reapply time, so the ticket
     # shows up as a fresh request in every list. The first date is
@@ -96,6 +107,22 @@ class Ticket(models.Model):
 
     def __str__(self):
         return f"Ticket #{self.id} - {self.customer.username} ({self.get_status_display()})"
+
+    @property
+    def reapply_expired(self):
+        """True when the reapply days of a Can Reapply ticket have run out."""
+        if self.status != self.Status.NOT_COMPATIBLE_CAN_REAPPLY or self.reapply_until is None:
+            return False
+        return timezone.localdate() > self.reapply_until
+
+    @property
+    def can_reapply_now(self):
+        """Can the Customer reapply with this ticket right now?"""
+        if self.status == self.Status.WITHDRAWN:
+            return True
+        if self.status == self.Status.NOT_COMPATIBLE_CAN_REAPPLY:
+            return not self.reapply_expired
+        return False
 
     @property
     def ticket_number(self):

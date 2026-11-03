@@ -15,8 +15,19 @@ export async function assignPartnerInstaller(ticketId, data) {
   return res.data;
 }
 
-export async function submitDecision(ticketId, decision) {
-  const res = await apiClient.patch(`/tickets/${ticketId}/decision/`, { decision });
+// reapplyDays is only used for NOT_COMPATIBLE_CAN_REAPPLY (default 30 on the server)
+export async function submitDecision(ticketId, decision, reapplyDays = null) {
+  const body = { decision };
+  if (reapplyDays) body.reapply_days = Number(reapplyDays);
+  const res = await apiClient.patch(`/tickets/${ticketId}/decision/`, body);
+  return res.data;
+}
+
+// Staff turns reapply on again (or changes the days) for a Can Reapply ticket.
+export async function enableReapply(ticketId, reapplyDays = 30) {
+  const res = await apiClient.patch(`/tickets/${ticketId}/enable-reapply/`, {
+    reapply_days: Number(reapplyDays),
+  });
   return res.data;
 }
 

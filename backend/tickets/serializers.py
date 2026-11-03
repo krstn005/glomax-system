@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Ticket, CompletionPhoto, RescheduleRequest, TicketAttempt
+from .models import Ticket, CompletionPhoto, RescheduleRequest, TicketAttempt, DEFAULT_REAPPLY_DAYS
 
 User = get_user_model()
 
@@ -117,6 +117,7 @@ class TicketSerializer(serializers.ModelSerializer):
     reschedule_requests = serializers.SerializerMethodField()
     attempts = serializers.SerializerMethodField()
     can_reapply = serializers.SerializerMethodField()
+    reapply_expired = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
@@ -126,6 +127,8 @@ class TicketSerializer(serializers.ModelSerializer):
             'attempt_number',
             'attempts',
             'can_reapply',
+            'reapply_until',
+            'reapply_expired',
             'full_name',
             'customer_username',
             'partner_installer_username',
@@ -189,7 +192,10 @@ class TicketSerializer(serializers.ModelSerializer):
         return TicketAttemptSerializer(obj.attempts.all(), many=True).data
 
     def get_can_reapply(self, obj):
-        return obj.status in REAPPLY_STATUSES
+        return obj.can_reapply_now
+
+    def get_reapply_expired(self, obj):
+        return obj.reapply_expired
 
 
 class TicketCalendarSerializer(serializers.ModelSerializer):
@@ -250,12 +256,31 @@ class TicketDecisionSerializer(serializers.Serializer):
         ('NOT_COMPATIBLE_CAN_REAPPLY', 'Not Compatible - Can Reapply'),
     )
     decision = serializers.ChoiceField(choices=DECISION_CHOICES)
+    # Only used for "Can Reapply": how many days the Customer has to reapply
+    reapply_days = serializers.IntegerField(
+        required=False, min_value=1, max_value=365, default=DEFAULT_REAPPLY_DAYS
+    )
 
     def validate(self, attrs):
         ticket = self.context['ticket']
         if ticket.status not in (Ticket.Status.ASSESSMENT_SUBMITTED, Ticket.Status.STAFF_REVIEW):
             raise serializers.ValidationError(
                 "A decision can only be made once the assessment has been submitted."
+            )
+        return attrs
+
+
+class EnableReapplySerializer(serializers.Serializer):
+    """Staff turns reapply on again (or changes the days) for a Can Reapply ticket."""
+    reapply_days = serializers.IntegerField(
+        required=False, min_value=1, max_value=365, default=DEFAULT_REAPPLY_DAYS
+    )
+
+    def validate(self, attrs):
+        ticket = self.context['ticket']
+        if ticket.status != Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY:
+            raise serializers.ValidationError(
+                "Reapply can only be turned on for tickets marked Not Compatible - Can Reapply."
             )
         return attrs
 

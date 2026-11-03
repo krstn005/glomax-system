@@ -161,6 +161,12 @@ def send_not_compatible_email(ticket, can_reapply):
             'You are welcome to reapply. You can send your request again from the Customer Portal, '
             'under Request Status.',
         ]
+        if ticket.reapply_until:
+            rows.append(('Reapply Until', ticket.reapply_until.strftime('%B %d, %Y')))
+            paragraphs.append(
+                'After the "Reapply Until" date below, the Reapply button will be gone. If you still want to apply later, '
+                'please contact Glomax Solar Enterprises.'
+            )
         button_text = 'Reapply in the Portal'
     else:
         heading = 'Your request is not compatible'
@@ -174,6 +180,27 @@ def send_not_compatible_email(ticket, can_reapply):
 
     blocks = [p(text) for text in paragraphs] + [details(rows), button(button_text, link)]
     return _send_customer_email(ticket, subject, heading, blocks)
+
+
+def send_reapply_enabled_email(ticket):
+    """Staff turned reapply on again. Tells the Customer the new last day."""
+    name = _customer_name(ticket)
+    link = _portal_link('/request-status')
+    until = ticket.reapply_until.strftime('%B %d, %Y') if ticket.reapply_until else ''
+
+    blocks = [
+        p(f'Hi {name},'),
+        p('Good news! You can reapply for your request again.'),
+        details([
+            ('Ticket #', ticket.ticket_number),
+            ('Property Address', ticket.property_address),
+            ('Reapply Until', until),
+        ]),
+        button('Reapply in the Portal', link),
+    ]
+    return _send_customer_email(
+        ticket, f'You can reapply again: {ticket.ticket_number}', 'You can reapply again', blocks
+    )
 
 
 def send_completion_email(ticket):

@@ -35,6 +35,7 @@ import {
   Loader2,
 } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
+import ReapplyDaysField, { DEFAULT_REAPPLY_DAYS, parseDays } from "../components/ReapplyDaysField";
 import { getStaffTickets, submitDecision } from "../../../api/staffTickets";
 import { downloadFinalSheetPDF } from "../../../api/tickets";
 import { getPaymentTerms, sendQuotation } from "../../../api/staffQuotations";
@@ -99,6 +100,9 @@ const DECISION_OPTIONS = [
     description: "This assessment looks compatible - send it to Admin for final approval.",
     style: "primary",
     icon: CheckCircle2,
+    confirmTitle: "Forward to Admin?",
+    confirmLabel: "Yes, forward to Admin",
+    effect: "This will send the ticket to Admin for final approval.",
   },
   {
     key: "NOT_COMPATIBLE_CANNOT",
@@ -106,6 +110,10 @@ const DECISION_OPTIONS = [
     description: "Not compatible, and this request cannot proceed further. The ticket will be closed.",
     style: "danger",
     icon: XCircle,
+    confirmTitle: "Mark as Not Compatible?",
+    confirmLabel: "Yes, close this ticket",
+    effect: "This will mark the ticket as Not Compatible and close it.",
+    warning: "The customer will get an email. They will not be able to reapply for this request.",
   },
   {
     key: "NOT_COMPATIBLE_CAN_REAPPLY",
@@ -113,8 +121,23 @@ const DECISION_OPTIONS = [
     description: "Not compatible right now, but the customer will be allowed to reapply later.",
     style: "warning",
     icon: RotateCcw,
+    confirmTitle: "Mark as Not Compatible?",
+    confirmLabel: "Yes, mark Not Compatible",
+    effect: "This will mark the ticket as Not Compatible for now.",
+    warning: "The customer will get an email telling them they can reapply until the date below.",
+    askDays: true,
   },
 ];
+
+const RESUBMIT_OPTION = {
+  key: "FORWARD_TO_ADMIN",
+  label: "Resubmit to Admin",
+  style: "primary",
+  icon: Send,
+  confirmTitle: "Resubmit to Admin?",
+  confirmLabel: "Yes, resubmit",
+  effect: "This will send the ticket back to Admin for another review.",
+};
 
 function getInitials(name) {
   const parts = (name || "?").trim().split(/\s+/);
@@ -140,9 +163,12 @@ function useEscape(onClose, enabled = true) {
   }, [onClose, enabled]);
 }
 
-function ConfirmModal({ decision, onCancel, onConfirm, busy }) {
+function ConfirmModal({ decision, ticketNumber, onCancel, onConfirm, busy }) {
   useEscape(onCancel, !busy);
+  const [days, setDays] = useState(String(DEFAULT_REAPPLY_DAYS));
+  const daysOk = !decision.askDays || parseDays(days) !== null;
   const Icon = decision.icon || Gavel;
+  const isDanger = decision.style === "danger";
 
   return (
     <div
@@ -151,14 +177,36 @@ function ConfirmModal({ decision, onCancel, onConfirm, busy }) {
         if (e.target === e.currentTarget && !busy) onCancel();
       }}
     >
-      <div className="stfad-modal" role="dialog" aria-modal="true">
+      <div className="stfad-modal" role="dialog" aria-modal="true" aria-labelledby="stfad-confirm-title">
         <span className={`stfad-modal-icon ${decision.style || "primary"}`}>
           <Icon size={24} />
         </span>
-        <h3>Confirm Decision</h3>
+        <h3 id="stfad-confirm-title">{decision.confirmTitle || "Confirm Decision"}</h3>
         <p>
-          Set this ticket's decision to <strong>{decision.label}</strong>? This cannot be undone from this page.
+          Ticket <strong>{ticketNumber}</strong>
+          <br />
+          Decision: <strong>{decision.label}</strong>
         </p>
+        {decision.effect && <p>{decision.effect}</p>}
+        {decision.warning && (
+          <p
+            role="alert"
+            style={{
+              margin: "4px 0 0",
+              padding: "10px 12px",
+              borderRadius: 8,
+              fontSize: 13,
+              lineHeight: 1.5,
+              textAlign: "left",
+              background: isDanger ? "#fef2f2" : "#fffbeb",
+              border: `1px solid ${isDanger ? "#fecaca" : "#fde68a"}`,
+              color: isDanger ? "#991b1b" : "#854d0e",
+            }}
+          >
+            {decision.warning}
+          </p>
+        )}
+        {decision.askDays && <ReapplyDaysField value={days} onChange={setDays} disabled={busy} />}
         <div className="stfad-modal-actions">
           <button type="button" className="stfad-btn-secondary" onClick={onCancel} disabled={busy}>
             Cancel
@@ -166,10 +214,10 @@ function ConfirmModal({ decision, onCancel, onConfirm, busy }) {
           <button
             type="button"
             className={`stfad-btn-confirm ${decision.style || "primary"}`}
-            onClick={onConfirm}
-            disabled={busy}
+            onClick={() => onConfirm(decision.askDays ? parseDays(days) : null)}
+            disabled={busy || !daysOk}
           >
-            {busy ? "Submitting..." : "Yes, confirm"}
+            {busy ? "Submitting..." : decision.confirmLabel || "Yes, confirm"}
           </button>
         </div>
       </div>
@@ -335,10 +383,11 @@ export default function StaffAssessmentDetailPage() {
     setShowConfirm(true);
   }
 
-  async function performDecision() {
+  async function performDecision(reapplyDays = null) {
+    if (submittingDecision || !pendingDecision) return;
     setSubmittingDecision(true);
     try {
-      await submitDecision(id, pendingDecision.key);
+      await submitDecision(id, pendingDecision.key, reapplyDays);
       await load();
       setToast({ message: "Decision submitted successfully.", type: "success" });
     } catch (err) {
@@ -527,14 +576,7 @@ export default function StaffAssessmentDetailPage() {
                       <button
                         type="button"
                         className="stfad-decision primary"
-                        onClick={() =>
-                          handleDecisionClick({
-                            key: "FORWARD_TO_ADMIN",
-                            label: "Resubmit to Admin",
-                            style: "primary",
-                            icon: Send,
-                          })
-                        }
+                        onClick={() => handleDecisionClick(RESUBMIT_OPTION)}
                         disabled={submittingDecision}
                       >
                         <span className="stfad-decision-icon">
@@ -739,6 +781,7 @@ export default function StaffAssessmentDetailPage() {
       {showConfirm && pendingDecision && (
         <ConfirmModal
           decision={pendingDecision}
+          ticketNumber={ticket?.ticket_number}
           busy={submittingDecision}
           onCancel={() => {
             setShowConfirm(false);

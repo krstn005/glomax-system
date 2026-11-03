@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
@@ -10,7 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import Ticket, CompletionPhoto, RescheduleRequest, TicketAttempt
+from .models import Ticket, CompletionPhoto, RescheduleRequest, TicketAttempt, DEFAULT_REAPPLY_DAYS
 from .quotation_linking import link_initial_quotation_to_ticket
 from .serializers import (
     TicketCreateSerializer,
@@ -18,6 +19,7 @@ from .serializers import (
     TicketCalendarSerializer,
     TicketAssignSerializer,
     TicketDecisionSerializer,
+    EnableReapplySerializer,
     TicketApproveSerializer,
     TicketReturnForRevisionSerializer,
     RescheduleRequestCreateSerializer,
@@ -80,6 +82,15 @@ def find_active_ticket(customer, exclude_id=None):
     if exclude_id:
         queryset = queryset.exclude(pk=exclude_id)
     return queryset.order_by('-created_at').first()
+
+
+def reapply_ended_message(ticket):
+    """What the Customer sees when the reapply days of a ticket have run out."""
+    return (
+        f"The time to reapply for {ticket.ticket_number} has ended. "
+        "Please contact Glomax Solar Enterprises if you still want to apply, "
+        "and Staff can turn reapply on again."
+    )
 
 
 def link_initial_quotation(ticket):
@@ -146,6 +157,7 @@ def reapply_ticket(ticket, new_details):
     ticket.assigned_at = None
     ticket.withdrawn_at = None
     ticket.completed_at = None
+    ticket.reapply_until = None
 
     # 3. New details and a fresh start
     for field, value in new_details.items():
@@ -216,6 +228,8 @@ class TicketListCreateView(generics.ListCreateAPIView):
         # new ticket (so they keep one ticket number).
         latest = Ticket.objects.filter(customer=request.user).order_by('-created_at').first()
         if latest and latest.status in REAPPLY_STATUSES:
+            if not latest.can_reapply_now:
+                return Response({"detail": reapply_ended_message(latest)}, status=status.HTTP_400_BAD_REQUEST)
             ticket = reapply_ticket(latest, serializer.validated_data)
             notify_new_request(ticket, reapplied=True)
             send_ticket_sms(ticket, '05')
@@ -259,6 +273,9 @@ class TicketReapplyView(APIView):
                 {"detail": "Only withdrawn tickets, or tickets marked Not Compatible - Can Reapply, can be reapplied."},
                 status=400,
             )
+
+        if not ticket.can_reapply_now:
+            return Response({"detail": reapply_ended_message(ticket)}, status=400)
 
         active_ticket = find_active_ticket(request.user, exclude_id=ticket.id)
         if active_ticket:
@@ -612,9 +629,15 @@ class TicketDecisionView(APIView):
         elif decision == 'NOT_COMPATIBLE_CAN_REAPPLY':
             ticket.status = Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY
             ticket.completed_at = timezone.now()
+            # The Customer can reapply for this many days, counted from today
+            days = serializer.validated_data.get('reapply_days', DEFAULT_REAPPLY_DAYS)
+            ticket.reapply_until = timezone.localdate() + timedelta(days=days)
             ticket.save()
 
-            message = f"Your request {ticket.ticket_number} was marked as Not Compatible, but you can reapply."
+            message = (
+                f"Your request {ticket.ticket_number} was marked as Not Compatible, but you can reapply "
+                f"until {ticket.reapply_until.strftime('%B %d, %Y')}."
+            )
             if send_not_compatible_email(ticket, can_reapply=True):
                 message += " We also sent the details to your email."
 
@@ -627,6 +650,45 @@ class TicketDecisionView(APIView):
             send_ticket_sms(ticket, '13', pref='notify_request_rejection')
         else:
             ticket.save()
+
+        return Response(TicketSerializer(ticket).data)
+
+
+class TicketEnableReapplyView(APIView):
+    """
+    PATCH /api/tickets/<id>/enable-reapply/  - Staff turns reapply on
+    again for a Not Compatible - Can Reapply ticket (for example after
+    the days ran out), or changes how many days are left. The days
+    count from today. Body: {"reapply_days": 14}  (1 to 365, default 30)
+    """
+    permission_classes = [permissions.IsAuthenticated, IsStaff]
+
+    def patch(self, request, pk):
+        from .utils import send_reapply_enabled_email
+
+        try:
+            ticket = Ticket.objects.get(pk=pk)
+        except Ticket.DoesNotExist:
+            return Response({"detail": "Ticket not found."}, status=404)
+
+        serializer = EnableReapplySerializer(data=request.data, context={'ticket': ticket})
+        serializer.is_valid(raise_exception=True)
+        days = serializer.validated_data['reapply_days']
+
+        ticket.reapply_until = timezone.localdate() + timedelta(days=days)
+        ticket.save()
+
+        until_text = ticket.reapply_until.strftime('%B %d, %Y')
+        message = f"You can reapply for {ticket.ticket_number} until {until_text}."
+        if send_reapply_enabled_email(ticket):
+            message += " We also sent the details to your email."
+
+        Notification.objects.create(
+            recipient=ticket.customer,
+            kind=Notification.Kind.TICKET_DECISION,
+            message=message,
+            link="/request-status",
+        )
 
         return Response(TicketSerializer(ticket).data)
 
