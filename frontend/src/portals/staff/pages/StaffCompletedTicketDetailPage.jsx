@@ -26,10 +26,13 @@ import {
   ClipboardList,
   History,
   FileText,
+  FileDown,
+  Loader2,
 } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
 import DirectionsLink from "../components/DirectionsLink";
 import { getStaffTickets } from "../../../api/staffTickets";
+import { downloadFinalSheetPDF } from "../../../api/tickets";
 import { formatCurrency, formatPaymentTerms } from "../../../utils/currency";
 import "../styles/staff-completed-ticket-detail.css";
 
@@ -78,6 +81,61 @@ function getInitials(name) {
   const first = parts[0]?.[0] || "";
   const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
   return (first + last).toUpperCase();
+}
+
+// Gold button in the header that downloads the Final Sheet PDF.
+// Only shows once Admin approved the ticket (it has a Final Sheet).
+function FinalSheetButton({ ticket }) {
+  const [state, setState] = useState("idle"); // idle | loading | error
+
+  async function download() {
+    if (state === "loading") return;
+    setState("loading");
+    try {
+      await downloadFinalSheetPDF(ticket.id, ticket.ticket_number);
+      setState("idle");
+    } catch {
+      setState("error");
+      setTimeout(() => setState("idle"), 3000);
+    }
+  }
+
+  const failed = state === "error";
+
+  return (
+    <>
+      <style>{"@keyframes stfcd-pdf-spin{to{transform:rotate(360deg)}}"}</style>
+      <button
+        type="button"
+        onClick={download}
+        disabled={state === "loading"}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "9px 16px",
+          borderRadius: 10,
+          border: "none",
+          fontSize: 14,
+          fontWeight: 700,
+          fontFamily: "inherit",
+          cursor: state === "loading" ? "wait" : "pointer",
+          background: failed ? "#fee2e2" : "#facc15",
+          color: failed ? "#b91c1c" : "#0d1f3c",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {state === "loading" ? (
+          <Loader2 size={16} style={{ animation: "stfcd-pdf-spin 0.8s linear infinite" }} />
+        ) : failed ? (
+          <AlertCircle size={16} />
+        ) : (
+          <FileDown size={16} />
+        )}
+        {state === "loading" ? "Preparing..." : failed ? "Try again" : "Final Sheet PDF"}
+      </button>
+    </>
+  );
 }
 
 function CardTitle({ icon: Icon, tone, title, hint }) {
@@ -255,10 +313,13 @@ export default function StaffCompletedTicketDetailPage() {
                   {finishedDate && ` on ${formatDate(finishedDate)}`}
                 </p>
               </div>
-              <span className={`stfcd-hero-status tone-${info.tone}`}>
-                <StatusIcon size={14} />
-                {ticket.status_display}
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginLeft: "auto" }}>
+                <span className={`stfcd-hero-status tone-${info.tone}`}>
+                  <StatusIcon size={14} />
+                  {ticket.status_display}
+                </span>
+                {finalSheet && <FinalSheetButton ticket={ticket} />}
+              </div>
             </section>
 
             {/* What happened to this ticket */}
