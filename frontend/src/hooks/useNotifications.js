@@ -27,8 +27,24 @@ export default function useNotifications() {
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+
+    // Check again every 20 seconds, but skip while the tab is hidden.
+    const interval = setInterval(() => {
+      if (document.visibilityState !== 'hidden') load();
+    }, POLL_INTERVAL_MS);
+
+    // Check right away when the user comes back to the tab.
+    function onReturn() {
+      if (document.visibilityState !== 'hidden') load();
+    }
+    document.addEventListener('visibilitychange', onReturn);
+    window.addEventListener('focus', onReturn);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
+    };
   }, [load]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
