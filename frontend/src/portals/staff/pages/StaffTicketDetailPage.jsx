@@ -30,10 +30,18 @@ import {
   ListChecks,
   MessageSquareWarning,
   Briefcase,
+  RotateCcw,
 } from 'lucide-react';
 import StaffLayout from '../components/StaffLayout';
 import DirectionsLink from '../components/DirectionsLink';
-import { getStaffTickets, getPartnerInstallers, assignPartnerInstaller, resolveRescheduleRequest } from '../../../api/staffTickets';
+import ReapplyDaysField, { DEFAULT_REAPPLY_DAYS, parseDays } from '../components/ReapplyDaysField';
+import {
+  getStaffTickets,
+  getPartnerInstallers,
+  assignPartnerInstaller,
+  resolveRescheduleRequest,
+  enableReapply,
+} from '../../../api/staffTickets';
 import '../styles/staff-ticket-detail.css';
 
 const STATUS_TAG_CLASS = {
@@ -525,6 +533,42 @@ function RescheduleModal({ ticket, reschedule, onCancel, onApprove, onDecline, b
   );
 }
 
+function ReapplyModal({ ticket, onCancel, onConfirm, busy }) {
+  const [days, setDays] = useState(String(DEFAULT_REAPPLY_DAYS));
+  useEscape(onCancel, busy);
+  const daysOk = parseDays(days) !== null;
+  const wasOn = ticket.reapply_until && !ticket.reapply_expired;
+
+  return (
+    <div className="stftd-modal-overlay" onMouseDown={() => !busy && onCancel()}>
+      <div className="stftd-modal" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="stftd-modal-icon">
+          <RotateCcw size={22} />
+        </div>
+        <h3>{wasOn ? 'Change reapply days?' : 'Enable Reapply?'}</h3>
+        <p>
+          Ticket <strong>{ticket.ticket_number}</strong>
+          <br />
+          The days count from today. The customer will get an email and a notification.
+        </p>
+        <ReapplyDaysField value={days} onChange={setDays} disabled={busy} />
+        <div className="stftd-modal-actions">
+          <button className="stftd-btn-secondary" onClick={onCancel} disabled={busy}>
+            Cancel
+          </button>
+          <button
+            className="stftd-btn-confirm"
+            onClick={() => onConfirm(parseDays(days))}
+            disabled={busy || !daysOk}
+          >
+            {busy ? 'Saving...' : wasOn ? 'Yes, change days' : 'Yes, enable reapply'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Toast({ message, type = 'success', onDone }) {
   useEffect(() => {
     const timer = setTimeout(onDone, 4000);
@@ -560,6 +604,9 @@ export default function StaffTicketDetailPage() {
 
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [resolvingReschedule, setResolvingReschedule] = useState(false);
+
+  const [showReapplyModal, setShowReapplyModal] = useState(false);
+  const [enablingReapply, setEnablingReapply] = useState(false);
 
   useEffect(() => {
     load();
@@ -662,6 +709,23 @@ export default function StaffTicketDetailPage() {
     }
   }
 
+  async function handleEnableReapply(days) {
+    setEnablingReapply(true);
+    try {
+      await enableReapply(id, days);
+      await load();
+      setToast({ message: `Reapply is on for ${days} days.`, type: 'success' });
+      setShowReapplyModal(false);
+    } catch (err) {
+      const data = err?.response?.data;
+      const msg =
+        data?.non_field_errors?.[0] || data?.reapply_days?.[0] || 'Could not enable reapply. Please try again.';
+      setToast({ message: msg, type: 'error' });
+    } finally {
+      setEnablingReapply(false);
+    }
+  }
+
   const customerName = ticket ? ticket.full_name || ticket.customer_username : '';
   const installerName = ticket?.partner_installer_username || '';
   const visitDays = daysFromToday(ticket?.visit_date);
@@ -750,6 +814,17 @@ export default function StaffTicketDetailPage() {
                 <button className="stftd-reschedule-banner-btn" onClick={() => setShowRescheduleModal(true)}>
                   Review Request
                 </button>
+              </div>
+            )}
+
+            {/* ---------- Why Staff marked it Not Compatible ---------- */}
+            {isStopped && ticket.not_compatible_reason && (
+              <div className="stftd-revision-note">
+                <MessageSquareWarning size={18} />
+                <div>
+                  <strong>Reason given by Staff</strong>
+                  <p>{ticket.not_compatible_reason}</p>
+                </div>
               </div>
             )}
 
@@ -938,6 +1013,43 @@ export default function StaffTicketDetailPage() {
                   </section>
                 )}
 
+                {/* Reapply (Not Compatible - Can Reapply) */}
+                {ticket.status === 'NC_CAN_REAPPLY' && (
+                  <section className="stftd-card">
+                    <CardTitle
+                      icon={RotateCcw}
+                      tone="gold"
+                      title="Customer Reapply"
+                      sub="How long the customer can send this request again"
+                    />
+                    <p style={{ margin: '0 0 12px', fontSize: 14, color: '#374151', lineHeight: 1.6 }}>
+                      {ticket.reapply_until ? (
+                        ticket.reapply_expired ? (
+                          <>
+                            The reapply time ended on <strong>{formatDate(ticket.reapply_until, 'long')}</strong>. The
+                            customer can no longer reapply unless you enable it again.
+                          </>
+                        ) : (
+                          <>
+                            The customer can reapply until <strong>{formatDate(ticket.reapply_until, 'long')}</strong>.
+                            After that the Reapply button is gone.
+                          </>
+                        )
+                      ) : (
+                        'There is no last day set for this ticket. The customer can reapply anytime.'
+                      )}
+                    </p>
+                    <button
+                      type="button"
+                      className="stftd-btn-confirm"
+                      onClick={() => setShowReapplyModal(true)}
+                      disabled={enablingReapply}
+                    >
+                      {ticket.reapply_until && !ticket.reapply_expired ? 'Change Days' : 'Enable Reapply'}
+                    </button>
+                  </section>
+                )}
+
                 {/* Reschedule history */}
                 {resolvedReschedules.length > 0 && (
                   <section className="stftd-card">
@@ -1047,6 +1159,15 @@ export default function StaffTicketDetailPage() {
           busy={assigning}
           onCancel={() => setShowConfirm(false)}
           onConfirm={performAssign}
+        />
+      )}
+
+      {showReapplyModal && ticket && (
+        <ReapplyModal
+          ticket={ticket}
+          busy={enablingReapply}
+          onCancel={() => setShowReapplyModal(false)}
+          onConfirm={handleEnableReapply}
         />
       )}
 

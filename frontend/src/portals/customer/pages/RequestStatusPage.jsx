@@ -469,7 +469,7 @@ function EarlierTries({ attempts }) {
                     {formatShortDate(a.started_at)}
                     {a.ended_at && ` – ${formatShortDate(a.ended_at)}`}
                   </td>
-                  <td className="rs-table-wrap-text">{snap.admin_revision_notes || '—'}</td>
+                  <td className="rs-table-wrap-text">{snap.not_compatible_reason || snap.admin_revision_notes || '—'}</td>
                 </tr>
               );
             })}
@@ -880,7 +880,9 @@ export default function RequestStatusPage() {
               </span>
               <div className="rs-alert-text">
                 <p className="rs-alert-title">This property is not compatible</p>
-                {ticket.admin_revision_notes && <p>Reason: {ticket.admin_revision_notes}</p>}
+                {(ticket.not_compatible_reason || ticket.admin_revision_notes) && (
+                  <p>Reason: {ticket.not_compatible_reason || ticket.admin_revision_notes}</p>
+                )}
                 {ticket.status === 'NC_CAN_REAPPLY' && ticket.reapply_until && !ticket.reapply_expired && (
                   <p>
                     You can reapply until <strong>{formatKey(ticket.reapply_until)}</strong> (

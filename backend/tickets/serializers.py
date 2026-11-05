@@ -128,6 +128,7 @@ class TicketSerializer(serializers.ModelSerializer):
             'attempts',
             'can_reapply',
             'reapply_until',
+            'not_compatible_reason',
             'reapply_expired',
             'full_name',
             'customer_username',
@@ -260,6 +261,8 @@ class TicketDecisionSerializer(serializers.Serializer):
     reapply_days = serializers.IntegerField(
         required=False, min_value=1, max_value=365, default=DEFAULT_REAPPLY_DAYS
     )
+    # Required for both Not Compatible choices (checked in validate)
+    reason = serializers.CharField(required=False, allow_blank=True, max_length=1000)
 
     def validate(self, attrs):
         ticket = self.context['ticket']
@@ -267,6 +270,11 @@ class TicketDecisionSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "A decision can only be made once the assessment has been submitted."
             )
+        if attrs['decision'] in ('NOT_COMPATIBLE_CANNOT', 'NOT_COMPATIBLE_CAN_REAPPLY'):
+            if not (attrs.get('reason') or '').strip():
+                raise serializers.ValidationError(
+                    {'reason': ['Please write the reason this assessment is not compatible.']}
+                )
         return attrs
 
 

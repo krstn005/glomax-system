@@ -158,6 +158,7 @@ def reapply_ticket(ticket, new_details):
     ticket.withdrawn_at = None
     ticket.completed_at = None
     ticket.reapply_until = None
+    ticket.not_compatible_reason = ''
 
     # 3. New details and a fresh start
     for field, value in new_details.items():
@@ -613,6 +614,7 @@ class TicketDecisionView(APIView):
         elif decision == 'NOT_COMPATIBLE_CANNOT':
             ticket.status = Ticket.Status.NOT_COMPATIBLE_CANNOT_PROCEED
             ticket.completed_at = timezone.now()
+            ticket.not_compatible_reason = serializer.validated_data['reason'].strip()
             ticket.save()
 
             message = f"Your request {ticket.ticket_number} was marked as Not Compatible."
@@ -629,6 +631,7 @@ class TicketDecisionView(APIView):
         elif decision == 'NOT_COMPATIBLE_CAN_REAPPLY':
             ticket.status = Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY
             ticket.completed_at = timezone.now()
+            ticket.not_compatible_reason = serializer.validated_data['reason'].strip()
             # The Customer can reapply for this many days, counted from today
             days = serializer.validated_data.get('reapply_days', DEFAULT_REAPPLY_DAYS)
             ticket.reapply_until = timezone.localdate() + timedelta(days=days)

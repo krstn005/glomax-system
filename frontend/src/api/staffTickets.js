@@ -15,10 +15,12 @@ export async function assignPartnerInstaller(ticketId, data) {
   return res.data;
 }
 
-// reapplyDays is only used for NOT_COMPATIBLE_CAN_REAPPLY (default 30 on the server)
-export async function submitDecision(ticketId, decision, reapplyDays = null) {
+// reapplyDays is only used for NOT_COMPATIBLE_CAN_REAPPLY (default 30 on the server).
+// reason is required for both Not Compatible choices.
+export async function submitDecision(ticketId, decision, reapplyDays = null, reason = null) {
   const body = { decision };
   if (reapplyDays) body.reapply_days = Number(reapplyDays);
+  if (reason) body.reason = reason;
   const res = await apiClient.patch(`/tickets/${ticketId}/decision/`, body);
   return res.data;
 }

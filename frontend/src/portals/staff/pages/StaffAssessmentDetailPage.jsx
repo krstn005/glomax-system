@@ -31,13 +31,10 @@ import {
   ClipboardList,
   ZoomIn,
   Lock,
-  FileDown,
-  Loader2,
 } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
 import ReapplyDaysField, { DEFAULT_REAPPLY_DAYS, parseDays } from "../components/ReapplyDaysField";
 import { getStaffTickets, submitDecision } from "../../../api/staffTickets";
-import { downloadFinalSheetPDF } from "../../../api/tickets";
 import { getPaymentTerms, sendQuotation } from "../../../api/staffQuotations";
 import { formatCurrency, formatPaymentTerms, formatDateTime } from "../../../utils/currency";
 import "../styles/staff-assessment-detail.css";
@@ -56,42 +53,6 @@ const STATUS_TONE = {
   ASSESSMENT_SUBMITTED: "indigo",
   STAFF_REVIEW: "blue",
 };
-
-// Gold button in the header that downloads the Final Sheet PDF.
-// Only shows once the Admin approved the ticket (it has a Final Sheet).
-function FinalSheetButton({ ticket }) {
-  const [state, setState] = useState("idle"); // idle | loading | error
-
-  async function download() {
-    if (state === "loading") return;
-    setState("loading");
-    try {
-      await downloadFinalSheetPDF(ticket.id, ticket.ticket_number);
-      setState("idle");
-    } catch {
-      setState("error");
-      setTimeout(() => setState("idle"), 3000);
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      className={`stfad-pdf-btn ${state === "error" ? "error" : ""}`}
-      onClick={download}
-      disabled={state === "loading"}
-    >
-      {state === "loading" ? (
-        <Loader2 size={16} className="stfad-spin" />
-      ) : state === "error" ? (
-        <AlertCircle size={16} />
-      ) : (
-        <FileDown size={16} />
-      )}
-      {state === "loading" ? "Preparing..." : state === "error" ? "Try again" : "Final Sheet PDF"}
-    </button>
-  );
-}
 
 const DECISION_OPTIONS = [
   {
@@ -112,6 +73,7 @@ const DECISION_OPTIONS = [
     icon: XCircle,
     confirmTitle: "Mark as Not Compatible?",
     confirmLabel: "Yes, close this ticket",
+    askReason: true,
     effect: "This will mark the ticket as Not Compatible and close it.",
     warning: "The customer will get an email. They will not be able to reapply for this request.",
   },
@@ -126,6 +88,7 @@ const DECISION_OPTIONS = [
     effect: "This will mark the ticket as Not Compatible for now.",
     warning: "The customer will get an email telling them they can reapply until the date below.",
     askDays: true,
+    askReason: true,
   },
 ];
 
@@ -167,6 +130,8 @@ function ConfirmModal({ decision, ticketNumber, onCancel, onConfirm, busy }) {
   useEscape(onCancel, !busy);
   const [days, setDays] = useState(String(DEFAULT_REAPPLY_DAYS));
   const daysOk = !decision.askDays || parseDays(days) !== null;
+  const [reason, setReason] = useState("");
+  const reasonOk = !decision.askReason || reason.trim().length > 0;
   const Icon = decision.icon || Gavel;
   const isDanger = decision.style === "danger";
 
@@ -206,6 +171,35 @@ function ConfirmModal({ decision, ticketNumber, onCancel, onConfirm, busy }) {
             {decision.warning}
           </p>
         )}
+        {decision.askReason && (
+          <div style={{ textAlign: "left", margin: "10px 0 0" }}>
+            <label
+              htmlFor="nc-reason"
+              style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}
+            >
+              Reason (required)
+            </label>
+            <textarea
+              id="nc-reason"
+              rows={3}
+              maxLength={1000}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              disabled={busy}
+              placeholder="Why is the assessment not compatible? The customer will read this."
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "10px 12px",
+                borderRadius: 8,
+                fontSize: 14,
+                fontFamily: "inherit",
+                resize: "vertical",
+                border: "1px solid #d1d5db",
+              }}
+            />
+          </div>
+        )}
         {decision.askDays && <ReapplyDaysField value={days} onChange={setDays} disabled={busy} />}
         <div className="stfad-modal-actions">
           <button type="button" className="stfad-btn-secondary" onClick={onCancel} disabled={busy}>
@@ -214,8 +208,10 @@ function ConfirmModal({ decision, ticketNumber, onCancel, onConfirm, busy }) {
           <button
             type="button"
             className={`stfad-btn-confirm ${decision.style || "primary"}`}
-            onClick={() => onConfirm(decision.askDays ? parseDays(days) : null)}
-            disabled={busy || !daysOk}
+            onClick={() =>
+              onConfirm(decision.askDays ? parseDays(days) : null, decision.askReason ? reason.trim() : null)
+            }
+            disabled={busy || !daysOk || !reasonOk}
           >
             {busy ? "Submitting..." : decision.confirmLabel || "Yes, confirm"}
           </button>
@@ -383,15 +379,16 @@ export default function StaffAssessmentDetailPage() {
     setShowConfirm(true);
   }
 
-  async function performDecision(reapplyDays = null) {
+  async function performDecision(reapplyDays = null, reason = null) {
     if (submittingDecision || !pendingDecision) return;
     setSubmittingDecision(true);
     try {
-      await submitDecision(id, pendingDecision.key, reapplyDays);
+      await submitDecision(id, pendingDecision.key, reapplyDays, reason);
       await load();
       setToast({ message: "Decision submitted successfully.", type: "success" });
     } catch (err) {
-      const msg = err?.response?.data?.non_field_errors?.[0] || "Could not submit the decision. Please try again.";
+      const data = err?.response?.data;
+      const msg = data?.non_field_errors?.[0] || data?.reason?.[0] || "Could not submit the decision. Please try again.";
       setToast({ message: msg, type: "error" });
     } finally {
       setSubmittingDecision(false);
@@ -468,7 +465,6 @@ export default function StaffAssessmentDetailPage() {
               </div>
               <div className="stfad-hero-actions">
                 <span className={`stfad-hero-status tone-${statusTone}`}>{ticket.status_display}</span>
-                {ticket.final_sheet && <FinalSheetButton ticket={ticket} />}
               </div>
             </section>
 

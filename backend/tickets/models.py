@@ -95,6 +95,10 @@ class Ticket(models.Model):
     # reapply on again. Empty on older tickets (they stay open).
     reapply_until = models.DateField(null=True, blank=True)
 
+    # Why Staff marked the ticket Not Compatible (required when they do).
+    # The Customer can read it on Request Status and in the email.
+    not_compatible_reason = models.TextField(blank=True, default='')
+
     # --- Timestamps for the status timeline ---
     # On a reapply this is moved to the reapply time, so the ticket
     # shows up as a fresh request in every list. The first date is

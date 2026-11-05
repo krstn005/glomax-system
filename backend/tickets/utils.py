@@ -3,7 +3,7 @@ from urllib.parse import urljoin
 
 from django.conf import settings
 
-from glomax_backend.email_design import build_email, button, details, note, p
+from glomax_backend.email_design import build_email, button, details, note, p, quote
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,11 @@ def send_not_compatible_email(ticket, can_reapply):
         ]
         button_text = 'View My Request'
 
-    blocks = [p(text) for text in paragraphs] + [details(rows), button(button_text, link)]
+    reason = (getattr(ticket, 'not_compatible_reason', '') or '').strip()
+    blocks = [p(text) for text in paragraphs]
+    if reason:
+        blocks.append(quote(reason, 'Reason from our team'))
+    blocks += [details(rows), button(button_text, link)]
     return _send_customer_email(ticket, subject, heading, blocks)
 
 
