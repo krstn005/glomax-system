@@ -217,6 +217,9 @@ const NEXT_STEPS = [
   { icon: Clock, text: 'Most inquiries get a reply as soon as possible on working days.' },
 ];
 
+// The landing page shows only the first 5 FAQs. The rest stay in Admin Settings.
+const MAX_LANDING_FAQS = 5;
+
 const MESSAGE_LIMIT = 1000;
 
 const EMPTY_FORM = {
@@ -764,7 +767,7 @@ export default function LandingPage() {
             )}
 
             {faqStatus === 'ready' &&
-              faqs.map((faq, index) => {
+              faqs.slice(0, MAX_LANDING_FAQS).map((faq, index) => {
                 const isOpen = openFaqIndex === index;
                 return (
                   <div className={`lnd-faq-item ${isOpen ? 'open' : ''}`} key={faq.id}>
@@ -1098,3 +1101,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
