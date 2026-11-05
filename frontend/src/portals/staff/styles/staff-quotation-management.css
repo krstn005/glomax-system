@@ -152,14 +152,17 @@
 .stfqm-card {
   container-type: inline-size;
   container-name: stfqm-card;
-  overflow: hidden;
+  /* overflow stays visible so the Filter menu is never cut off */
   border: 1px solid #eef2f7;
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 1px 3px rgba(13, 31, 60, 0.04), 0 6px 16px rgba(13, 31, 60, 0.05);
 }
 
+/* The header sits above the list so the Filter menu opens in front of it */
 .stfqm-card-head {
+  position: relative;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -167,6 +170,17 @@
   gap: 14px;
   padding: 18px 20px 16px;
   border-bottom: 1px solid #f1f5f9;
+}
+
+/* The card no longer clips its children, so the bottom corners are
+   rounded here instead */
+.stfqm-card > :last-child,
+.stfqm-list > :last-child {
+  border-radius: 0 0 15px 15px;
+}
+
+.stfqm-head {
+  border-radius: 0;
 }
 
 .stfqm-card-title {
