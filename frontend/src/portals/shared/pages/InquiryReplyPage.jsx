@@ -117,8 +117,15 @@ function Shell({ children }) {
     <div className="inqreply-page">
       <header className="inqreply-top">
         <div className="inqreply-top-inner">
-          <img src={logo} alt="" className="inqreply-logo" />
-          <span className="inqreply-brand">Glomax Solar Enterprises</span>
+          <Link
+            to="/"
+            title="Go to the Glomax Solar home page"
+            aria-label="Go to the Glomax Solar home page"
+            style={{ display: "contents", color: "inherit", textDecoration: "none" }}
+          >
+            <img src={logo} alt="" className="inqreply-logo" />
+            <span className="inqreply-brand">Glomax Solar Enterprises</span>
+          </Link>
           <span className="inqreply-secure">
             <ShieldCheck size={14} />
             Private link

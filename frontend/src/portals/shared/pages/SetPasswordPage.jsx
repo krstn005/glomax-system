@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   Eye,
   EyeOff,
@@ -179,7 +179,12 @@ export default function SetPasswordPage() {
       <div className="spw-glow" aria-hidden="true" />
 
       <div className="spw-wrap">
-        <div className="spw-brand">
+        <Link
+          to="/"
+          className="spw-brand"
+          title="Go to the Glomax Solar home page"
+          style={{ color: "inherit", textDecoration: "none" }}
+        >
           <span className="spw-logo">
             <img src={logo} alt="Glomax Solar Enterprises" />
           </span>
@@ -187,7 +192,7 @@ export default function SetPasswordPage() {
             <p className="spw-brand-name">Glomax Solar</p>
             <p className="spw-brand-sub">Enterprises</p>
           </div>
-        </div>
+        </Link>
 
         <div className="spw-card">
           {status === 'checking' && (

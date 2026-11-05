@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Eye,
   EyeOff,
@@ -154,7 +154,12 @@ export default function PortalLoginPage({ role }) {
         <div className="pl-brand-glow" aria-hidden="true" />
         <div className="pl-brand-grid" aria-hidden="true" />
 
-        <div className="pl-brand-top">
+        <Link
+          to="/"
+          className="pl-brand-top"
+          title="Go to the Glomax Solar home page"
+          style={{ color: "inherit", textDecoration: "none" }}
+        >
           <span className="pl-logo-ring">
             <img src={logo} alt="Glomax Solar Enterprises" />
           </span>
@@ -162,7 +167,7 @@ export default function PortalLoginPage({ role }) {
             <p className="pl-brand-name">Glomax Solar</p>
             <p className="pl-brand-sub">Enterprises</p>
           </div>
-        </div>
+        </Link>
 
         <div className="pl-brand-body">
           <span className="pl-portal-pill">
