@@ -1,7 +1,10 @@
 import logging
+import re
 
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, permissions, status, throttling
+from rest_framework.exceptions import NotFound
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -108,13 +111,22 @@ class OptionalPageNumberPagination(PageNumberPagination):
     def paginate_queryset(self, queryset, request, view=None):
         if request.query_params.get(self.page_query_param) is None:
             return None
-        return super().paginate_queryset(queryset, request, view)
+        try:
+            return super().paginate_queryset(queryset, request, view)
+        except NotFound:
+            # Page number is too big (e.g. after a search gives fewer
+            # results) - show page 1 instead of an error.
+            self.request = request
+            paginator = self.django_paginator_class(queryset, self.get_page_size(request))
+            self.page = paginator.page(1)
+            return list(self.page)
 
 
 class InquiryListView(generics.ListAPIView):
     """
     GET /api/inquiries/staff/  - Staff's Email Inquiries page listing.
     Optional ?is_replied=false filter to show only unanswered ones.
+    Optional ?search=text to find by inquiry #, name, email, phone or message.
     Optional ?page=N for pagination (20 per page) - omit ?page
     entirely to get the full list, same as before this was added.
     Always sorted with unread customer replies first (has_unread_reply
@@ -131,6 +143,19 @@ class InquiryListView(generics.ListAPIView):
         is_replied = self.request.query_params.get('is_replied')
         if is_replied is not None:
             queryset = queryset.filter(is_replied=(is_replied.lower() == 'true'))
+
+        # Optional ?search= : inquiry # (5 or #5), name, email, phone or message
+        search_term = (self.request.query_params.get('search') or '').strip()
+        if search_term:
+            id_match = re.fullmatch(r'#?(\d{1,9})', search_term)
+            by_number = Q(id=int(id_match.group(1))) if id_match else Q(pk__in=[])
+            queryset = queryset.filter(
+                by_number |
+                Q(full_name__icontains=search_term) |
+                Q(email__icontains=search_term) |
+                Q(phone_number__icontains=search_term) |
+                Q(message__icontains=search_term)
+            )
         return queryset
 
 

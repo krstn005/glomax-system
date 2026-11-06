@@ -12,8 +12,8 @@
       -pdf-frame-content: page-footer;
       left: 1.6cm;
       right: 1.6cm;
-      bottom: 0.8cm;
-      height: 0.9cm;
+      bottom: 0.6cm;
+      height: 1.3cm;
     }
   }
 
@@ -308,16 +308,28 @@
     width: 36pt;
   }
 
+  .sign-head {
+    font-size: 7.5pt;
+    font-weight: bold;
+    color: #1e3a5f;
+    letter-spacing: 0.5pt;
+    text-align: center;
+  }
+
+  .sign-space {
+    font-size: 9pt;
+  }
+
   .sign-line {
     border-top: 1pt solid #0d1f3c;
-    padding-top: 4pt;
+    padding-top: 6pt;
     color: #0d1f3c;
     font-size: 8.5pt;
     font-weight: bold;
   }
 
   .sign-sub {
-    padding-top: 1pt;
+    padding-top: 3pt;
     color: #94a3b8;
     font-size: 7pt;
   }
@@ -609,20 +621,35 @@
 
   <!-- Closing statement + signatures: the very end of the document -->
   <div class="no-break">
-    <table class="closing" style="margin-top: 10pt;">
+    <table class="closing" style="margin-top: 16pt;">
       <tr><td>I HAVE READ AND RECEIVED THIS DISCLOSURE AGREEMENT AND THE TERMS AND CONDITIONS.</td></tr>
     </table>
 
-    <table class="signatures" style="margin-top: 22pt;">
+    <table class="signatures" style="margin-top: 26pt;">
+      <tr>
+        <td class="sign-head">FOR GLOMAX SOLAR ENTERPRISES</td>
+        <td class="gap">&nbsp;</td>
+        <td class="sign-head">CUSTOMER</td>
+      </tr>
+      <tr>
+        <td class="sign-space">&nbsp;<br />&nbsp;</td>
+        <td class="gap">&nbsp;</td>
+        <td class="sign-space">&nbsp;<br />&nbsp;</td>
+      </tr>
       <tr>
         <td class="sign-line">{{ approved_by_name|default:"Glomax Solar Enterprises" }}</td>
         <td class="gap">&nbsp;</td>
         <td class="sign-line">{{ customer_name }}</td>
       </tr>
       <tr>
-        <td class="sign-sub">Approved by &middot; {{ approved_at_text|default:"—" }}</td>
+        <td class="sign-sub">Authorized approver, Glomax Solar Enterprises</td>
         <td class="gap">&nbsp;</td>
-        <td class="sign-sub">Signature of Customer over printed name &middot; Date</td>
+        <td class="sign-sub">Signature of Customer over printed name</td>
+      </tr>
+      <tr>
+        <td class="sign-sub">Approved on {{ approved_at_text|default:"—" }}</td>
+        <td class="gap">&nbsp;</td>
+        <td class="sign-sub">Date: {{ generated_at_text }}</td>
       </tr>
     </table>
   </div>
@@ -633,6 +660,10 @@
       <tr>
         <td style="text-align: left;">Glomax Solar Enterprises &middot; Disclosure Agreement {{ ticket.ticket_number }}{% if approved_at_text %} &middot; Approved {{ approved_at_text }}{% endif %}</td>
         <td style="text-align: right;">Page <pdf:pagenumber /> of <pdf:pagecount /></td>
+      </tr>
+      <tr>
+        <td style="text-align: left; border-top: none; padding-top: 2pt;">Generated {{ generated_at_text }} by {{ generated_by_name }}</td>
+        <td style="border-top: none;"></td>
       </tr>
     </table>
   </div>

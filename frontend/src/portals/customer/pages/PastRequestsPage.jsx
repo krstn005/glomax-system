@@ -43,6 +43,18 @@ function canReapply(ticket) {
   return typeof ticket.can_reapply === 'boolean' ? ticket.can_reapply : REAPPLY_STATUSES.includes(ticket.status);
 }
 
+// Not Compatible - Can Reapply, but the date Staff set has not come yet
+function isWaitingToReapply(ticket) {
+  return ticket.status === 'NC_CAN_REAPPLY' && Boolean(ticket.reapply_waiting) && Boolean(ticket.reapply_from);
+}
+
+// For "YYYY-MM-DD" values
+function formatKey(key) {
+  if (!key) return '';
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
 // Choices in the Filter drop-down
 const FILTER_OPTIONS = [
   { key: 'ALL', label: 'All Requests', icon: Layers, tone: 'navy', match: () => true },
@@ -212,6 +224,7 @@ function DetailsModal({ ticket, onClose, onReapply, hasActiveRequest }) {
   const hasFinalSheet = ['APPROVED', 'COMPLETED'].includes(ticket.status);
   const isNotCompatible = NOT_COMPATIBLE.includes(ticket.status);
   const reapplyable = canReapply(ticket);
+  const waitingToReapply = isWaitingToReapply(ticket);
   const earlierTries = ticket.attempts?.length || 0;
 
   // Close with the Esc key
@@ -268,7 +281,15 @@ function DetailsModal({ ticket, onClose, onReapply, hasActiveRequest }) {
               <div className="pr-alert-text">
                 <p className="pr-alert-title">This property was not compatible</p>
                 {ticket.admin_revision_notes && <p>Reason: {ticket.admin_revision_notes}</p>}
-                {ticket.status === 'NC_CAN_REAPPLY' && <p>You can fix the issue and reapply using this same ticket.</p>}
+                {ticket.status === 'NC_CAN_REAPPLY' && !waitingToReapply && (
+                  <p>You can fix the issue and reapply using this same ticket.</p>
+                )}
+                {waitingToReapply && (
+                  <p>
+                    You can reapply starting <strong>{formatKey(ticket.reapply_from)}</strong>. The Reapply button
+                    will work on that day.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -340,6 +361,18 @@ function DetailsModal({ ticket, onClose, onReapply, hasActiveRequest }) {
           <button type="button" className="pr-btn-secondary" onClick={onClose}>
             Close
           </button>
+          {waitingToReapply && (
+            <button
+              type="button"
+              className="pr-btn-gold"
+              disabled
+              title={`You can reapply starting ${formatKey(ticket.reapply_from)}`}
+              style={{ opacity: 0.5, cursor: 'not-allowed' }}
+            >
+              <RotateCcw size={16} />
+              Reapply from {formatDate(`${ticket.reapply_from}T00:00:00`)}
+            </button>
+          )}
           {reapplyable && !hasActiveRequest && (
             <button type="button" className="pr-btn-gold" onClick={() => onReapply(ticket)}>
               <RotateCcw size={16} />
@@ -575,6 +608,12 @@ export default function PastRequestsPage() {
                           <span className="pr-reapply-tag">
                             <RotateCcw size={11} />
                             Can reapply
+                          </span>
+                        )}
+                        {isWaitingToReapply(t) && (
+                          <span className="pr-reapply-tag">
+                            <RotateCcw size={11} />
+                            From {formatDate(`${t.reapply_from}T00:00:00`)}
                           </span>
                         )}
                       </span>

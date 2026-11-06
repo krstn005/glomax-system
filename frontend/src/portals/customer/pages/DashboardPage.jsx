@@ -123,6 +123,12 @@ function parseLocalDate(value) {
   return new Date(value);
 }
 
+function longDate(value) {
+  const date = parseLocalDate(value);
+  if (!date || Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
 function formatDate(value) {
   const date = parseLocalDate(value);
   if (!date || Number.isNaN(date.getTime())) return '—';
@@ -494,7 +500,12 @@ export default function DashboardPage() {
                 <div className="db-alert-text">
                   <p className="db-alert-title">{activeTicket.ticket_number} needs changes before it can go on</p>
                   <p className="db-alert-sub">
-                    {activeTicket.admin_revision_notes || 'Our team found something that needs fixing first.'}
+                    {activeTicket.not_compatible_reason ||
+                      activeTicket.admin_revision_notes ||
+                      'Our team found something that needs fixing first.'}
+                    {activeTicket.reapply_waiting && activeTicket.reapply_from
+                      ? ` You can reapply starting ${longDate(activeTicket.reapply_from)}.`
+                      : ''}
                   </p>
                 </div>
               </div>
@@ -574,7 +585,19 @@ export default function DashboardPage() {
                         Withdraw
                       </button>
                     )}
-                    {activeTicket.status === 'NC_CAN_REAPPLY' && (
+                    {activeTicket.status === 'NC_CAN_REAPPLY' && activeTicket.reapply_waiting && (
+                      <button
+                        type="button"
+                        className="db-btn-outline"
+                        disabled
+                        title={`You can reapply starting ${longDate(activeTicket.reapply_from)}`}
+                        style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                      >
+                        <RotateCcw size={15} />
+                        Reapply from {formatDate(activeTicket.reapply_from)}
+                      </button>
+                    )}
+                    {activeTicket.status === 'NC_CAN_REAPPLY' && !activeTicket.reapply_waiting && (
                       <Link className="db-btn-outline" to="/new-request">
                         <RotateCcw size={15} />
                         Reapply
@@ -775,6 +798,9 @@ export default function DashboardPage() {
                         {nextStep
                           ? nextStep.text
                           : 'Send a new request and our team will set up a roof assessment at your property.'}
+                        {activeTicket?.status === 'NC_CAN_REAPPLY' && activeTicket.reapply_waiting && activeTicket.reapply_from
+                          ? ` You can reapply starting ${longDate(activeTicket.reapply_from)}.`
+                          : ''}
                       </p>
                     </div>
                   </div>

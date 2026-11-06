@@ -232,7 +232,7 @@ class FinalSheetPDFView(APIView):
         if final_sheet is None:
             return HttpResponse("This ticket has not been approved yet.", status=404)
 
-        pdf = build_final_sheet_pdf(ticket)
+        pdf = build_final_sheet_pdf(ticket, generated_by=request.user)
         if pdf is None:
             return HttpResponse("Could not generate PDF.", status=500)
 

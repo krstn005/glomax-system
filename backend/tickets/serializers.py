@@ -118,6 +118,7 @@ class TicketSerializer(serializers.ModelSerializer):
     attempts = serializers.SerializerMethodField()
     can_reapply = serializers.SerializerMethodField()
     reapply_expired = serializers.SerializerMethodField()
+    reapply_waiting = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
@@ -127,6 +128,8 @@ class TicketSerializer(serializers.ModelSerializer):
             'attempt_number',
             'attempts',
             'can_reapply',
+            'reapply_from',
+            'reapply_waiting',
             'reapply_until',
             'not_compatible_reason',
             'reapply_expired',
@@ -198,6 +201,9 @@ class TicketSerializer(serializers.ModelSerializer):
     def get_reapply_expired(self, obj):
         return obj.reapply_expired
 
+    def get_reapply_waiting(self, obj):
+        return obj.reapply_waiting
+
 
 class TicketCalendarSerializer(serializers.ModelSerializer):
     """
@@ -257,9 +263,10 @@ class TicketDecisionSerializer(serializers.Serializer):
         ('NOT_COMPATIBLE_CAN_REAPPLY', 'Not Compatible - Can Reapply'),
     )
     decision = serializers.ChoiceField(choices=DECISION_CHOICES)
-    # Only used for "Can Reapply": how many days the Customer has to reapply
+    # Only used for "Can Reapply": how many days from today until the
+    # Customer can reapply (0 = right away)
     reapply_days = serializers.IntegerField(
-        required=False, min_value=1, max_value=365, default=DEFAULT_REAPPLY_DAYS
+        required=False, min_value=0, max_value=365, default=DEFAULT_REAPPLY_DAYS
     )
     # Required for both Not Compatible choices (checked in validate)
     reason = serializers.CharField(required=False, allow_blank=True, max_length=1000)
@@ -279,9 +286,9 @@ class TicketDecisionSerializer(serializers.Serializer):
 
 
 class EnableReapplySerializer(serializers.Serializer):
-    """Staff turns reapply on again (or changes the days) for a Can Reapply ticket."""
+    """Staff changes the reapply date for a Can Reapply ticket (days from today, 0 = right away)."""
     reapply_days = serializers.IntegerField(
-        required=False, min_value=1, max_value=365, default=DEFAULT_REAPPLY_DAYS
+        required=False, min_value=0, max_value=365, default=DEFAULT_REAPPLY_DAYS
     )
 
     def validate(self, attrs):

@@ -86,16 +86,16 @@ function formatKey(key) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// "12 days left" for the last day to reapply ("YYYY-MM-DD")
-function reapplyDaysLeft(key) {
+// "12 days to go" until the day the customer can reapply ("YYYY-MM-DD")
+function reapplyDaysToGo(key) {
   if (!key) return '';
   const [y, m, d] = key.split('-').map(Number);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const days = Math.round((new Date(y, m - 1, d) - today) / 86400000);
-  if (days <= 0) return 'today is the last day';
-  if (days === 1) return '1 day left';
-  return `${days} days left`;
+  if (days <= 0) return 'today';
+  if (days === 1) return '1 day to go';
+  return `${days} days to go`;
 }
 
 function tomorrowKey() {
@@ -883,19 +883,25 @@ export default function RequestStatusPage() {
                 {(ticket.not_compatible_reason || ticket.admin_revision_notes) && (
                   <p>Reason: {ticket.not_compatible_reason || ticket.admin_revision_notes}</p>
                 )}
-                {ticket.status === 'NC_CAN_REAPPLY' && ticket.reapply_until && !ticket.reapply_expired && (
+                {ticket.status === 'NC_CAN_REAPPLY' && ticket.reapply_waiting && (
                   <p>
-                    You can reapply until <strong>{formatKey(ticket.reapply_until)}</strong> (
-                    {reapplyDaysLeft(ticket.reapply_until)}).
-                  </p>
-                )}
-                {ticket.status === 'NC_CAN_REAPPLY' && ticket.reapply_expired && (
-                  <p>
-                    The time to reapply ended on <strong>{formatKey(ticket.reapply_until)}</strong>. If you still
-                    want to apply, please contact Glomax Solar Enterprises and our team can turn it on again.
+                    You can reapply starting <strong>{formatKey(ticket.reapply_from)}</strong> (
+                    {reapplyDaysToGo(ticket.reapply_from)}). The Reapply button will work on that day.
                   </p>
                 )}
               </div>
+              {ticket.status === 'NC_CAN_REAPPLY' && ticket.reapply_waiting && (
+                <button
+                  type="button"
+                  className="rs-btn-primary rs-alert-btn"
+                  disabled
+                  title={`You can reapply starting ${formatKey(ticket.reapply_from)}`}
+                  style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                >
+                  <RotateCcw size={15} />
+                  Reapply from {formatShortDate(ticket.reapply_from + 'T00:00:00')}
+                </button>
+              )}
               {ticket.status === 'NC_CAN_REAPPLY' && showReapply && (
                 <Link to={reapplyLink} className="rs-btn-primary rs-alert-btn">
                   <RotateCcw size={15} />

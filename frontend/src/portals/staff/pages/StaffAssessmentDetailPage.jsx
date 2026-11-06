@@ -87,7 +87,7 @@ const DECISION_OPTIONS = [
     confirmTitle: "Mark as Not Compatible?",
     confirmLabel: "Yes, mark Not Compatible",
     effect: "This will mark the ticket as Not Compatible for now.",
-    warning: "The customer will get an email telling them they can reapply until the date below.",
+    warning: "The customer will get an email telling them the date they can reapply. They cannot reapply before that date.",
     askDays: true,
     askReason: true,
   },

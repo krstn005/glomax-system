@@ -2,8 +2,9 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-# How long a customer can reapply after Staff marks a ticket
-# "Not Compatible - Can Reapply". Staff can pick another number of days.
+# After Staff marks a ticket "Not Compatible - Can Reapply", the Customer
+# must wait this many days before they can reapply. Staff can pick another
+# number of days, or a date (0 days means the Customer can reapply right away).
 DEFAULT_REAPPLY_DAYS = 30
 
 
@@ -89,10 +90,13 @@ class Ticket(models.Model):
     # The older tries are saved in TicketAttempt.
     attempt_number = models.PositiveIntegerField(default=1)
 
-    # Last day the Customer can reapply after "Not Compatible - Can
-    # Reapply". Set by Staff (30 days by default, they can change it).
-    # After this day the Reapply button is gone until Staff turns
-    # reapply on again. Empty on older tickets (they stay open).
+    # First day the Customer can reapply after "Not Compatible - Can
+    # Reapply". Set by Staff. Before this day the Reapply button is
+    # blocked. Empty on older tickets (they can reapply right away).
+    reapply_from = models.DateField(null=True, blank=True)
+
+    # Not used anymore (it was a last day to reapply). Kept so older
+    # data and older pages do not break.
     reapply_until = models.DateField(null=True, blank=True)
 
     # Why Staff marked the ticket Not Compatible (required when they do).
@@ -113,11 +117,16 @@ class Ticket(models.Model):
         return f"Ticket #{self.id} - {self.customer.username} ({self.get_status_display()})"
 
     @property
-    def reapply_expired(self):
-        """True when the reapply days of a Can Reapply ticket have run out."""
-        if self.status != self.Status.NOT_COMPATIBLE_CAN_REAPPLY or self.reapply_until is None:
+    def reapply_waiting(self):
+        """True when a Can Reapply ticket must still wait for its reapply date."""
+        if self.status != self.Status.NOT_COMPATIBLE_CAN_REAPPLY or self.reapply_from is None:
             return False
-        return timezone.localdate() > self.reapply_until
+        return timezone.localdate() < self.reapply_from
+
+    @property
+    def reapply_expired(self):
+        """Reapply no longer has a last day, so this is always False."""
+        return False
 
     @property
     def can_reapply_now(self):
@@ -125,7 +134,7 @@ class Ticket(models.Model):
         if self.status == self.Status.WITHDRAWN:
             return True
         if self.status == self.Status.NOT_COMPATIBLE_CAN_REAPPLY:
-            return not self.reapply_expired
+            return not self.reapply_waiting
         return False
 
     @property

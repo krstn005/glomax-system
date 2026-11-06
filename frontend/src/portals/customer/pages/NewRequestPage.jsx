@@ -170,6 +170,73 @@ function PageHeading({ step = 0, reapplyFrom = null }) {
   );
 }
 
+// For "YYYY-MM-DD" values
+function formatKey(key) {
+  if (!key) return '';
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// Shown when Staff set a date the customer can reapply, and it has not come yet
+function ReapplyWaitBlocked({ ticket, onViewStatus, onDashboard }) {
+  return (
+    <div className="nr-blocked">
+      <div className="nr-blocked-body">
+        <div className="nr-blocked-message">
+          <span className="nr-blocked-icon">
+            <AlertTriangle size={24} />
+          </span>
+          <h2>You can't reapply yet</h2>
+          <p>
+            Our team set a date for you to reapply {ticket.ticket_number}. You can send your request again
+            starting <strong>{formatKey(ticket.reapply_from)}</strong>.
+          </p>
+          {ticket.not_compatible_reason && (
+            <div className="nr-blocked-tip">
+              <Info size={16} />
+              <p>Reason from our team: {ticket.not_compatible_reason}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="nr-blocked-ticket">
+          <div className="nr-blocked-ticket-head">
+            <div className="nr-blocked-ticket-id">
+              <span className="nr-blocked-ticket-icon">
+                <FileText size={16} />
+              </span>
+              <div>
+                <p className="nr-blocked-ticket-label">Your Request</p>
+                <p className="nr-blocked-ticket-number">{ticket.ticket_number}</p>
+              </div>
+            </div>
+            <span className={`nr-status tone-${STATUS_TONE[ticket.status] || 'blue'}`}>
+              {ticket.status_display}
+            </span>
+          </div>
+
+          <div className="nr-blocked-ticket-list">
+            <SummaryField icon={CalendarDays} label="You can reapply on" value={formatKey(ticket.reapply_from)} />
+            <SummaryField icon={Package} label="Package" value={ticket.solar_package || '—'} />
+            <SummaryField icon={MapPin} label="Address" value={ticket.property_address || '—'} />
+          </div>
+        </div>
+      </div>
+
+      <div className="nr-blocked-actions">
+        <button type="button" className="nr-pill-secondary" onClick={onDashboard}>
+          <LayoutDashboard size={16} />
+          Back to Dashboard
+        </button>
+        <button type="button" className="nr-pill-primary" onClick={onViewStatus}>
+          View Request Status
+          <ArrowRight size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Shown when the customer already has a request in progress.
 // Wide layout: message on the left, request preview on the right.
 function ActiveRequestBlocked({ ticket, onViewStatus, onDashboard }) {
@@ -242,6 +309,8 @@ export default function NewRequestPage() {
   const [activeTicket, setActiveTicket] = useState(null);
   // The old ticket being used again (Withdrawn or Not Compatible - Can Reapply)
   const [reapplyFrom, setReapplyFrom] = useState(null);
+  // A Not Compatible - Can Reapply ticket whose reapply date has not come yet
+  const [waitingTicket, setWaitingTicket] = useState(null);
   const [result, setResult] = useState({ reapplied: false, attempt: 1 });
 
   const [step, setStep] = useState(1);
@@ -270,7 +339,14 @@ export default function NewRequestPage() {
         if (cancelled) return;
         const found = tickets.find((t) => !RESOLVED_STATUSES.includes(t.status));
         setActiveTicket(found || null);
-        if (!found) pickReapplyTicket(tickets);
+        if (!found) {
+          const newest = [...tickets].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+          if (newest && newest.status === 'NC_CAN_REAPPLY' && newest.reapply_waiting) {
+            setWaitingTicket(newest);
+          } else {
+            pickReapplyTicket(tickets);
+          }
+        }
       } catch {
         // If this check fails, don't block the form - the backend
         // still enforces this rule on submit either way.
@@ -428,6 +504,21 @@ export default function NewRequestPage() {
           <PageHeading />
           <ActiveRequestBlocked
             ticket={activeTicket}
+            onViewStatus={() => navigate('/request-status')}
+            onDashboard={() => navigate('/dashboard')}
+          />
+        </div>
+      </CustomerLayout>
+    );
+  }
+
+  if (waitingTicket) {
+    return (
+      <CustomerLayout>
+        <div className="nr-page">
+          <PageHeading />
+          <ReapplyWaitBlocked
+            ticket={waitingTicket}
             onViewStatus={() => navigate('/request-status')}
             onDashboard={() => navigate('/dashboard')}
           />

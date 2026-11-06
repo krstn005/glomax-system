@@ -161,11 +161,11 @@ def send_not_compatible_email(ticket, can_reapply):
             'You are welcome to reapply. You can send your request again from the Customer Portal, '
             'under Request Status.',
         ]
-        if ticket.reapply_until:
-            rows.append(('Reapply Until', ticket.reapply_until.strftime('%B %d, %Y')))
+        if ticket.reapply_from and ticket.reapply_waiting:
+            rows.append(('Reapply Starting', ticket.reapply_from.strftime('%B %d, %Y')))
             paragraphs.append(
-                'After the "Reapply Until" date below, the Reapply button will be gone. If you still want to apply later, '
-                'please contact Glomax Solar Enterprises.'
+                'You can reapply starting on the "Reapply Starting" date below. '
+                'The Reapply button will not work before that day.'
             )
         button_text = 'Reapply in the Portal'
     else:
@@ -187,23 +187,27 @@ def send_not_compatible_email(ticket, can_reapply):
 
 
 def send_reapply_enabled_email(ticket):
-    """Staff turned reapply on again. Tells the Customer the new last day."""
+    """Staff changed the reapply date. Tells the Customer when they can reapply."""
     name = _customer_name(ticket)
     link = _portal_link('/request-status')
-    until = ticket.reapply_until.strftime('%B %d, %Y') if ticket.reapply_until else ''
+    waiting = ticket.reapply_waiting
+    start = ticket.reapply_from.strftime('%B %d, %Y') if ticket.reapply_from else ''
+
+    rows = [('Ticket #', ticket.ticket_number), ('Property Address', ticket.property_address)]
+    if waiting:
+        intro = f'Staff updated the date you can reapply for your request. You can reapply starting {start}.'
+        rows.append(('Reapply Starting', start))
+    else:
+        intro = 'Good news! You can reapply for your request now.'
 
     blocks = [
         p(f'Hi {name},'),
-        p('Good news! You can reapply for your request again.'),
-        details([
-            ('Ticket #', ticket.ticket_number),
-            ('Property Address', ticket.property_address),
-            ('Reapply Until', until),
-        ]),
+        p(intro),
+        details(rows),
         button('Reapply in the Portal', link),
     ]
     return _send_customer_email(
-        ticket, f'You can reapply again: {ticket.ticket_number}', 'You can reapply again', blocks
+        ticket, f'Reapply update: {ticket.ticket_number}', 'Your reapply date', blocks
     )
 
 

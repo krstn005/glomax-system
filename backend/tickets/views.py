@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import timedelta
 
 from django.core.serializers.json import DjangoJSONEncoder
@@ -10,6 +11,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.exceptions import NotFound
 
 from .models import Ticket, CompletionPhoto, RescheduleRequest, TicketAttempt, DEFAULT_REAPPLY_DAYS
 from .quotation_linking import link_initial_quotation_to_ticket
@@ -84,12 +86,11 @@ def find_active_ticket(customer, exclude_id=None):
     return queryset.order_by('-created_at').first()
 
 
-def reapply_ended_message(ticket):
-    """What the Customer sees when the reapply days of a ticket have run out."""
+def reapply_wait_message(ticket):
+    """What the Customer sees when it is not yet the date they can reapply."""
     return (
-        f"The time to reapply for {ticket.ticket_number} has ended. "
-        "Please contact Glomax Solar Enterprises if you still want to apply, "
-        "and Staff can turn reapply on again."
+        f"You can reapply for {ticket.ticket_number} starting "
+        f"{ticket.reapply_from.strftime('%B %d, %Y')}. Please come back on that day."
     )
 
 
@@ -157,6 +158,7 @@ def reapply_ticket(ticket, new_details):
     ticket.assigned_at = None
     ticket.withdrawn_at = None
     ticket.completed_at = None
+    ticket.reapply_from = None
     ticket.reapply_until = None
     ticket.not_compatible_reason = ''
 
@@ -230,7 +232,7 @@ class TicketListCreateView(generics.ListCreateAPIView):
         latest = Ticket.objects.filter(customer=request.user).order_by('-created_at').first()
         if latest and latest.status in REAPPLY_STATUSES:
             if not latest.can_reapply_now:
-                return Response({"detail": reapply_ended_message(latest)}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": reapply_wait_message(latest)}, status=status.HTTP_400_BAD_REQUEST)
             ticket = reapply_ticket(latest, serializer.validated_data)
             notify_new_request(ticket, reapplied=True)
             send_ticket_sms(ticket, '05')
@@ -276,7 +278,7 @@ class TicketReapplyView(APIView):
             )
 
         if not ticket.can_reapply_now:
-            return Response({"detail": reapply_ended_message(ticket)}, status=400)
+            return Response({"detail": reapply_wait_message(ticket)}, status=400)
 
         active_ticket = find_active_ticket(request.user, exclude_id=ticket.id)
         if active_ticket:
@@ -471,7 +473,16 @@ class OptionalPageNumberPagination(PageNumberPagination):
     def paginate_queryset(self, queryset, request, view=None):
         if request.query_params.get(self.page_query_param) is None:
             return None
-        return super().paginate_queryset(queryset, request, view)
+        try:
+            return super().paginate_queryset(queryset, request, view)
+        except NotFound:
+            # The page asked for does not exist (for example the user was
+            # on page 3 and then searched, so there are fewer pages now).
+            # Show page 1 instead of an error.
+            paginator = self.django_paginator_class(queryset, self.get_page_size(request))
+            self.page = paginator.page(1)
+            self.request = request
+            return list(self.page)
 
 
 class StaffTicketListView(generics.ListAPIView):
@@ -498,9 +509,23 @@ class StaffTicketListView(generics.ListAPIView):
 
         search_term = self.request.query_params.get('search')
         if search_term:
+            # Search the ticket number, the customer's name (on the request
+            # and on the account), email, phone, address and the installer
+            search_term = search_term.strip()
+            # ticket_number (GLX-0012) is not a database column, it is built
+            # from the ticket id. So "GLX-0012", "glx 12", "#12" or "12"
+            # is matched against the id instead.
+            id_match = re.fullmatch(r'(?:glx[-\s]?)?#?(\d{1,9})', search_term, re.IGNORECASE)
+            by_number = Q(id=int(id_match.group(1))) if id_match else Q(pk__in=[])
             queryset = queryset.filter(
-                Q(ticket_number__icontains=search_term) |
-                Q(customer__username__icontains=search_term)
+                by_number |
+                Q(full_name__icontains=search_term) |
+                Q(customer__full_name__icontains=search_term) |
+                Q(customer__username__icontains=search_term) |
+                Q(customer__email__icontains=search_term) |
+                Q(contact_number__icontains=search_term) |
+                Q(property_address__icontains=search_term) |
+                Q(partner_installer__username__icontains=search_term)
             )
 
         ordering = self.request.query_params.get('ordering')
@@ -632,14 +657,19 @@ class TicketDecisionView(APIView):
             ticket.status = Ticket.Status.NOT_COMPATIBLE_CAN_REAPPLY
             ticket.completed_at = timezone.now()
             ticket.not_compatible_reason = serializer.validated_data['reason'].strip()
-            # The Customer can reapply for this many days, counted from today
+            # The Customer can reapply starting this many days from today
             days = serializer.validated_data.get('reapply_days', DEFAULT_REAPPLY_DAYS)
-            ticket.reapply_until = timezone.localdate() + timedelta(days=days)
+            ticket.reapply_from = timezone.localdate() + timedelta(days=days)
+            ticket.reapply_until = None
             ticket.save()
 
+            if days == 0:
+                when_text = "You can reapply now."
+            else:
+                when_text = f"You can reapply starting {ticket.reapply_from.strftime('%B %d, %Y')}."
             message = (
-                f"Your request {ticket.ticket_number} was marked as Not Compatible, but you can reapply "
-                f"until {ticket.reapply_until.strftime('%B %d, %Y')}."
+                f"Your request {ticket.ticket_number} was marked as Not Compatible, but you can "
+                f"reapply later. {when_text}"
             )
             if send_not_compatible_email(ticket, can_reapply=True):
                 message += " We also sent the details to your email."
@@ -659,10 +689,10 @@ class TicketDecisionView(APIView):
 
 class TicketEnableReapplyView(APIView):
     """
-    PATCH /api/tickets/<id>/enable-reapply/  - Staff turns reapply on
-    again for a Not Compatible - Can Reapply ticket (for example after
-    the days ran out), or changes how many days are left. The days
-    count from today. Body: {"reapply_days": 14}  (1 to 365, default 30)
+    PATCH /api/tickets/<id>/enable-reapply/  - Staff changes the date
+    the Customer can start reapplying, for a Not Compatible - Can
+    Reapply ticket. The days count from today.
+    Body: {"reapply_days": 14}  (0 to 365, default 30. 0 = right away)
     """
     permission_classes = [permissions.IsAuthenticated, IsStaff]
 
@@ -678,11 +708,17 @@ class TicketEnableReapplyView(APIView):
         serializer.is_valid(raise_exception=True)
         days = serializer.validated_data['reapply_days']
 
-        ticket.reapply_until = timezone.localdate() + timedelta(days=days)
+        ticket.reapply_from = timezone.localdate() + timedelta(days=days)
+        ticket.reapply_until = None
         ticket.save()
 
-        until_text = ticket.reapply_until.strftime('%B %d, %Y')
-        message = f"You can reapply for {ticket.ticket_number} until {until_text}."
+        if days == 0:
+            message = f"You can reapply for {ticket.ticket_number} now."
+        else:
+            message = (
+                f"You can reapply for {ticket.ticket_number} starting "
+                f"{ticket.reapply_from.strftime('%B %d, %Y')}."
+            )
         if send_reapply_enabled_email(ticket):
             message += " We also sent the details to your email."
 
