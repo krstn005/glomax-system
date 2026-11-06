@@ -33,6 +33,7 @@ import {
   Lock,
 } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
+import PaymentTermsSelect from "../components/PaymentTermsSelect";
 import ReapplyDaysField, { DEFAULT_REAPPLY_DAYS, parseDays } from "../components/ReapplyDaysField";
 import { getStaffTickets, submitDecision } from "../../../api/staffTickets";
 import { getPaymentTerms, sendQuotation } from "../../../api/staffQuotations";
@@ -107,6 +108,26 @@ function getInitials(name) {
   const first = parts[0]?.[0] || "?";
   const last = parts.length > 1 ? parts[parts.length - 1][0] : parts[0]?.[1] || "";
   return (first + last).toUpperCase();
+}
+
+// Staff may type "260,000" or "₱260,000". The server needs a plain number.
+function cleanAmount(value) {
+  return String(value || "").replace(/[₱,\s]/g, "");
+}
+
+// Turns the server's error reply into one readable sentence
+function getQuotationError(err) {
+  const data = err?.response?.data;
+  if (!data || typeof data === "string") return "Could not send the quotation. Please try again.";
+  if (data.detail) return data.detail;
+  if (data.non_field_errors?.[0]) return data.non_field_errors[0];
+  const key = Object.keys(data)[0];
+  if (key) {
+    const value = Array.isArray(data[key]) ? data[key][0] : data[key];
+    const label = key.replace(/_/g, " ");
+    return `${label.charAt(0).toUpperCase() + label.slice(1)}: ${value}`;
+  }
+  return "Could not send the quotation. Please try again.";
 }
 
 function formatLongDate(value) {
@@ -353,12 +374,17 @@ export default function StaffAssessmentDetailPage() {
       setToast({ message: "Package Details and Estimated Cost are required.", type: "error" });
       return;
     }
+    const cost = cleanAmount(estimatedCost);
+    if (!/^\d+(\.\d{1,2})?$/.test(cost) || Number(cost) <= 0) {
+      setToast({ message: "Estimated Cost must be a number, like 250000.", type: "error" });
+      return;
+    }
     setSendingQuote(true);
     try {
       await sendQuotation(id, {
         quotation_type: "UPDATED",
         package_details: packageDetails,
-        estimated_cost: estimatedCost,
+        estimated_cost: cost,
         payment_terms_id: paymentTermsId || null,
       });
       await load();
@@ -367,8 +393,8 @@ export default function StaffAssessmentDetailPage() {
       setPaymentTermsId("");
       setTriedSend(false);
       setToast({ message: "Updated Quotation sent.", type: "success" });
-    } catch {
-      setToast({ message: "Could not send the quotation. Please try again.", type: "error" });
+    } catch (err) {
+      setToast({ message: getQuotationError(err), type: "error" });
     } finally {
       setSendingQuote(false);
     }
@@ -733,21 +759,13 @@ export default function StaffAssessmentDetailPage() {
                       </div>
                       <div className="stfad-field">
                         <label htmlFor="stfad-terms">Payment Terms</label>
-                        <div className="stfad-input">
-                          <CalendarClock size={16} />
-                          <select
-                            id="stfad-terms"
-                            value={paymentTermsId}
-                            onChange={(e) => setPaymentTermsId(e.target.value)}
-                          >
-                            <option value="">Select payment terms...</option>
-                            {paymentTerms.map((pt) => (
-                              <option key={pt.id} value={pt.id}>
-                                {pt.description.slice(0, 60)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        <PaymentTermsSelect
+                          id="stfad-terms"
+                          terms={paymentTerms}
+                          value={paymentTermsId}
+                          onChange={setPaymentTermsId}
+                          disabled={sendingQuote}
+                        />
                       </div>
                       <button
                         type="button"
