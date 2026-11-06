@@ -753,7 +753,7 @@ class TicketCompleteView(APIView):
 
         message = f"Your request {ticket.ticket_number} is completed!"
         if send_completion_email(ticket):
-            message += " We sent your Completion Certificate to your email."
+            message += " We also sent the details to your email."
 
         Notification.objects.create(
             recipient=ticket.customer,

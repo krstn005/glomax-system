@@ -5,9 +5,13 @@ Builds the PDF documents as bytes, so the same code can be used by:
 One place for the PDF code means the download and the email always match.
 """
 import io
+from zoneinfo import ZoneInfo
 
 from django.template.loader import render_to_string
 from xhtml2pdf import pisa
+
+# The Final Sheet always shows Philippine time, whatever the server uses
+PH_TIME = ZoneInfo('Asia/Manila')
 
 
 def _render_pdf(html):
@@ -19,6 +23,26 @@ def _render_pdf(html):
     if result.err:
         return None
     return buffer.getvalue()
+
+
+def _person_name(user):
+    """A person's real name if we have it, otherwise their username."""
+    if user is None:
+        return None
+    full_name = (getattr(user, 'full_name', '') or '').strip()
+    if not full_name and hasattr(user, 'get_full_name'):
+        full_name = (user.get_full_name() or '').strip()
+    return full_name or user.username
+
+
+def _ph_date_time(value):
+    """November 6, 2026, 7:50 PM (Philippine time). Empty text if no date."""
+    if not value:
+        return ''
+    local = value.astimezone(PH_TIME)
+    hour = local.hour % 12 or 12
+    am_pm = 'AM' if local.hour < 12 else 'PM'
+    return f"{local.strftime('%B')} {local.day}, {local.year}, {hour}:{local.minute:02d} {am_pm}"
 
 
 def build_final_sheet_pdf(ticket):
@@ -58,27 +82,9 @@ def build_final_sheet_pdf(ticket):
         'initial_quotation': initial_quotation,
         'updated_quotation': updated_quotation,
         'installer_name': ticket.partner_installer.username if ticket.partner_installer else None,
-        'approved_by_name': final_sheet.approved_by.username if final_sheet.approved_by else None,
+        # Who approved it (the Admin) and when, in Philippine time
+        'approved_by_name': _person_name(final_sheet.approved_by),
+        'approved_at_text': _ph_date_time(final_sheet.approved_at),
         'payment_terms_lines': _format_payment_terms_lines(final_sheet.payment_terms_summary),
-    })
-    return _render_pdf(html)
-
-
-def build_completion_certificate_pdf(ticket):
-    """
-    The Completion Certificate PDF. Returns the PDF bytes, or None if
-    the PDF could not be made.
-    """
-    from .models import FinalSheet
-    from .views import _find_logo_path
-
-    final_sheet = FinalSheet.objects.filter(ticket=ticket).first()
-
-    html = render_to_string('finalsheet/completion_certificate_pdf.html', {
-        'logo_path': _find_logo_path(),
-        'ticket': ticket,
-        'final_sheet': final_sheet,
-        'completion_photos': ticket.completion_photos.all(),
-        'installer_name': ticket.partner_installer.username if ticket.partner_installer else None,
     })
     return _render_pdf(html)

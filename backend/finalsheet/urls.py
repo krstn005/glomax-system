@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import TicketFeedbackView, FinalSheetPDFView, CompletionCertificatePDFView, AdminReportsPDFView
+from .views import TicketFeedbackView, FinalSheetPDFView, AdminReportsPDFView
 
 urlpatterns = [
     path(
@@ -11,11 +11,6 @@ urlpatterns = [
         'tickets/<int:pk>/final-sheet/pdf/',
         FinalSheetPDFView.as_view(),
         name='final-sheet-pdf',
-    ),
-    path(
-        'tickets/<int:pk>/completion-certificate/pdf/',
-        CompletionCertificatePDFView.as_view(),
-        name='completion-certificate-pdf',
     ),
     path(
         'tickets/reports/pdf/',

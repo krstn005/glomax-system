@@ -398,7 +398,8 @@
         <div class="amber" style="padding-top: 5pt;">PROVIDER</div>
         <div class="big-name">Glomax Solar Enterprises</div>
         <div class="small-text" style="padding-top: 2pt;">Manila, Philippines</div>
-        <div class="small-text">Approved on {{ final_sheet.approved_at|date:"F j, Y" }}</div>
+        <div class="small-text">Approved by {{ approved_by_name|default:"Glomax Solar Enterprises" }}</div>
+        <div class="small-text">Approved on {{ approved_at_text|default:"—" }}</div>
       </td>
     </tr>
   </table>
@@ -619,7 +620,7 @@
         <td class="sign-line">{{ customer_name }}</td>
       </tr>
       <tr>
-        <td class="sign-sub">Approved by &middot; {{ final_sheet.approved_at|date:"F j, Y" }}</td>
+        <td class="sign-sub">Approved by &middot; {{ approved_at_text|default:"—" }}</td>
         <td class="gap">&nbsp;</td>
         <td class="sign-sub">Signature of Customer over printed name &middot; Date</td>
       </tr>
@@ -630,7 +631,7 @@
   <div id="page-footer">
     <table>
       <tr>
-        <td style="text-align: left;">Glomax Solar Enterprises &middot; Disclosure Agreement {{ ticket.ticket_number }}</td>
+        <td style="text-align: left;">Glomax Solar Enterprises &middot; Disclosure Agreement {{ ticket.ticket_number }}{% if approved_at_text %} &middot; Approved {{ approved_at_text }}{% endif %}</td>
         <td style="text-align: right;">Page <pdf:pagenumber /> of <pdf:pagecount /></td>
       </tr>
     </table>

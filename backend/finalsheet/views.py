@@ -16,7 +16,7 @@ from django.utils import timezone
 from tickets.models import Ticket
 from .models import Feedback
 from .serializers import FeedbackSerializer, FeedbackCreateSerializer
-from .pdf_builders import build_final_sheet_pdf, build_completion_certificate_pdf
+from .pdf_builders import build_final_sheet_pdf
 from accounts.permissions import IsCustomer, IsAdmin
 
 class TicketFeedbackView(APIView):
@@ -238,42 +238,6 @@ class FinalSheetPDFView(APIView):
 
         response = HttpResponse(pdf, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{ticket.ticket_number}-final-sheet.pdf"'
-        return response
-
-
-class CompletionCertificatePDFView(APIView):
-    """
-    GET /api/tickets/<id>/completion-certificate/pdf/  - generates and
-    returns a PDF "certificate" confirming the installation was
-    completed, using xhtml2pdf to render the
-    finalsheet/completion_certificate_pdf.html template. Allowed for
-    the ticket's own Customer, or Staff/Admin - same access rule as
-    the Final Sheet PDF. 404 if the ticket hasn't actually reached
-    COMPLETED status yet.
-    """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request, pk):
-        try:
-            ticket = Ticket.objects.get(pk=pk)
-        except Ticket.DoesNotExist:
-            return HttpResponse("Ticket not found.", status=404)
-
-        user = request.user
-        is_owner = ticket.customer_id == user.id
-        is_staff_or_admin = user.role in ('STAFF', 'ADMIN')
-        if not (is_owner or is_staff_or_admin):
-            return HttpResponse("You do not have permission to view this document.", status=403)
-
-        if ticket.status != Ticket.Status.COMPLETED:
-            return HttpResponse("This ticket has not been marked complete yet.", status=404)
-
-        pdf = build_completion_certificate_pdf(ticket)
-        if pdf is None:
-            return HttpResponse("Could not generate PDF.", status=500)
-
-        response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{ticket.ticket_number}-completion-certificate.pdf"'
         return response
 
 

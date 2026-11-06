@@ -72,7 +72,7 @@ def send_assignment_email(ticket):
 # These emails go out when the final result of a request is known:
 #   - Approved             -> Disclosure Agreement PDF attached
 #   - Not Compatible       -> short explanation, no PDF
-#   - Completed            -> Completion Certificate PDF attached
+#   - Completed            -> short thank-you and feedback request, no PDF
 #   - Reschedule decision  -> new visit date approved or declined
 # Each one returns True if the email was sent, and False if not (no
 # email address, or sending failed). A failed email is written to the
@@ -209,18 +209,10 @@ def send_reapply_enabled_email(ticket):
 
 def send_completion_email(ticket):
     """
-    Customer's request was marked Completed. Sends the Completion
-    Certificate PDF. If the PDF can't be made, the email still goes out
-    and tells the customer to download it from the portal.
+    Customer's request was marked Completed. Sends a short thank-you
+    email and asks for feedback. No PDF is attached.
     """
     from finalsheet.models import FinalSheet
-    from finalsheet.pdf_builders import build_completion_certificate_pdf
-
-    try:
-        pdf = build_completion_certificate_pdf(ticket)
-    except Exception:
-        logger.exception("Could not make the Completion Certificate PDF for %s", ticket.ticket_number)
-        pdf = None
 
     final_sheet = FinalSheet.objects.filter(ticket=ticket).first()
     name = _customer_name(ticket)
@@ -232,23 +224,15 @@ def send_completion_email(ticket):
     if ticket.completed_at:
         rows.append(('Completed On', ticket.completed_at.strftime('%B %d, %Y')))
 
-    if pdf:
-        note_text = 'Your Completion Certificate is attached to this email as a PDF.'
-        files = [(f'{ticket.ticket_number}-completion-certificate.pdf', pdf)]
-    else:
-        note_text = 'You can download your Completion Certificate anytime from Request Status in the Customer Portal.'
-        files = []
-
     blocks = [
         p(f'Hi {name},'),
         p('Your request is now completed. Thank you for choosing Glomax Solar Enterprises!'),
         p('We would also love to hear about your experience. Please leave your feedback in the Customer Portal.'),
         details(rows),
-        note(note_text),
         button('View My Request', link),
     ]
     return _send_customer_email(
-        ticket, f'Your request is completed: {ticket.ticket_number}', 'Your request is completed', blocks, files
+        ticket, f'Your request is completed: {ticket.ticket_number}', 'Your request is completed', blocks
     )
 
 
