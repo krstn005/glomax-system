@@ -56,9 +56,18 @@ const OTP_LENGTH = 6;
 const OTP_LIFETIME_MS = 10 * 60 * 1000;
 const RESEND_WAIT_MS = 60 * 1000;
 
+// "Juan Dela Cruz" becomes "JC" (first and last word)
+function getInitials(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'CU';
+  const first = parts[0][0];
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : parts[0][1] || '';
+  return (first + last).toUpperCase();
+}
+
 function toProfileForm(me) {
   return {
-    fullName: me.username || '',
+    fullName: me.full_name || '',
     email: me.email || '',
     phone: me.phone_number || '',
     address: me.address || '',
@@ -286,7 +295,7 @@ function ProfileTab({ me, onSaved, showToast }) {
     setError('');
     try {
       const formData = new FormData();
-      formData.append('username', form.fullName.trim());
+      formData.append('full_name', form.fullName.trim());
       formData.append('email', form.email.trim());
       formData.append('phone_number', form.phone);
       formData.append('address', form.address.trim());
@@ -318,7 +327,7 @@ function ProfileTab({ me, onSaved, showToast }) {
     }
   }
 
-  const initials = (form.fullName || 'CU').slice(0, 2).toUpperCase();
+  const initials = getInitials(form.fullName);
   const displayedPicture = picturePreview || pictureUrl;
 
   return (
@@ -375,6 +384,8 @@ function ProfileTab({ me, onSaved, showToast }) {
             icon={User}
             value={form.fullName}
             error={fieldErrors.fullName}
+            maxLength={150}
+            autoComplete="name"
             onChange={(e) => updateField('fullName', e.target.value)}
           />
           {fieldErrors.fullName && <p className="set-field-error">{fieldErrors.fullName}</p>}
@@ -1042,7 +1053,7 @@ export default function SettingsPage() {
     setToast({ message, type });
   }
 
-  const initials = (me?.username || 'CU').slice(0, 2).toUpperCase();
+  const initials = getInitials(me?.full_name);
   const picture = toMediaUrl(me?.profile_picture);
 
   return (
@@ -1070,7 +1081,7 @@ export default function SettingsPage() {
             <div className="set-user">
               <Avatar picture={picture} initials={initials} size="lg" />
               <div className="set-user-text">
-                <p className="set-user-name">{me.username}</p>
+                <p className="set-user-name">{me.full_name || 'Customer'}</p>
                 <p className="set-user-email">{me.email || 'No email yet'}</p>
                 <span className="set-user-role">Customer</span>
               </div>
