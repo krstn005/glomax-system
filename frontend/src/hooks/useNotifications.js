@@ -14,6 +14,13 @@ export default function useNotifications() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    // Nobody is signed in, so there is nothing to ask the server.
+    // This also avoids useless 401 errors in the browser console.
+    if (!localStorage.getItem('access_token')) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
     try {
       const data = await getNotifications();
       setNotifications(data);
