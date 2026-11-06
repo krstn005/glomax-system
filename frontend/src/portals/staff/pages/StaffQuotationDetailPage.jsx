@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
+import PaymentTermsSelect from "../../../components/PaymentTermsSelect";
 import { getStaffTickets } from "../../../api/staffTickets";
 import { getPaymentTerms, sendQuotation } from "../../../api/staffQuotations";
 import { formatCurrency, formatPaymentTerms, formatDateTime } from "../../../utils/currency";
@@ -10,6 +11,26 @@ import logo from "../../../assets/images/logo.jpg";
 import "../styles/staff-quotation-detail.css";
 
 const EDITABLE_STATUSES = ["ASSESSMENT_SUBMITTED", "STAFF_REVIEW"];
+
+// Removes commas, spaces and the peso sign from the cost, so
+// "260,000" or "₱260,000.50" becomes "260000" or "260000.50".
+function cleanCost(value) {
+  return String(value || "").replace(/[₱,\s]/g, "");
+}
+
+// Gets the real message from the server, so the user can see
+// what is wrong instead of a general message.
+function getServerMessage(err) {
+  const fallback = "Could not send the quotation. Please try again.";
+  const data = err?.response?.data;
+  if (!data || typeof data === "string") return fallback;
+  if (data.detail) return String(data.detail);
+  if (data.non_field_errors?.[0]) return String(data.non_field_errors[0]);
+  const first = Object.values(data)[0];
+  if (Array.isArray(first) && first[0]) return String(first[0]);
+  if (typeof first === "string") return first;
+  return fallback;
+}
 
 function ConfirmModal({ onCancel, onConfirm, busy }) {
   return (
@@ -115,8 +136,16 @@ export default function StaffQuotationDetailPage() {
   }
 
   function handleSendClick() {
-    if (!packageDetails || !estimatedCost) {
+    if (!packageDetails.trim() || !estimatedCost.trim()) {
       setToast({ message: "Package Details and Estimated Cost are required.", type: "error" });
+      return;
+    }
+    const cost = cleanCost(estimatedCost);
+    if (!/^\d+(\.\d{1,2})?$/.test(cost) || Number(cost) <= 0) {
+      setToast({
+        message: "Estimated Cost must be a number, like 250000 or 250,000.",
+        type: "error",
+      });
       return;
     }
     setShowConfirm(true);
@@ -127,8 +156,8 @@ export default function StaffQuotationDetailPage() {
     try {
       await sendQuotation(id, {
         quotation_type: "UPDATED",
-        package_details: packageDetails,
-        estimated_cost: estimatedCost,
+        package_details: packageDetails.trim(),
+        estimated_cost: cleanCost(estimatedCost),
         payment_terms_id: paymentTermsId || null,
         notes,
       });
@@ -136,9 +165,7 @@ export default function StaffQuotationDetailPage() {
       resetForm();
       setToast({ message: "Updated Quotation sent successfully.", type: "success" });
     } catch (err) {
-      const msg = err?.response?.data?.non_field_errors?.[0] ||
-        "Could not send the quotation. Please try again.";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getServerMessage(err), type: "error" });
     } finally {
       setSending(false);
       setShowConfirm(false);
@@ -286,23 +313,20 @@ export default function StaffQuotationDetailPage() {
                     <input
                       value={estimatedCost}
                       onChange={(e) => setEstimatedCost(e.target.value)}
-                      placeholder="e.g. 250000"
+                      placeholder="e.g. 250000 or 250,000"
+                      inputMode="decimal"
                     />
                   </div>
 
                   <div className="stfqd-field">
-                    <label>Payment Terms</label>
-                    <select
+                    <label htmlFor="stfqd-payment-terms">Payment Terms</label>
+                    <PaymentTermsSelect
+                      id="stfqd-payment-terms"
+                      terms={paymentTerms}
                       value={paymentTermsId}
-                      onChange={(e) => setPaymentTermsId(e.target.value)}
-                    >
-                      <option value="">Select payment terms...</option>
-                      {paymentTerms.map((pt) => (
-                        <option key={pt.id} value={pt.id}>
-                          {pt.description.slice(0, 60)}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setPaymentTermsId}
+                      disabled={sending}
+                    />
                   </div>
 
                   <div className="stfqd-field stfqd-field-wide">
