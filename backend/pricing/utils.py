@@ -77,7 +77,7 @@ def _send_price_emails(recipients, package_name, old_price, new_price, system_ty
                 p("The price of one of our solar packages has been updated."),
                 details([
                     ("Package", package_name),
-                    ("System", f"{system_type_display} \u00b7 {capacity_kw} kW"),
+                    ("System", f"{system_type_display} · {capacity_kw} kW"),
                     ("Old price", _peso(old_price)),
                     ("New price", _peso(new_price)),
                 ]),
@@ -215,3 +215,74 @@ def announce_payment_terms_change(old_description, new_entry):
             )
     except Exception as e:
         logger.error(f"Could not announce payment terms change: {e}")
+
+
+def _send_updated_quotation_email(email_address, name, ticket_number, package_details,
+                                  cost_text, terms_parts, notes):
+    """
+    Sends the Updated Quotation email to one customer. Runs in a
+    background thread. A failure is logged and never reaches Staff.
+    """
+    try:
+        rows = [
+            ("Ticket #", ticket_number),
+            ("Package", package_details),
+            ("Estimated cost", cost_text),
+        ]
+        blocks = [
+            p(f"Hi {name or 'there'},"),
+            p(
+                "Thank you for your patience. Our team reviewed the roof "
+                "assessment and prepared your updated quotation."
+            ),
+            details(rows),
+        ]
+        if terms_parts:
+            blocks.append(bullets("Payment terms", terms_parts))
+        if notes:
+            blocks.append(p(notes))
+        blocks += [
+            p("You can also see this quotation in your account."),
+            button("View My Request", f"{settings.CUSTOMER_PORTAL_URL}/request-status"),
+        ]
+        build_email(
+            f"Your updated quotation for {ticket_number}",
+            email_address,
+            "Your updated quotation",
+            blocks,
+        ).send(fail_silently=False)
+    except Exception as e:
+        logger.error(f"Could not send updated quotation email to {email_address}: {e}")
+
+
+def announce_updated_quotation(ticket, quotation):
+    """
+    Emails the Customer their Updated Quotation. Called right after
+    Staff sends it. Never raises, so the quotation is always saved.
+    Returns True if an email was started, False if there was no email
+    address or something went wrong.
+    """
+    try:
+        customer = ticket.customer
+        if not customer.email:
+            return False
+
+        name = (ticket.full_name or customer.full_name or customer.username or '').strip()
+        terms = quotation.payment_terms.description if quotation.payment_terms_id else ''
+
+        _start_email_thread(
+            _send_updated_quotation_email,
+            (
+                customer.email,
+                name,
+                ticket.ticket_number,
+                quotation.package_details,
+                _peso(quotation.estimated_cost),
+                _split_terms(terms),
+                (quotation.notes or '').strip(),
+            ),
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Could not start updated quotation email for {ticket.ticket_number}: {e}")
+        return False

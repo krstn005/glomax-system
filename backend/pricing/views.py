@@ -13,7 +13,7 @@ from .serializers import (
     PriceHistorySerializer,
     PriceHistoryCreateSerializer,
 )
-from .utils import announce_price_change, announce_payment_terms_change
+from .utils import announce_price_change, announce_payment_terms_change, announce_updated_quotation
 
 
 class PaymentTermsListView(generics.ListCreateAPIView):
@@ -110,6 +110,10 @@ class TicketQuotationListCreateView(generics.ListCreateAPIView):
          ticket (Initial or Updated). Staff only. An Updated Quotation
          is additionally restricted to the correct ticket status (see
          QuotationCreateSerializer.validate).
+
+         An Updated Quotation is also emailed to the Customer (see
+         announce_updated_quotation in pricing/utils.py). The email
+         never blocks or fails the save.
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -145,6 +149,10 @@ class TicketQuotationListCreateView(generics.ListCreateAPIView):
         serializer = self.get_serializer(data=request.data, context={'ticket': ticket, 'request': request})
         serializer.is_valid(raise_exception=True)
         quotation = serializer.save(ticket=ticket)
+
+        # Email the Customer their Updated Quotation
+        if quotation.quotation_type == 'UPDATED':
+            announce_updated_quotation(ticket, quotation)
 
         return Response(
             QuotationSerializer(quotation).data,
