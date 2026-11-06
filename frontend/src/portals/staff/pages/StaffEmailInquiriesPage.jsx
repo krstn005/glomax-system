@@ -11,7 +11,6 @@ import {
   AlertCircle,
   MessageCircle,
   ArrowRight,
-  Info,
   Mail,
   RefreshCw,
   Send,
@@ -243,8 +242,21 @@ export default function StaffEmailInquiriesPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [filterCounts, setFilterCounts] = useState({});
   const [reloadKey, setReloadKey] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const currentFilter = STATUS_FILTERS.find((f) => f.key === statusFilter) || STATUS_FILTERS[0];
+
+  // Wait a moment after typing, then search on the server (all pages)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchTerm.trim();
+      setDebouncedSearch((prev) => {
+        if (prev !== next) setPage(1);
+        return next;
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Load the current page of inquiries
   useEffect(() => {
@@ -253,7 +265,7 @@ export default function StaffEmailInquiriesPage() {
     async function load() {
       setLoading(true);
       try {
-        const data = await getInquiriesPage(page, currentFilter.replied);
+        const data = await getInquiriesPage(page, currentFilter.replied, debouncedSearch);
         if (cancelled) return;
         setInquiries(data.results);
         setCount(data.count);
@@ -272,7 +284,7 @@ export default function StaffEmailInquiriesPage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, statusFilter, reloadKey]);
+  }, [page, statusFilter, reloadKey, debouncedSearch]);
 
   // Counts for the Filter list - when the page opens and on Refresh
   useEffect(() => {
@@ -322,19 +334,9 @@ export default function StaffEmailInquiriesPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // Search looks at the inquiries on the current page only - it matches
-  // an inquiry # exactly, or part of a name or email.
-  const rawTerm = searchTerm.trim().toLowerCase();
-  const filteredInquiries = inquiries.filter((inq) => {
-    if (!rawTerm) return true;
-    if (/^#?\d+$/.test(rawTerm)) {
-      return String(inq.id) === rawTerm.replace(/^#/, "");
-    }
-    return (
-      (inq.full_name || "").toLowerCase().includes(rawTerm) ||
-      (inq.email || "").toLowerCase().includes(rawTerm)
-    );
-  });
+  // The server already searched every page, so show the list as it is
+  const rawTerm = searchTerm.trim();
+  const filteredInquiries = inquiries;
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
   const hasActiveFilters = statusFilter !== "ALL" || Boolean(rawTerm);
@@ -424,16 +426,6 @@ export default function StaffEmailInquiriesPage() {
               />
             </div>
           </div>
-
-          {/* Search only checks the inquiries on this page */}
-          {rawTerm && totalPages > 1 && (
-            <div className="stfinq-filterbar">
-              <p className="stfinq-search-note">
-                <Info size={14} />
-                Search only looks at this page (page {page} of {totalPages}).
-              </p>
-            </div>
-          )}
 
           {error ? (
             <div className="stfinq-empty">
