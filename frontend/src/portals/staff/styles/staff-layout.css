@@ -161,6 +161,28 @@
   background: #facc15;
 }
 
+.stf-nav-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Number on a sidebar link (how many are waiting) */
+.stf-nav-badge {
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 0 7px;
+  border-radius: 9999px;
+  background: #facc15;
+  color: #0d1f3c;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.18);
+}
+
 /* Dark background behind the sliding sidebar on phones */
 .stf-sidebar-backdrop {
   display: none;

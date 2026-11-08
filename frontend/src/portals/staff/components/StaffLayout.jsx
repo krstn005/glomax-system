@@ -20,6 +20,8 @@ import {
 import logo from '../../../assets/images/logo.jpg';
 import apiClient from '../../../api/client';
 import { toMediaUrl } from '../../../utils/mediaUrl';
+import { getInquiriesPage } from '../../../api/inquiries';
+import { getStaffTicketsPage, getAssessmentReviewPage } from '../../../api/staffTickets';
 import '../styles/staff-layout.css';
 import StaffNotificationBell from './StaffNotificationBell';
 
@@ -33,15 +35,15 @@ const NAV_GROUPS = [
   {
     label: 'Inquiries & Quotations',
     items: [
-      { to: '/staff/email-inquiries', label: 'Email Inquiries', icon: Mail },
+      { to: '/staff/email-inquiries', label: 'Email Inquiries', icon: Mail, badge: 'inquiries' },
       { to: '/staff/quotation-management', label: 'Quotation Management', icon: FileText },
     ],
   },
   {
     label: 'Ticket Management',
     items: [
-      { to: '/staff/manage-tickets', label: 'Ticket Tracking', icon: Activity },
-      { to: '/staff/assessment-review', label: 'Assessment Review', icon: ClipboardCheck },
+      { to: '/staff/manage-tickets', label: 'Ticket Tracking', icon: Activity, badge: 'tickets' },
+      { to: '/staff/assessment-review', label: 'Assessment Review', icon: ClipboardCheck, badge: 'assessments' },
       { to: '/staff/completed-tickets', label: 'Completed Tickets', icon: CheckCircle },
     ],
   },
@@ -54,6 +56,19 @@ const NAV_GROUPS = [
     ],
   },
 ];
+
+// How often the sidebar numbers refresh by themselves (1 minute)
+const COUNT_REFRESH_MS = 60000;
+
+// Small number on a sidebar link. Hidden when there is nothing to do.
+function NavBadge({ count }) {
+  if (!count) return null;
+  return (
+    <span className="stf-nav-badge" aria-label={`${count} waiting`}>
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
 
 // Shows the profile photo if there is one, otherwise the initials.
 // If the photo link is broken, it falls back to the initials too.
@@ -92,6 +107,7 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
   const [username, setUsername] = useState(localStorage.getItem('username') || 'Staff');
   const [picture, setPicture] = useState(localStorage.getItem('profilePicture') || null);
   const profileRef = useRef(null);
+  const [navCounts, setNavCounts] = useState({ inquiries: 0, tickets: 0, assessments: 0 });
   const initials = username.slice(0, 2).toUpperCase();
 
   // Close the profile dropdown when clicking outside it or pressing Esc
@@ -154,6 +170,47 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
     return () => window.removeEventListener('profile-picture-updated', handleProfileUpdate);
   }, []);
 
+  // Numbers shown in the sidebar: inquiries not replied to, new requests
+  // waiting for an installer, and assessments waiting for review.
+  // They load when the page opens, every minute, and when you come back
+  // to this tab. If one fails, its old number is kept.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCounts() {
+      const results = await Promise.allSettled([
+        getInquiriesPage(1, false),
+        getStaffTicketsPage(1, 'REQUEST_SUBMITTED'),
+        getAssessmentReviewPage(1, 'NEEDS_REVIEW'),
+      ]);
+      if (cancelled) return;
+      const keys = ['inquiries', 'tickets', 'assessments'];
+      setNavCounts((old) => {
+        const next = { ...old };
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled') {
+            const data = r.value;
+            next[keys[i]] = Array.isArray(data) ? data.length : Number(data?.count || 0);
+          }
+        });
+        return next;
+      });
+    }
+
+    function handleVisible() {
+      if (document.visibilityState === 'visible') loadCounts();
+    }
+
+    loadCounts();
+    const timer = setInterval(loadCounts, COUNT_REFRESH_MS);
+    document.addEventListener('visibilitychange', handleVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisible);
+    };
+  }, [location.pathname]);
+
   function goToSettings() {
     setMenuOpen(false);
     navigate('/staff/settings');
@@ -195,7 +252,7 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="stf-nav-group">
               <p className="stf-nav-label">{group.label}</p>
-              {group.items.map(({ to, label, icon: Icon, alsoActive = [] }) => (
+              {group.items.map(({ to, label, icon: Icon, alsoActive = [], badge }) => (
                 <Link
                   key={to}
                   to={to}
@@ -204,7 +261,8 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
                   }`}
                 >
                   <Icon size={17} />
-                  <span>{label}</span>
+                  <span className="stf-nav-text">{label}</span>
+                  {badge && <NavBadge count={navCounts[badge]} />}
                 </Link>
               ))}
             </div>
