@@ -537,7 +537,7 @@ function ReapplyModal({ ticket, onCancel, onConfirm, busy }) {
   const [days, setDays] = useState(String(DEFAULT_REAPPLY_DAYS));
   useEscape(onCancel, busy);
   const daysOk = parseDays(days) !== null;
-  const wasOn = ticket.reapply_until && !ticket.reapply_expired;
+  const wasOn = Boolean(ticket.reapply_from);
 
   return (
     <div className="stftd-modal-overlay" onMouseDown={() => !busy && onCancel()}>
@@ -545,11 +545,11 @@ function ReapplyModal({ ticket, onCancel, onConfirm, busy }) {
         <div className="stftd-modal-icon">
           <RotateCcw size={22} />
         </div>
-        <h3>{wasOn ? 'Change reapply days?' : 'Enable Reapply?'}</h3>
+        <h3>{wasOn ? 'Change reapply date?' : 'Enable Reapply?'}</h3>
         <p>
           Ticket <strong>{ticket.ticket_number}</strong>
           <br />
-          The days count from today. The customer will get an email and a notification.
+          The days count from today. The customer cannot reapply before that date. They will get an email and a notification.
         </p>
         <ReapplyDaysField value={days} onChange={setDays} disabled={busy} />
         <div className="stftd-modal-actions">
@@ -561,7 +561,7 @@ function ReapplyModal({ ticket, onCancel, onConfirm, busy }) {
             onClick={() => onConfirm(parseDays(days))}
             disabled={busy || !daysOk}
           >
-            {busy ? 'Saving...' : wasOn ? 'Yes, change days' : 'Yes, enable reapply'}
+            {busy ? 'Saving...' : wasOn ? 'Yes, change date' : 'Yes, enable reapply'}
           </button>
         </div>
       </div>
@@ -714,7 +714,13 @@ export default function StaffTicketDetailPage() {
     try {
       await enableReapply(id, days);
       await load();
-      setToast({ message: `Reapply is on for ${days} days.`, type: 'success' });
+      setToast({
+        message:
+          days === 0
+            ? 'The customer can reapply right away.'
+            : `The customer can reapply in ${days} days.`,
+        type: 'success',
+      });
       setShowReapplyModal(false);
     } catch (err) {
       const data = err?.response?.data;
@@ -1020,23 +1026,22 @@ export default function StaffTicketDetailPage() {
                       icon={RotateCcw}
                       tone="gold"
                       title="Customer Reapply"
-                      sub="How long the customer can send this request again"
+                      sub="When the customer can send this request again"
                     />
                     <p style={{ margin: '0 0 12px', fontSize: 14, color: '#374151', lineHeight: 1.6 }}>
-                      {ticket.reapply_until ? (
-                        ticket.reapply_expired ? (
+                      {ticket.reapply_from ? (
+                        ticket.reapply_waiting ? (
                           <>
-                            The reapply time ended on <strong>{formatDate(ticket.reapply_until, 'long')}</strong>. The
-                            customer can no longer reapply unless you enable it again.
+                            The customer can reapply starting <strong>{formatDate(ticket.reapply_from, 'long')}</strong>.
+                            Until then the Reapply button stays off.
                           </>
                         ) : (
                           <>
-                            The customer can reapply until <strong>{formatDate(ticket.reapply_until, 'long')}</strong>.
-                            After that the Reapply button is gone.
+                            The customer can reapply now (since <strong>{formatDate(ticket.reapply_from, 'long')}</strong>).
                           </>
                         )
                       ) : (
-                        'There is no last day set for this ticket. The customer can reapply anytime.'
+                        'There is no wait date set for this ticket. The customer can reapply anytime.'
                       )}
                     </p>
                     <button
@@ -1045,7 +1050,7 @@ export default function StaffTicketDetailPage() {
                       onClick={() => setShowReapplyModal(true)}
                       disabled={enablingReapply}
                     >
-                      {ticket.reapply_until && !ticket.reapply_expired ? 'Change Days' : 'Enable Reapply'}
+                      {ticket.reapply_from ? 'Change Reapply Date' : 'Enable Reapply'}
                     </button>
                   </section>
                 )}
