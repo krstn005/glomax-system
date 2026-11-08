@@ -36,7 +36,7 @@ import { getPublicFaqs } from '../../../api/adminconfig';
 import { sanitizePhoneNumber } from '../../../utils/phone';
 import heroImage from '../assets/images/landing_hero.jpg';
 // Picture beside the About Us text
-import aboutImage from '../assets/images/testimonials/prf29.jpg';
+import aboutImage from '../assets/images/testimonials/prf17.jpg';
 import logo from '../../../assets/images/logo.jpg';
 import '../styles/landing.css';
 

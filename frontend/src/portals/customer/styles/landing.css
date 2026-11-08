@@ -656,11 +656,13 @@ html {
   width: 100%;
   aspect-ratio: 4 / 3.2;
   object-fit: cover;
+  /* Zoomed in a little (the frame cuts off the edges) */
+  transform: scale(1.15);
   transition: transform 0.6s ease;
 }
 
 .lnd-about-frame:hover img {
-  transform: scale(1.04);
+  transform: scale(1.2);
 }
 
 .lnd-about-badge {
