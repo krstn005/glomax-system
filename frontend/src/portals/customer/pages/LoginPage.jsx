@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Loader2,
 } from 'lucide-react';
-import { GoogleLogin } from '@react-oauth/google';
+import GoogleSignInButton from '../../../components/auth/GoogleSignInButton';
 import apiClient from '../../../api/client';
 import { saveSession, getApiError } from '../../../api/twoFactor';
 import TwoFactorStep from '../../../components/auth/TwoFactorStep';
@@ -290,11 +290,10 @@ export default function LoginPage() {
               </div>
 
               <div className="cl-google">
-                <GoogleLogin
+                <GoogleSignInButton
                   onSuccess={handleGoogleSuccess}
                   onError={() => setError('Google sign-in failed. Please try again.')}
-                  width={String(googleWidth)}
-                  shape="rectangular"
+                  width={googleWidth}
                   text="signin_with"
                 />
               </div>

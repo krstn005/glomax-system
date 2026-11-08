@@ -18,7 +18,7 @@ import {
   XCircle,
   Loader2,
 } from 'lucide-react';
-import { GoogleLogin } from '@react-oauth/google';
+import GoogleSignInButton from '../../../components/auth/GoogleSignInButton';
 import { register } from '../../../api/auth';
 import { googleLogin } from '../../../api/google';
 import { sanitizePhoneNumber } from '../../../utils/phone';
@@ -480,11 +480,10 @@ export default function RegisterPage() {
           </div>
 
           <div className="cl-google">
-            <GoogleLogin
+            <GoogleSignInButton
               onSuccess={handleGoogleSuccess}
               onError={() => setError('Google sign-up failed. Please try again.')}
-              width={String(googleWidth)}
-              shape="rectangular"
+              width={googleWidth}
               text="signup_with"
             />
           </div>
