@@ -1830,27 +1830,7 @@ a.lnd-directions:hover {
   margin-top: 4px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: #f8fafc;
-}
-
-.lnd-map-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 150px;
-  padding: 20px;
-  border-style: dashed;
-  color: var(--soft);
-  text-align: center;
-}
-
-.lnd-map-empty p {
-  margin: 0;
-  max-width: 280px;
-  font-size: 13px;
-  line-height: 1.5;
+  background: #fff;
 }
 
 .lnd-map-bar {
@@ -1860,7 +1840,6 @@ a.lnd-directions:hover {
   flex-wrap: wrap;
   gap: 8px;
   padding: 8px 10px;
-  background: #fff;
   border-bottom: 1px solid var(--line);
 }
 
@@ -1891,36 +1870,74 @@ a.lnd-directions:hover {
   color: var(--gold);
 }
 
-.lnd-map-open {
+.lnd-map-locate {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
   color: var(--navy);
   font-size: 12.5px;
   font-weight: 800;
-  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
 }
 
-.lnd-map-open:hover {
-  color: var(--gold-deep);
+.lnd-map-locate:hover {
+  background: #fefce8;
+  border-color: var(--gold-dark);
 }
 
-.lnd-map-frame {
-  display: block;
+.lnd-map-wrap {
+  position: relative;
+}
+
+/* z-index 0 + isolation keeps the map's layers under the fixed nav bar */
+.lnd-map-canvas {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
   width: 100%;
-  height: 280px;
-  border: 0;
-  animation: lndRise 0.35s ease-out both;
+  height: 300px;
+  background: #e2e8f0;
+  cursor: crosshair;
+}
+
+.lnd-map-busy {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(13, 31, 60, 0.9);
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .lnd-map-note {
   margin: 0;
   padding: 8px 12px;
-  background: #fff;
   border-top: 1px solid var(--line);
   font-size: 12px;
   line-height: 1.5;
   color: var(--muted);
+}
+
+.lnd-map-note.warn {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.lnd-page .lnd-pin {
+  background: none;
+  border: 0;
 }
 
 /* Success screen */
@@ -2381,8 +2398,8 @@ a.lnd-directions:hover {
     align-items: flex-start;
   }
 
-  .lnd-map-frame {
-    height: 230px;
+  .lnd-map-canvas {
+    height: 260px;
   }
 
   .lnd-row {

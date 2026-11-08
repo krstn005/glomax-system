@@ -30,10 +30,12 @@ import {
   AlertCircle,
   Info,
   Navigation,
-  ExternalLink,
+  LocateFixed,
   Satellite,
   Map as MapIcon,
 } from 'lucide-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { submitInquiry } from '../../../api/inquiries';
 import { getPublicFaqs } from '../../../api/adminconfig';
 import { sanitizePhoneNumber } from '../../../utils/phone';
@@ -244,6 +246,7 @@ const EMPTY_FORM = {
   email: '',
   phone_number: '',
   address: '',
+  pin: null,
   subject: 'ROOF_ASSESSMENT',
   message: '',
 };
@@ -294,34 +297,183 @@ function TestimonialSlider({ images }) {
   );
 }
 
-// Shows the typed address on a Google map so the customer can see the house
-// right away. It opens in satellite view so the roof can be seen. It waits
-// a moment after the customer stops typing before it moves the map.
-function AddressMap({ address }) {
+// Map under the Property Address field. The customer can tap the map or drag
+// the pin to mark their house. The address is then filled in by itself.
+// If they type the address instead, the pin moves to that place.
+// Maps: OpenStreetMap + Esri satellite pictures. Address lookup: Nominatim (OpenStreetMap).
+// All of these are free and need no API key.
+const MAP_START = [14.5995, 120.9842]; // Manila
+const PIN_ICON = L.divIcon({
+  className: 'lnd-pin',
+  html:
+    '<svg width="30" height="40" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M12 1C5.9 1 1 5.8 1 11.7 1 19.6 12 31 12 31s11-11.4 11-19.3C23 5.8 18.1 1 12 1z" fill="#facc15" stroke="#0d1f3c" stroke-width="2"/>' +
+    '<circle cx="12" cy="11.5" r="4" fill="#0d1f3c"/></svg>',
+  iconSize: [30, 40],
+  iconAnchor: [15, 38],
+});
+
+const SATELLITE_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const STREET_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+function AddressMap({ address, pin, onPick }) {
+  const boxRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+  const layersRef = useRef({});
+  const actionsRef = useRef({});
+  const skipRef = useRef(false);
+  const addressRef = useRef(address);
+  const onPickRef = useRef(onPick);
   const [view, setView] = useState('satellite');
-  const [shownAddress, setShownAddress] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
 
-  useEffect(() => {
-    const clean = address.trim();
-    if (clean.length < 5) {
-      setShownAddress('');
-      return undefined;
+  addressRef.current = address;
+  onPickRef.current = onPick;
+
+  function putMarker(lat, lng) {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!markerRef.current) {
+      const marker = L.marker([lat, lng], { icon: PIN_ICON, draggable: true }).addTo(map);
+      marker.on('dragend', () => {
+        const p = marker.getLatLng();
+        actionsRef.current.pickAt(p.lat, p.lng);
+      });
+      markerRef.current = marker;
+    } else {
+      markerRef.current.setLatLng([lat, lng]);
     }
-    const timer = setTimeout(() => setShownAddress(clean), 800);
-    return () => clearTimeout(timer);
-  }, [address]);
+  }
 
-  if (!shownAddress) {
-    return (
-      <div className="lnd-map lnd-map-empty">
-        <MapPin size={22} />
-        <p>Type your address above and your place will show here on the map.</p>
-      </div>
+  function removeMarker() {
+    if (markerRef.current) {
+      markerRef.current.remove();
+      markerRef.current = null;
+    }
+  }
+
+  // The customer tapped the map, dragged the pin or used their location
+  async function pickAt(lat, lng) {
+    const map = mapRef.current;
+    if (!map) return;
+    putMarker(lat, lng);
+    map.setView([lat, lng], Math.max(map.getZoom(), 18));
+    setBusy(true);
+    setNote('');
+    let text = null;
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=en`,
+      );
+      const data = await res.json();
+      text = data?.display_name || null;
+    } catch {
+      text = null;
+    }
+    if (!mapRef.current) return;
+    if (text) {
+      if (text !== addressRef.current) skipRef.current = true;
+    } else {
+      setNote('We could not read the address for this spot. Please type it in the field above.');
+    }
+    onPickRef.current({ lat, lng }, text);
+    setBusy(false);
+  }
+  actionsRef.current = { pickAt };
+
+  function findMyLocation() {
+    if (!navigator.geolocation) {
+      setNote('Your phone or browser cannot share its location. Please tap the map instead.');
+      return;
+    }
+    setBusy(true);
+    setNote('');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => actionsRef.current.pickAt(pos.coords.latitude, pos.coords.longitude),
+      () => {
+        setBusy(false);
+        setNote('We could not get your location. Please allow location access, or tap the map instead.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 
-  const query = encodeURIComponent(shownAddress);
-  const mapType = view === 'satellite' ? 'k' : 'm';
+  // Create the map once
+  useEffect(() => {
+    const map = L.map(boxRef.current, { center: MAP_START, zoom: 11, scrollWheelZoom: false });
+    layersRef.current = {
+      satellite: L.tileLayer(SATELLITE_TILES, { maxZoom: 19, attribution: 'Imagery &copy; Esri' }),
+      map: L.tileLayer(STREET_TILES, { maxZoom: 19, attribution: '&copy; OpenStreetMap' }),
+    };
+    layersRef.current.satellite.addTo(map);
+    map.on('click', (e) => actionsRef.current.pickAt(e.latlng.lat, e.latlng.lng));
+    mapRef.current = map;
+    const fix = setTimeout(() => map.invalidateSize(), 300);
+    return () => {
+      clearTimeout(fix);
+      map.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+    };
+  }, []);
+
+  // Satellite / Map switch
+  useEffect(() => {
+    const map = mapRef.current;
+    const layers = layersRef.current;
+    if (!map || !layers.satellite) return;
+    const other = view === 'satellite' ? layers.map : layers.satellite;
+    if (map.hasLayer(other)) map.removeLayer(other);
+    if (!map.hasLayer(layers[view])) layers[view].addTo(map);
+  }, [view]);
+
+  // The customer typed an address: wait a moment, then move the pin there
+  useEffect(() => {
+    if (skipRef.current) {
+      skipRef.current = false;
+      return undefined;
+    }
+    const clean = address.trim();
+    if (clean.length < 5) {
+      removeMarker();
+      return undefined;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setBusy(true);
+      setNote('');
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ph&q=${encodeURIComponent(clean)}`,
+          { signal: controller.signal },
+        );
+        const data = await res.json();
+        const hit = Array.isArray(data) ? data[0] : null;
+        if (hit && mapRef.current) {
+          const lat = Number(hit.lat);
+          const lng = Number(hit.lon);
+          putMarker(lat, lng);
+          mapRef.current.setView([lat, lng], 18);
+          onPickRef.current({ lat, lng }, null);
+        } else {
+          removeMarker();
+          setNote('We could not find that address. Add your barangay and city, or tap the map to pin your house.');
+        }
+      } catch (err) {
+        if (err?.name !== 'AbortError') {
+          setNote('The map could not look up that address. You can tap the map to pin your house.');
+        }
+      }
+      setBusy(false);
+    }, 900);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
 
   return (
     <div className="lnd-map">
@@ -348,28 +500,27 @@ function AddressMap({ address }) {
             Map
           </button>
         </div>
-        <a
-          className="lnd-map-open"
-          href={`https://www.google.com/maps/search/?api=1&query=${query}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <ExternalLink size={13} />
-          Open in Google Maps
-        </a>
+        <button type="button" className="lnd-map-locate" onClick={findMyLocation}>
+          <LocateFixed size={13} />
+          Use my location
+        </button>
       </div>
 
-      <iframe
-        key={`${mapType}-${shownAddress}`}
-        className="lnd-map-frame"
-        title="Map of your property address"
-        src={`https://www.google.com/maps?q=${query}&t=${mapType}&z=19&output=embed`}
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-        allowFullScreen
-      />
-      <p className="lnd-map-note">
-        Not the right place? Add your barangay and city to the address so the pin lands on your house.
+      <div className="lnd-map-wrap">
+        <div ref={boxRef} className="lnd-map-canvas" />
+        {busy && (
+          <span className="lnd-map-busy">
+            <Loader2 size={14} className="lnd-spin" />
+            Looking...
+          </span>
+        )}
+      </div>
+
+      <p className={`lnd-map-note ${note ? 'warn' : ''}`}>
+        {note ||
+          (pin
+            ? 'Pin saved. Drag the pin to fix the spot if it is not exactly on your house.'
+            : 'Tap the map to drop a pin on your house. You can also type the address above.')}
       </p>
     </div>
   );
@@ -526,8 +677,15 @@ export default function LandingPage() {
 
   function handleChange(e) {
     const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+    // A new typed address means the old pin no longer matches
+    setForm((f) => ({ ...f, [name]: value, ...(name === 'address' ? { pin: null } : {}) }));
     if (status === 'error') setStatus('idle');
+  }
+
+  // Called by the map when the pin is placed. addressText is filled in only
+  // when the customer tapped the map (the typed address stays as it is otherwise).
+  function handlePinPicked(pin, addressText) {
+    setForm((f) => ({ ...f, pin, ...(addressText ? { address: addressText } : {}) }));
   }
 
   function handleSubjectChange(value) {
@@ -548,9 +706,13 @@ export default function LandingPage() {
     setErrorMessage('');
     try {
       // The address has no field of its own on the server, so it is added to the end of the message
-      const { address, ...rest } = form;
+      const { address, pin, ...rest } = form;
       const cleanAddress = address.trim();
-      const message = form.message.trim() + (cleanAddress ? `\n\nProperty address: ${cleanAddress}` : '');
+      const pinLink = pin ? `https://www.google.com/maps?q=${pin.lat.toFixed(6)},${pin.lng.toFixed(6)}` : '';
+      const message =
+        form.message.trim() +
+        (cleanAddress ? `\n\nProperty address: ${cleanAddress}` : '') +
+        (pinLink ? `\nPinned location: ${pinLink}` : '');
       await submitInquiry({ ...rest, message });
       setStatus('success');
       setForm(EMPTY_FORM);
@@ -1111,11 +1273,13 @@ export default function LandingPage() {
                       />
                     </div>
                     <div className="lnd-address-foot">
-                      <p className="lnd-field-hint">Type where you want solar installed. You can check the place on the map.</p>
+                      <p className="lnd-field-hint">Type where you want solar installed, or pin it on the map below.</p>
                       {form.address.trim() ? (
                         <a
                           className="lnd-directions"
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(form.address.trim())}`}
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${
+                            form.pin ? `${form.pin.lat},${form.pin.lng}` : encodeURIComponent(form.address.trim())
+                          }`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -1129,7 +1293,7 @@ export default function LandingPage() {
                         </span>
                       )}
                     </div>
-                    <AddressMap address={form.address} />
+                    <AddressMap address={form.address} pin={form.pin} onPick={handlePinPicked} />
                   </div>
 
                   <div className="lnd-field">
