@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Home,
@@ -29,6 +30,9 @@ import {
   Loader2,
   AlertCircle,
   Info,
+  ChevronLeft,
+  ChevronRight,
+  Navigation,
 } from 'lucide-react';
 import { submitInquiry } from '../../../api/inquiries';
 import { getPublicFaqs } from '../../../api/adminconfig';
@@ -37,6 +41,18 @@ import heroImage from '../assets/images/landing_hero.jpg';
 import aboutImage from '../assets/images/landing_section.jpg';
 import logo from '../../../assets/images/logo.jpg';
 import '../styles/landing.css';
+
+// Customer testimonial pictures. Just put the pictures in
+// src/portals/customer/assets/images/testimonials/ (jpg, png or webp).
+// They show up in the slider by themselves, in file name order.
+// If the folder has no pictures, the slider is hidden.
+const TESTIMONIAL_FILES = import.meta.glob('../assets/images/testimonials/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', {
+  eager: true,
+  import: 'default',
+});
+const TESTIMONIAL_IMAGES = Object.keys(TESTIMONIAL_FILES)
+  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  .map((key) => TESTIMONIAL_FILES[key]);
 
 const NAV_ITEMS = [
   { id: 'hero', label: 'Home' },
@@ -217,8 +233,8 @@ const NEXT_STEPS = [
   { icon: Clock, text: 'Most inquiries get a reply as soon as possible on working days.' },
 ];
 
-// The landing page shows only the first 5 FAQs. The rest stay in Admin Settings.
-const MAX_LANDING_FAQS = 5;
+// The landing page shows only the first 6 FAQs. The rest stay in Admin Settings.
+const MAX_LANDING_FAQS = 6;
 
 const MESSAGE_LIMIT = 1000;
 
@@ -226,6 +242,7 @@ const EMPTY_FORM = {
   full_name: '',
   email: '',
   phone_number: '',
+  address: '',
   subject: 'ROOF_ASSESSMENT',
   message: '',
 };
@@ -248,6 +265,165 @@ function getErrorText(err) {
     return `${field.charAt(0).toUpperCase() + field.slice(1)}: ${value}`;
   }
   return 'Something went wrong sending your inquiry. Please try again.';
+}
+
+// Sliding customer pictures (shown under About Us).
+// Moves by itself every 4 seconds, stops while the mouse is over it,
+// and a click opens the picture bigger.
+function TestimonialSlider({ images }) {
+  const trackRef = useRef(null);
+  const [index, setIndex] = useState(0);
+  const [maxIndex, setMaxIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [openImage, setOpenImage] = useState(null);
+
+  // How far one step is (one picture + the gap)
+  const stepSize = useCallback(() => {
+    const track = trackRef.current;
+    const first = track?.firstElementChild;
+    if (!track || !first) return 0;
+    const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+    return first.getBoundingClientRect().width + gap;
+  }, []);
+
+  const measure = useCallback(() => {
+    const track = trackRef.current;
+    const step = stepSize();
+    if (!track || !step) return;
+    setMaxIndex(Math.max(0, Math.round((track.scrollWidth - track.clientWidth) / step)));
+  }, [stepSize]);
+
+  useEffect(() => {
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure, images.length]);
+
+  function goTo(i) {
+    const track = trackRef.current;
+    const step = stepSize();
+    if (!track || !step) return;
+    const target = Math.min(Math.max(i, 0), maxIndex);
+    track.scrollTo({ left: target * step, behavior: 'smooth' });
+    setIndex(target);
+  }
+
+  function handleScroll() {
+    const step = stepSize();
+    if (step) setIndex(Math.min(maxIndex, Math.round(trackRef.current.scrollLeft / step)));
+  }
+
+  // Auto slide
+  useEffect(() => {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (paused || reduce || maxIndex === 0 || openImage) return undefined;
+    const timer = setInterval(() => {
+      const track = trackRef.current;
+      const step = stepSize();
+      if (!track || !step) return;
+      const current = Math.round(track.scrollLeft / step);
+      const next = current >= maxIndex ? 0 : current + 1;
+      track.scrollTo({ left: next * step, behavior: 'smooth' });
+      setIndex(next);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [paused, maxIndex, openImage, stepSize]);
+
+  // Esc closes the big picture
+  useEffect(() => {
+    if (!openImage) return undefined;
+    function handleKey(e) {
+      if (e.key === 'Escape') setOpenImage(null);
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [openImage]);
+
+  return (
+    <div className="lnd-container lnd-tst" data-reveal>
+      <div className="lnd-tst-head">
+        <span className="lnd-eyebrow">Happy Customers</span>
+        <h3 className="lnd-tst-title">Proof from Our Customers</h3>
+        <p className="lnd-subtitle">Real feedback from homeowners who switched to solar with us.</p>
+      </div>
+
+      <div
+        className="lnd-tst-wrap"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onTouchStart={() => setPaused(true)}
+        onTouchEnd={() => setTimeout(() => setPaused(false), 3000)}
+      >
+        {maxIndex > 0 && (
+          <button
+            type="button"
+            className="lnd-tst-arrow prev"
+            onClick={() => goTo(index <= 0 ? maxIndex : index - 1)}
+            aria-label="Previous picture"
+          >
+            <ChevronLeft size={20} />
+          </button>
+        )}
+
+        <div className="lnd-tst-track" ref={trackRef} onScroll={handleScroll}>
+          {images.map((src, i) => (
+            <button
+              type="button"
+              className="lnd-tst-card"
+              key={src}
+              onClick={() => setOpenImage(src)}
+              aria-label={`Open customer testimonial ${i + 1}`}
+            >
+              <img src={src} alt={`Customer testimonial ${i + 1}`} loading="lazy" />
+            </button>
+          ))}
+        </div>
+
+        {maxIndex > 0 && (
+          <button
+            type="button"
+            className="lnd-tst-arrow next"
+            onClick={() => goTo(index >= maxIndex ? 0 : index + 1)}
+            aria-label="Next picture"
+          >
+            <ChevronRight size={20} />
+          </button>
+        )}
+      </div>
+
+      {maxIndex > 9 && (
+        <p className="lnd-tst-count" aria-live="polite">
+          {index + 1} / {maxIndex + 1}
+        </p>
+      )}
+
+      {maxIndex > 0 && maxIndex <= 9 && (
+        <div className="lnd-tst-dots" role="tablist" aria-label="Testimonial pictures">
+          {Array.from({ length: maxIndex + 1 }).map((_, i) => (
+            <button
+              type="button"
+              key={i}
+              className={`lnd-tst-dot ${i === index ? 'active' : ''}`}
+              onClick={() => goTo(i)}
+              aria-label={`Go to picture ${i + 1}`}
+              aria-selected={i === index}
+            />
+          ))}
+        </div>
+      )}
+
+      {openImage &&
+        createPortal(
+          <div className="lnd-lightbox" onClick={() => setOpenImage(null)} role="dialog" aria-modal="true">
+            <button type="button" className="lnd-lightbox-close" onClick={() => setOpenImage(null)} aria-label="Close">
+              <X size={22} />
+            </button>
+            <img src={openImage} alt="Customer testimonial" onClick={(e) => e.stopPropagation()} />
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
 }
 
 export default function LandingPage() {
@@ -422,7 +598,11 @@ export default function LandingPage() {
     setStatus('submitting');
     setErrorMessage('');
     try {
-      await submitInquiry({ ...form, message: form.message.trim() });
+      // The address has no field of its own on the server, so it is added to the end of the message
+      const { address, ...rest } = form;
+      const cleanAddress = address.trim();
+      const message = form.message.trim() + (cleanAddress ? `\n\nProperty address: ${cleanAddress}` : '');
+      await submitInquiry({ ...rest, message });
       setStatus('success');
       setForm(EMPTY_FORM);
       setChosenPackage(null);
@@ -588,6 +768,8 @@ export default function LandingPage() {
             </ul>
           </div>
         </div>
+
+        {TESTIMONIAL_IMAGES.length > 0 && <TestimonialSlider images={TESTIMONIAL_IMAGES} />}
       </section>
 
       {/* ---------- How it works ---------- */}
@@ -964,6 +1146,43 @@ export default function LandingPage() {
                   </div>
 
                   <div className="lnd-field">
+                    <label className="lnd-label" htmlFor="address">
+                      Property Address <span className="lnd-optional">(optional)</span>
+                    </label>
+                    <div className="lnd-input">
+                      <MapPin size={17} className="lnd-input-icon" />
+                      <input
+                        id="address"
+                        name="address"
+                        type="text"
+                        autoComplete="street-address"
+                        placeholder="House no., street, barangay, city"
+                        value={form.address}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="lnd-address-foot">
+                      <p className="lnd-field-hint">Type where you want solar installed. You can check the place on the map.</p>
+                      {form.address.trim() ? (
+                        <a
+                          className="lnd-directions"
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(form.address.trim())}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Navigation size={14} />
+                          Get Directions
+                        </a>
+                      ) : (
+                        <span className="lnd-directions disabled" aria-disabled="true">
+                          <Navigation size={14} />
+                          Get Directions
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="lnd-field">
                     <div className="lnd-label-row">
                       <label className="lnd-label" htmlFor="message">Message</label>
                       {chosenPackage && form.subject === 'PACKAGE_QUESTION' && (
@@ -1101,4 +1320,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
