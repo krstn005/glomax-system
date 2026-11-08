@@ -15,11 +15,21 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+
+def health_check(request):
+    # Simple "I am awake" answer. It does not touch the database,
+    # so it is fast. UptimeRobot calls this every 5 minutes to keep
+    # the Render server from sleeping.
+    return JsonResponse({'status': 'ok'})
+
+
 urlpatterns = [
+    path('api/health/', health_check),
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')),
     path('api/tickets/', include('tickets.urls')),
