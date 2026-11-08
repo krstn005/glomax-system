@@ -498,6 +498,15 @@ html {
   scroll-margin-top: 76px;
 }
 
+/* Less empty space between About Us (with its sliding pictures) and How It Works */
+.lnd-section-about {
+  padding-bottom: 56px;
+}
+
+.lnd-section-how {
+  padding-top: 72px;
+}
+
 .lnd-section-tint {
   background: var(--tint);
 }
@@ -2176,6 +2185,14 @@ a.lnd-directions:hover {
 
   .lnd-section {
     padding: 72px 0;
+  }
+
+  .lnd-section-about {
+    padding-bottom: 40px;
+  }
+
+  .lnd-section-how {
+    padding-top: 52px;
   }
 
   .lnd-section-head {

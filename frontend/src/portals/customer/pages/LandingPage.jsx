@@ -35,7 +35,8 @@ import { submitInquiry } from '../../../api/inquiries';
 import { getPublicFaqs } from '../../../api/adminconfig';
 import { sanitizePhoneNumber } from '../../../utils/phone';
 import heroImage from '../assets/images/landing_hero.jpg';
-import aboutImage from '../assets/images/landing_section.jpg';
+// Picture beside the About Us text
+import aboutImage from '../assets/images/testimonials/prf29.jpg';
 import logo from '../../../assets/images/logo.jpg';
 import '../styles/landing.css';
 
@@ -596,7 +597,7 @@ export default function LandingPage() {
       </section>
 
       {/* ---------- About ---------- */}
-      <section id="about" className="lnd-section">
+      <section id="about" className="lnd-section lnd-section-about">
         <div className="lnd-container lnd-about" data-reveal>
           <div className="lnd-about-media">
             <div className="lnd-about-frame">
@@ -637,7 +638,7 @@ export default function LandingPage() {
       </section>
 
       {/* ---------- How it works ---------- */}
-      <section id="how" className="lnd-section lnd-section-tint">
+      <section id="how" className="lnd-section lnd-section-tint lnd-section-how">
         <div className="lnd-container">
           <div className="lnd-section-head" data-reveal>
             <span className="lnd-eyebrow">How It Works</span>
