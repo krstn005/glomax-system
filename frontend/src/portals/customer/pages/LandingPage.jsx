@@ -30,6 +30,9 @@ import {
   AlertCircle,
   Info,
   Navigation,
+  ExternalLink,
+  Satellite,
+  Map as MapIcon,
 } from 'lucide-react';
 import { submitInquiry } from '../../../api/inquiries';
 import { getPublicFaqs } from '../../../api/adminconfig';
@@ -287,6 +290,87 @@ function TestimonialSlider({ images }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Shows the typed address on a Google map so the customer can see the house
+// right away. It opens in satellite view so the roof can be seen. It waits
+// a moment after the customer stops typing before it moves the map.
+function AddressMap({ address }) {
+  const [view, setView] = useState('satellite');
+  const [shownAddress, setShownAddress] = useState('');
+
+  useEffect(() => {
+    const clean = address.trim();
+    if (clean.length < 5) {
+      setShownAddress('');
+      return undefined;
+    }
+    const timer = setTimeout(() => setShownAddress(clean), 800);
+    return () => clearTimeout(timer);
+  }, [address]);
+
+  if (!shownAddress) {
+    return (
+      <div className="lnd-map lnd-map-empty">
+        <MapPin size={22} />
+        <p>Type your address above and your place will show here on the map.</p>
+      </div>
+    );
+  }
+
+  const query = encodeURIComponent(shownAddress);
+  const mapType = view === 'satellite' ? 'k' : 'm';
+
+  return (
+    <div className="lnd-map">
+      <div className="lnd-map-bar">
+        <div className="lnd-map-tabs" role="tablist" aria-label="Map view">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'satellite'}
+            className={view === 'satellite' ? 'active' : ''}
+            onClick={() => setView('satellite')}
+          >
+            <Satellite size={14} />
+            Satellite
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'map'}
+            className={view === 'map' ? 'active' : ''}
+            onClick={() => setView('map')}
+          >
+            <MapIcon size={14} />
+            Map
+          </button>
+        </div>
+        <a
+          className="lnd-map-open"
+          href={`https://www.google.com/maps/search/?api=1&query=${query}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <ExternalLink size={13} />
+          Open in Google Maps
+        </a>
+      </div>
+
+      <iframe
+        key={`${mapType}-${shownAddress}`}
+        className="lnd-map-frame"
+        title="Map of your property address"
+        src={`https://www.google.com/maps?q=${query}&t=${mapType}&z=19&output=embed`}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        allowFullScreen
+      />
+      <p className="lnd-map-note">
+        Not the right place? Add your barangay and city to the address so the pin lands on your house.
+      </p>
     </div>
   );
 }
@@ -1045,6 +1129,7 @@ export default function LandingPage() {
                         </span>
                       )}
                     </div>
+                    <AddressMap address={form.address} />
                   </div>
 
                   <div className="lnd-field">
