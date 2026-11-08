@@ -23,10 +23,12 @@ you can pass it in as normal text. The plain-text version of the email
 (for mail apps that do not show HTML) is made from the same blocks.
 """
 import os
+from datetime import timedelta, timezone as dt_timezone
 from email.mime.image import MIMEImage
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.utils import timezone
 from django.utils.html import escape
 
 COMPANY_ADDRESS = "8000 Plaza Residences Plaza, Brgy. 303, Lacson St., Sta. Cruz, Manila"
@@ -34,6 +36,42 @@ COMPANY_ADDRESS = "8000 Plaza Residences Plaza, Brgy. 303, Lacson St., Sta. Cruz
 NAVY = '#0d1f3c'
 GOLD = '#facc15'
 LOGO_CID = 'glomax_logo'
+
+# Philippine time (UTC+8)
+PH_TIME = dt_timezone(timedelta(hours=8))
+
+ROLE_NAMES = {
+    'STAFF': 'Staff',
+    'ADMIN': 'Admin',
+    'PARTNER_INSTALLER': 'Partner Installer',
+    'CUSTOMER': 'Customer',
+}
+
+
+def sent_line(sent_by=None):
+    """
+    The "who sent it and when" line shown at the bottom of every email.
+    sent_by is the person who caused the email (a user). Without one, it
+    only shows when it was sent.
+
+        Sent by Maria Cruz (Staff) on November 8, 2026, 6:07 PM PHT
+        Sent on November 8, 2026, 6:07 PM PHT
+    """
+    local = timezone.now().astimezone(PH_TIME)
+    hour = local.hour % 12 or 12
+    am_pm = 'AM' if local.hour < 12 else 'PM'
+    when = f"{local.strftime('%B')} {local.day}, {local.year}, {hour}:{local.minute:02d} {am_pm} PHT"
+
+    if sent_by is None:
+        return f'Sent on {when}'
+
+    name = (getattr(sent_by, 'full_name', '') or '').strip()
+    if not name and hasattr(sent_by, 'get_full_name'):
+        name = (sent_by.get_full_name() or '').strip()
+    name = name or getattr(sent_by, 'username', '') or 'Glomax'
+    role = ROLE_NAMES.get(getattr(sent_by, 'role', ''), '')
+    who = f'{name} ({role})' if role else name
+    return f'Sent by {who} on {when}'
 
 
 # ---------------------------------------------------------------------
@@ -192,11 +230,16 @@ def _block_html(block):
     return ''
 
 
-def wrap_html(inner_html, heading=None):
+def wrap_html(inner_html, heading=None, sent_text=None):
     """The shared look: header with logo, body, footer."""
     heading_html = (
         f'<h2 style="margin:0 0 14px;color:{NAVY};font-size:20px;line-height:1.3;">{escape(heading)}</h2>'
         if heading else ''
+    )
+    sent_html = (
+        f'<p style="margin:0 0 8px;color:#6b7280;font-size:12px;font-weight:bold;line-height:1.5;">'
+        f'{escape(sent_text)}</p>'
+        if sent_text else ''
     )
     return f"""\
 <!DOCTYPE html>
@@ -230,6 +273,7 @@ def wrap_html(inner_html, heading=None):
       </tr>
       <tr>
         <td style="background-color:#f9fafb;padding:16px 32px;border-top:1px solid #f1f3f6;">
+          {sent_html}
           <p style="margin:0 0 4px;color:#9ca3af;font-size:11.5px;line-height:1.5;">
             This is an automated message from Glomax Solar Enterprises. Please do not reply to this email.
           </p>
@@ -243,8 +287,8 @@ def wrap_html(inner_html, heading=None):
 """
 
 
-def render_html(heading, blocks):
-    return wrap_html(''.join(_block_html(block) for block in blocks), heading)
+def render_html(heading, blocks, sent_text=None):
+    return wrap_html(''.join(_block_html(block) for block in blocks), heading, sent_text)
 
 
 # ---------------------------------------------------------------------
@@ -270,10 +314,12 @@ def _block_text(block):
     return ''
 
 
-def render_text(heading, blocks):
+def render_text(heading, blocks, sent_text=None):
     parts = [heading] if heading else []
     parts += [text for text in (_block_text(block) for block in blocks) if text]
     parts.append('Best regards,\nGlomax Solar Enterprises')
+    if sent_text:
+        parts.append(sent_text)
     parts.append(f'This is an automated message. Please do not reply to this email.\n{COMPANY_ADDRESS}')
     return '\n\n'.join(parts)
 
@@ -298,7 +344,7 @@ def attach_logo(email):
         pass
 
 
-def build_email(subject, to, heading, blocks, pdf_files=()):
+def build_email(subject, to, heading, blocks, pdf_files=(), sent_by=None):
     """
     Makes the email message (it is not sent yet - call .send() on it).
 
@@ -306,15 +352,18 @@ def build_email(subject, to, heading, blocks, pdf_files=()):
     heading   the title shown at the top of the email body
     blocks    the pieces, made with p(), details(), button() and so on
     pdf_files list of (file name, PDF bytes) to attach
+    sent_by   the person who caused this email (a user), shown at the bottom
+              with the date and time. Leave it out for emails nobody sent by hand.
     """
     recipients = [to] if isinstance(to, str) else list(to)
+    sent_text = sent_line(sent_by)
     email = EmailMultiAlternatives(
         subject=subject,
-        body=render_text(heading, blocks),
+        body=render_text(heading, blocks, sent_text),
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=recipients,
     )
-    email.attach_alternative(render_html(heading, blocks), 'text/html')
+    email.attach_alternative(render_html(heading, blocks, sent_text), 'text/html')
     attach_logo(email)
     for filename, content in pdf_files:
         email.attach(filename, content, 'application/pdf')

@@ -426,7 +426,7 @@ class TicketRescheduleDecisionView(APIView):
 
         # Email the Customer too. The bell message says so only if it was sent.
         approved = decision == 'APPROVE'
-        if send_reschedule_decision_email(ticket, reschedule, approved):
+        if send_reschedule_decision_email(ticket, reschedule, approved, sent_by=request.user):
             message += " We also sent the details to your email."
 
         Notification.objects.create(
@@ -593,7 +593,7 @@ class TicketAssignView(APIView):
         ticket.assigned_at = timezone.now()
         ticket.save()
 
-        send_assignment_email(ticket)
+        send_assignment_email(ticket, sent_by=request.user)
         send_ticket_sms(ticket, '06')
 
         Notification.objects.create(
@@ -643,7 +643,7 @@ class TicketDecisionView(APIView):
             ticket.save()
 
             message = f"Your request {ticket.ticket_number} was marked as Not Compatible."
-            if send_not_compatible_email(ticket, can_reapply=False):
+            if send_not_compatible_email(ticket, can_reapply=False, sent_by=request.user):
                 message += " We also sent the details to your email."
 
             Notification.objects.create(
@@ -671,7 +671,7 @@ class TicketDecisionView(APIView):
                 f"Your request {ticket.ticket_number} was marked as Not Compatible, but you can "
                 f"reapply later. {when_text}"
             )
-            if send_not_compatible_email(ticket, can_reapply=True):
+            if send_not_compatible_email(ticket, can_reapply=True, sent_by=request.user):
                 message += " We also sent the details to your email."
 
             Notification.objects.create(
@@ -719,7 +719,7 @@ class TicketEnableReapplyView(APIView):
                 f"You can reapply for {ticket.ticket_number} starting "
                 f"{ticket.reapply_from.strftime('%B %d, %Y')}."
             )
-        if send_reapply_enabled_email(ticket):
+        if send_reapply_enabled_email(ticket, sent_by=request.user):
             message += " We also sent the details to your email."
 
         Notification.objects.create(
@@ -788,7 +788,7 @@ class TicketCompleteView(APIView):
         ticket.save()
 
         message = f"Your request {ticket.ticket_number} is completed!"
-        if send_completion_email(ticket):
+        if send_completion_email(ticket, sent_by=request.user):
             message += " We also sent the details to your email."
 
         Notification.objects.create(
@@ -850,7 +850,7 @@ class TicketApproveView(APIView):
         ticket.save()
 
         message = f"Your request {ticket.ticket_number} has been approved!"
-        if send_approval_email(ticket):
+        if send_approval_email(ticket, sent_by=request.user):
             message += " We sent your Disclosure Agreement to your email."
 
         Notification.objects.create(

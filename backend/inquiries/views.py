@@ -227,6 +227,7 @@ class InquirySendQuotationView(APIView):
                 estimated_cost=data["estimated_cost"],
                 payment_terms=data["payment_terms"],
                 notes=data.get("notes", ""),
+                sent_by=request.user,
             )
         except AnymailError as e:
             logger.error(f"Failed to send quotation email for inquiry {pk}: {e}")
@@ -326,7 +327,7 @@ class StaffInquiryMessagesView(APIView):
         email_sent = True
         warning = None
         try:
-            send_reply_email(inquiry=inquiry, staff_message_content=content)
+            send_reply_email(inquiry=inquiry, staff_message_content=content, sent_by=request.user)
         except AnymailError as e:
             logger.error(f"Failed to send reply email for inquiry {pk}: {e}")
             email_sent = False

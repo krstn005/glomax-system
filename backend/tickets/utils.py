@@ -23,7 +23,7 @@ def _customer_name(ticket):
     )
 
 
-def send_assignment_email(ticket):
+def send_assignment_email(ticket, sent_by=None):
     """
     Notifies the assigned Partner Installer by email once Staff assigns
     them to a ticket. Uses the shared Glomax email design (same as every
@@ -58,6 +58,7 @@ def send_assignment_email(ticket):
             installer.email,
             'New roof assessment visit',
             blocks,
+            sent_by=sent_by,
         ).send(fail_silently=True)
     except Exception:
         # Assignment already succeeded in the database by the time
@@ -80,7 +81,7 @@ def send_assignment_email(ticket):
 # happened. All of them use the shared Glomax email design.
 
 
-def _send_customer_email(ticket, subject, heading, blocks, pdf_files=()):
+def _send_customer_email(ticket, subject, heading, blocks, pdf_files=(), sent_by=None):
     """
     Sends one email to the Customer. pdf_files is a list of
     (file name, PDF bytes). Returns True if sent, False if not.
@@ -91,14 +92,14 @@ def _send_customer_email(ticket, subject, heading, blocks, pdf_files=()):
         return False
 
     try:
-        build_email(subject, customer.email, heading, blocks, pdf_files).send()
+        build_email(subject, customer.email, heading, blocks, pdf_files, sent_by=sent_by).send()
         return True
     except Exception:
         logger.exception("Could not send the email for %s", ticket.ticket_number)
         return False
 
 
-def send_approval_email(ticket):
+def send_approval_email(ticket, sent_by=None):
     """
     Customer's request was approved by the Admin. Sends the Disclosure
     Agreement PDF. If the PDF can't be made, the email still goes out
@@ -136,11 +137,12 @@ def send_approval_email(ticket):
         button('View My Request', link),
     ]
     return _send_customer_email(
-        ticket, f'Your request is approved: {ticket.ticket_number}', 'Your request is approved', blocks, files
+        ticket, f'Your request is approved: {ticket.ticket_number}', 'Your request is approved', blocks, files,
+        sent_by=sent_by,
     )
 
 
-def send_not_compatible_email(ticket, can_reapply):
+def send_not_compatible_email(ticket, can_reapply, sent_by=None):
     """
     Customer's request was marked Not Compatible by Staff.
     can_reapply=True  -> tells them they can send a new request.
@@ -183,10 +185,10 @@ def send_not_compatible_email(ticket, can_reapply):
     if reason:
         blocks.append(quote(reason, 'Reason from our team'))
     blocks += [details(rows), button(button_text, link)]
-    return _send_customer_email(ticket, subject, heading, blocks)
+    return _send_customer_email(ticket, subject, heading, blocks, sent_by=sent_by)
 
 
-def send_reapply_enabled_email(ticket):
+def send_reapply_enabled_email(ticket, sent_by=None):
     """Staff changed the reapply date. Tells the Customer when they can reapply."""
     name = _customer_name(ticket)
     link = _portal_link('/request-status')
@@ -207,11 +209,11 @@ def send_reapply_enabled_email(ticket):
         button('Reapply in the Portal', link),
     ]
     return _send_customer_email(
-        ticket, f'Reapply update: {ticket.ticket_number}', 'Your reapply date', blocks
+        ticket, f'Reapply update: {ticket.ticket_number}', 'Your reapply date', blocks, sent_by=sent_by
     )
 
 
-def send_completion_email(ticket):
+def send_completion_email(ticket, sent_by=None):
     """
     Customer's request was marked Completed. Sends a short thank-you
     email and asks for feedback. No PDF is attached.
@@ -236,11 +238,12 @@ def send_completion_email(ticket):
         button('View My Request', link),
     ]
     return _send_customer_email(
-        ticket, f'Your request is completed: {ticket.ticket_number}', 'Your request is completed', blocks
+        ticket, f'Your request is completed: {ticket.ticket_number}', 'Your request is completed', blocks,
+        sent_by=sent_by,
     )
 
 
-def send_reschedule_decision_email(ticket, reschedule, approved):
+def send_reschedule_decision_email(ticket, reschedule, approved, sent_by=None):
     """
     Customer asked for a new visit date and Staff answered. Tells the
     Customer if the new date was approved or declined. Returns True if
@@ -274,4 +277,4 @@ def send_reschedule_decision_email(ticket, reschedule, approved):
         rows.append(('Note from Staff', staff_note))
 
     blocks = [p(text) for text in paragraphs] + [details(rows), button('View My Request', link)]
-    return _send_customer_email(ticket, subject, heading, blocks)
+    return _send_customer_email(ticket, subject, heading, blocks, sent_by=sent_by)

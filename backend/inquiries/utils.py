@@ -70,7 +70,7 @@ def _cta_button_html(link, label):
     return button_html(label, link, 'gold')
 
 
-def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms, notes):
+def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms, notes, sent_by=None):
     """
     Sends the Initial Quotation to whoever submitted the inquiry.
     This can only be sent once per inquiry (enforced in the view).
@@ -113,11 +113,12 @@ def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms
         inquiry.email,
         "Your quotation",
         blocks,
+        sent_by=sent_by,
     )
     email.send(fail_silently=False)
 
 
-def send_reply_email(inquiry, staff_message_content):
+def send_reply_email(inquiry, staff_message_content, sent_by=None):
     """
     Sends Staff's follow-up reply to the customer's email. Includes
     the same Reply Link again so the customer can keep the
@@ -138,5 +139,6 @@ def send_reply_email(inquiry, staff_message_content):
         inquiry.email,
         "You have a new reply",
         blocks,
+        sent_by=sent_by,
     )
     email.send(fail_silently=False)
