@@ -712,66 +712,46 @@ html {
   color: var(--gold-deep);
 }
 
-/* ---------- Customer testimonial slider (inside About Us) ---------- */
+/* ---------- Customer pictures: a row that keeps sliding (inside About Us) ---------- */
 .lnd-tst {
   margin-top: 72px;
 }
 
-.lnd-tst-head {
-  max-width: 640px;
-  margin: 0 auto 28px;
-  text-align: center;
-}
-
 .lnd-tst-title {
-  margin: 10px 0 8px;
-  font-size: clamp(22px, 2.6vw, 30px);
-  font-weight: 900;
-  line-height: 1.2;
+  margin: 0 0 24px;
+  padding: 0 16px;
+  font-size: clamp(18px, 2.2vw, 24px);
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
   color: var(--navy);
 }
 
-.lnd-tst-wrap {
-  position: relative;
+/* Full width of the screen */
+.lnd-tst-marquee {
+  overflow: hidden;
+  width: 100%;
 }
 
-.lnd-tst-track {
+.lnd-tst-belt {
   display: flex;
   gap: 16px;
-  overflow-x: auto;
-  padding: 6px 2px 14px;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  width: max-content;
+  animation: lndTstSlide 120s linear infinite;
+  will-change: transform;
 }
 
-.lnd-tst-track::-webkit-scrollbar {
-  display: none;
+.lnd-tst-marquee:hover .lnd-tst-belt {
+  animation-play-state: paused;
 }
 
 .lnd-tst-card {
-  flex: 0 0 calc((100% - 32px) / 3);
-  height: 360px;
-  padding: 0;
+  flex: 0 0 auto;
+  width: 236px;
+  height: 226px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 12px 28px rgba(13, 31, 60, 0.1);
-  scroll-snap-align: start;
-  cursor: zoom-in;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-
-.lnd-tst-card:hover {
-  transform: translateY(-4px);
-  border-color: #fde68a;
-  box-shadow: 0 20px 40px rgba(13, 31, 60, 0.16);
-}
-
-.lnd-tst-card:focus-visible {
-  outline: 3px solid rgba(250, 204, 21, 0.6);
-  outline-offset: 2px;
+  border-radius: 24px;
+  background: #e2e8f0;
 }
 
 .lnd-tst-card img {
@@ -781,122 +761,14 @@ html {
   object-position: top center;
 }
 
-.lnd-tst-arrow {
-  position: absolute;
-  top: 50%;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  margin-top: -29px;
-  border: none;
-  border-radius: 50%;
-  background: var(--navy);
-  color: var(--gold);
-  box-shadow: 0 8px 18px rgba(13, 31, 60, 0.3);
-  cursor: pointer;
-  transition: background 0.18s, transform 0.18s;
-}
-
-.lnd-tst-arrow:hover {
-  background: var(--navy-3);
-  transform: scale(1.06);
-}
-
-.lnd-tst-arrow.prev {
-  left: -14px;
-}
-
-.lnd-tst-arrow.next {
-  right: -14px;
-}
-
-.lnd-tst-count {
-  margin: 6px 0 0;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.lnd-tst-dots {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.lnd-tst-dot {
-  width: 9px;
-  height: 9px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: #cbd5e1;
-  cursor: pointer;
-  transition: width 0.25s, background 0.25s;
-}
-
-.lnd-tst-dot.active {
-  width: 26px;
-  background: var(--gold-dark);
-}
-
-/* Big picture (drawn on the page body, so it does not use the .lnd-page colours) */
-.lnd-lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(8, 18, 36, 0.86);
-  backdrop-filter: blur(4px);
-  cursor: zoom-out;
-  animation: lndLightboxIn 0.22s ease-out both;
-}
-
-.lnd-lightbox img {
-  max-width: min(92vw, 760px);
-  max-height: 90vh;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
-  cursor: default;
-  animation: lndLightboxZoom 0.26s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
-}
-
-.lnd-lightbox-close {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  cursor: pointer;
-}
-
-.lnd-lightbox-close:hover {
-  background: #facc15;
-  color: #0d1f3c;
-}
-
-@keyframes lndLightboxIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes lndLightboxZoom {
-  from { opacity: 0; transform: scale(0.85); }
-  to { opacity: 1; transform: scale(1); }
+/* Moves exactly one full set of pictures, then starts over without a jump */
+@keyframes lndTstSlide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-50% - 8px));
+  }
 }
 
 /* ---------- Steps ---------- */
@@ -2288,13 +2160,6 @@ a.lnd-directions:hover {
   }
 }
 
-@media (max-width: 1100px) {
-  .lnd-tst-card {
-    flex-basis: calc((100% - 16px) / 2);
-    height: 340px;
-  }
-}
-
 @media (max-width: 640px) {
   .lnd-container,
   .lnd-nav-inner {
@@ -2388,12 +2253,9 @@ a.lnd-directions:hover {
   }
 
   .lnd-tst-card {
-    flex-basis: 84%;
-    height: 380px;
-  }
-
-  .lnd-tst-arrow {
-    display: none;
+    width: 190px;
+    height: 182px;
+    border-radius: 20px;
   }
 
   .lnd-address-foot {
@@ -2469,5 +2331,10 @@ a.lnd-directions:hover {
   [data-reveal] {
     opacity: 1;
     transform: none;
+  }
+
+  /* No automatic sliding: people can scroll the row by hand instead */
+  .lnd-tst-marquee {
+    overflow-x: auto;
   }
 }

@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Home,
@@ -30,8 +29,6 @@ import {
   Loader2,
   AlertCircle,
   Info,
-  ChevronLeft,
-  ChevronRight,
   Navigation,
 } from 'lucide-react';
 import { submitInquiry } from '../../../api/inquiries';
@@ -42,7 +39,7 @@ import aboutImage from '../assets/images/landing_section.jpg';
 import logo from '../../../assets/images/logo.jpg';
 import '../styles/landing.css';
 
-// Customer testimonial pictures. Just put the pictures in
+// Customer pictures (the sliding row under About Us). Just put the pictures in
 // src/portals/customer/assets/images/testimonials/ (jpg, png or webp).
 // They show up in the slider by themselves, in file name order.
 // If the folder has no pictures, the slider is hidden.
@@ -267,161 +264,28 @@ function getErrorText(err) {
   return 'Something went wrong sending your inquiry. Please try again.';
 }
 
-// Sliding customer pictures (shown under About Us).
-// Moves by itself every 4 seconds, stops while the mouse is over it,
-// and a click opens the picture bigger.
+// Customer pictures that keep sliding by themselves, left to right, on a loop.
+// Nobody needs to click anything. The row is shown twice so the loop has no gap.
+// It stops while the mouse is over it.
 function TestimonialSlider({ images }) {
-  const trackRef = useRef(null);
-  const [index, setIndex] = useState(0);
-  const [maxIndex, setMaxIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [openImage, setOpenImage] = useState(null);
-
-  // How far one step is (one picture + the gap)
-  const stepSize = useCallback(() => {
-    const track = trackRef.current;
-    const first = track?.firstElementChild;
-    if (!track || !first) return 0;
-    const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
-    return first.getBoundingClientRect().width + gap;
-  }, []);
-
-  const measure = useCallback(() => {
-    const track = trackRef.current;
-    const step = stepSize();
-    if (!track || !step) return;
-    setMaxIndex(Math.max(0, Math.round((track.scrollWidth - track.clientWidth) / step)));
-  }, [stepSize]);
-
-  useEffect(() => {
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [measure, images.length]);
-
-  function goTo(i) {
-    const track = trackRef.current;
-    const step = stepSize();
-    if (!track || !step) return;
-    const target = Math.min(Math.max(i, 0), maxIndex);
-    track.scrollTo({ left: target * step, behavior: 'smooth' });
-    setIndex(target);
-  }
-
-  function handleScroll() {
-    const step = stepSize();
-    if (step) setIndex(Math.min(maxIndex, Math.round(trackRef.current.scrollLeft / step)));
-  }
-
-  // Auto slide
-  useEffect(() => {
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (paused || reduce || maxIndex === 0 || openImage) return undefined;
-    const timer = setInterval(() => {
-      const track = trackRef.current;
-      const step = stepSize();
-      if (!track || !step) return;
-      const current = Math.round(track.scrollLeft / step);
-      const next = current >= maxIndex ? 0 : current + 1;
-      track.scrollTo({ left: next * step, behavior: 'smooth' });
-      setIndex(next);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [paused, maxIndex, openImage, stepSize]);
-
-  // Esc closes the big picture
-  useEffect(() => {
-    if (!openImage) return undefined;
-    function handleKey(e) {
-      if (e.key === 'Escape') setOpenImage(null);
-    }
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [openImage]);
+  // Speed stays the same no matter how many pictures there are
+  const seconds = Math.max(20, images.length * 4);
 
   return (
-    <div className="lnd-container lnd-tst" data-reveal>
-      <div className="lnd-tst-head">
-        <span className="lnd-eyebrow">Happy Customers</span>
-        <h3 className="lnd-tst-title">Proof from Our Customers</h3>
-        <p className="lnd-subtitle">Real feedback from homeowners who switched to solar with us.</p>
-      </div>
+    <div className="lnd-tst" data-reveal>
+      <h3 className="lnd-tst-title">Proof from Our Customers</h3>
 
-      <div
-        className="lnd-tst-wrap"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-        onTouchStart={() => setPaused(true)}
-        onTouchEnd={() => setTimeout(() => setPaused(false), 3000)}
-      >
-        {maxIndex > 0 && (
-          <button
-            type="button"
-            className="lnd-tst-arrow prev"
-            onClick={() => goTo(index <= 0 ? maxIndex : index - 1)}
-            aria-label="Previous picture"
-          >
-            <ChevronLeft size={20} />
-          </button>
-        )}
-
-        <div className="lnd-tst-track" ref={trackRef} onScroll={handleScroll}>
-          {images.map((src, i) => (
-            <button
-              type="button"
-              className="lnd-tst-card"
-              key={src}
-              onClick={() => setOpenImage(src)}
-              aria-label={`Open customer testimonial ${i + 1}`}
-            >
-              <img src={src} alt={`Customer testimonial ${i + 1}`} loading="lazy" />
-            </button>
-          ))}
+      <div className="lnd-tst-marquee" aria-label="Pictures from our customers">
+        <div className="lnd-tst-belt" style={{ animationDuration: `${seconds}s` }}>
+          {[0, 1].map((copy) =>
+            images.map((src, i) => (
+              <div className="lnd-tst-card" key={`${copy}-${src}`} aria-hidden={copy === 1 ? 'true' : undefined}>
+                <img src={src} alt={copy === 0 ? `Customer picture ${i + 1}` : ''} loading="lazy" decoding="async" />
+              </div>
+            )),
+          )}
         </div>
-
-        {maxIndex > 0 && (
-          <button
-            type="button"
-            className="lnd-tst-arrow next"
-            onClick={() => goTo(index >= maxIndex ? 0 : index + 1)}
-            aria-label="Next picture"
-          >
-            <ChevronRight size={20} />
-          </button>
-        )}
       </div>
-
-      {maxIndex > 9 && (
-        <p className="lnd-tst-count" aria-live="polite">
-          {index + 1} / {maxIndex + 1}
-        </p>
-      )}
-
-      {maxIndex > 0 && maxIndex <= 9 && (
-        <div className="lnd-tst-dots" role="tablist" aria-label="Testimonial pictures">
-          {Array.from({ length: maxIndex + 1 }).map((_, i) => (
-            <button
-              type="button"
-              key={i}
-              className={`lnd-tst-dot ${i === index ? 'active' : ''}`}
-              onClick={() => goTo(i)}
-              aria-label={`Go to picture ${i + 1}`}
-              aria-selected={i === index}
-            />
-          ))}
-        </div>
-      )}
-
-      {openImage &&
-        createPortal(
-          <div className="lnd-lightbox" onClick={() => setOpenImage(null)} role="dialog" aria-modal="true">
-            <button type="button" className="lnd-lightbox-close" onClick={() => setOpenImage(null)} aria-label="Close">
-              <X size={22} />
-            </button>
-            <img src={openImage} alt="Customer testimonial" onClick={(e) => e.stopPropagation()} />
-          </div>,
-          document.body,
-        )}
     </div>
   );
 }
