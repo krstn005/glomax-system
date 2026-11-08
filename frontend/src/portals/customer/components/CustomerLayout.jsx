@@ -28,6 +28,27 @@ import '../styles/customer-layout.css';
 // or marked not compatible (same rule as the Dashboard).
 const IN_PROGRESS_STATUSES = ['REQUEST_SUBMITTED', 'PI_ASSIGNED', 'ASSESSMENT_SUBMITTED', 'STAFF_REVIEW', 'ADMIN_REVIEW'];
 
+// Tickets that have documents the customer can download
+const DOCUMENT_STATUSES = ['APPROVED', 'COMPLETED'];
+
+// How often the sidebar numbers refresh.
+const COUNT_REFRESH_MS = 60000;
+
+// Kept outside the component. Every page has its own layout, so the layout
+// is created again on each page change - this keeps the last numbers so
+// they do not jump back to 0 while loading.
+let savedCounts = { active: 0, documents: 0 };
+
+// Small gold number next to a sidebar link. Hidden when it is 0.
+function NavBadge({ count }) {
+  if (!count) return null;
+  return (
+    <span className="cst-nav-badge" aria-label={`${count} waiting`}>
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
+
 // Sidebar links, grouped into sections. "New Request" isn't here
 // because it has its own gold button at the top of the sidebar.
 const NAV_GROUPS = [
@@ -38,9 +59,9 @@ const NAV_GROUPS = [
   {
     label: 'My Requests',
     items: [
-      { to: '/request-status', label: 'Request Status', icon: Activity },
+      { to: '/request-status', label: 'Request Status', icon: Activity, badge: 'active' },
       { to: '/past-requests', label: 'Past Requests', icon: History },
-      { to: '/documents', label: 'My Documents', icon: Files },
+      { to: '/documents', label: 'My Documents', icon: Files, badge: 'documents' },
     ],
   },
   {
@@ -87,6 +108,7 @@ export default function CustomerLayout({ children, pageTitle, pageSubtitle }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // Hidden until the tickets load, so the button doesn't flash in and out
   const [canRequest, setCanRequest] = useState(false);
+  const [navCounts, setNavCounts] = useState(savedCounts);
 
   // Check if the customer already has a request in progress
   useEffect(() => {
@@ -98,6 +120,12 @@ export default function CustomerLayout({ children, pageTitle, pageSubtitle }) {
         if (cancelled) return;
         const list = Array.isArray(tickets) ? tickets : [];
         setCanRequest(!list.some((t) => IN_PROGRESS_STATUSES.includes(t.status)));
+        // Numbers beside the sidebar links
+        savedCounts = {
+          active: list.filter((t) => IN_PROGRESS_STATUSES.includes(t.status)).length,
+          documents: list.filter((t) => DOCUMENT_STATUSES.includes(t.status)).length,
+        };
+        setNavCounts(savedCounts);
       } catch {
         // Could not check - keep the button hidden. The New Request page
         // still blocks a second request on its own.
@@ -105,12 +133,19 @@ export default function CustomerLayout({ children, pageTitle, pageSubtitle }) {
       }
     }
     checkTickets();
+    const timer = setInterval(checkTickets, COUNT_REFRESH_MS);
+    function handleVisible() {
+      if (document.visibilityState === 'visible') checkTickets();
+    }
+    document.addEventListener('visibilitychange', handleVisible);
 
     // The Dashboard sends this after a withdraw, so the button comes
     // back right away without a page reload.
     window.addEventListener('customer-tickets-changed', checkTickets);
     return () => {
       cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisible);
       window.removeEventListener('customer-tickets-changed', checkTickets);
     };
   }, []);
@@ -220,10 +255,11 @@ export default function CustomerLayout({ children, pageTitle, pageSubtitle }) {
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="cst-nav-group">
               <p className="cst-nav-label">{group.label}</p>
-              {group.items.map(({ to, label, icon: Icon }) => (
+              {group.items.map(({ to, label, icon: Icon, badge }) => (
                 <NavLink key={to} to={to} className="cst-nav-link">
                   <Icon size={17} />
-                  <span>{label}</span>
+                  <span className="cst-nav-text">{label}</span>
+                  {badge && <NavBadge count={navCounts[badge]} />}
                 </NavLink>
               ))}
             </div>

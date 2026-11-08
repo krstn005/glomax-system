@@ -33,7 +33,7 @@ const NAV_GROUPS = [
   {
     label: 'Tickets',
     items: [
-      { to: '/admin/requests', label: 'Requests', icon: Inbox },
+      { to: '/admin/requests', label: 'Requests', icon: Inbox, badge: 'requests' },
       { to: '/admin/completed-tickets', label: 'Completed Tickets', icon: CheckCircle },
     ],
   },
@@ -59,6 +59,26 @@ const NAV_GROUPS = [
     ],
   },
 ];
+
+// How often the sidebar numbers refresh, and how long a fetch is reused.
+const COUNT_REFRESH_MS = 60000;
+const COUNT_FRESH_MS = 15000;
+
+// Kept outside the component. Every page has its own layout, so the layout
+// is created again on each page change - this keeps the last numbers so
+// they do not jump back to 0 while loading.
+let savedCounts = { requests: 0 };
+let savedAt = 0;
+
+// Small gold number next to a sidebar link. Hidden when it is 0.
+function NavBadge({ count }) {
+  if (!count) return null;
+  return (
+    <span className="adm-nav-badge" aria-label={`${count} waiting`}>
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
 
 // Keeps a link highlighted on its detail pages too (/admin/requests/42)
 function isActive(pathname, to) {
@@ -94,6 +114,7 @@ export default function AdminLayout({ children, pageTitle, pageSubtitle }) {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [username, setUsername] = useState(localStorage.getItem('username') || 'Admin');
   const [picture, setPicture] = useState(localStorage.getItem('profilePicture') || null);
+  const [navCounts, setNavCounts] = useState(savedCounts);
   const profileRef = useRef(null);
   const initials = username.slice(0, 2).toUpperCase();
 
@@ -158,6 +179,40 @@ export default function AdminLayout({ children, pageTitle, pageSubtitle }) {
     };
   }, []);
 
+  // Numbers beside sidebar links: Requests = tickets waiting for Admin approval
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCounts(force = false) {
+      if (!force && Date.now() - savedAt <= COUNT_FRESH_MS) {
+        setNavCounts(savedCounts);
+        return;
+      }
+      try {
+        const res = await apiClient.get('/tickets/admin/', { params: { status: 'ADMIN_REVIEW' } });
+        const data = res.data;
+        const total = Array.isArray(data) ? data.length : data?.count ?? 0;
+        savedCounts = { ...savedCounts, requests: total };
+        savedAt = Date.now();
+        if (!cancelled) setNavCounts(savedCounts);
+      } catch {
+        // Keep the last numbers if the request fails.
+      }
+    }
+
+    loadCounts();
+    const timer = setInterval(() => loadCounts(true), COUNT_REFRESH_MS);
+    function handleVisible() {
+      if (document.visibilityState === 'visible') loadCounts();
+    }
+    document.addEventListener('visibilitychange', handleVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisible);
+    };
+  }, [location.pathname]);
+
   function goToSettings() {
     setMenuOpen(false);
     navigate('/admin/settings');
@@ -199,14 +254,15 @@ export default function AdminLayout({ children, pageTitle, pageSubtitle }) {
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="adm-nav-group">
               <p className="adm-nav-label">{group.label}</p>
-              {group.items.map(({ to, label, icon: Icon }) => (
+              {group.items.map(({ to, label, icon: Icon, badge }) => (
                 <Link
                   key={to}
                   to={to}
                   className={`adm-nav-link ${isActive(location.pathname, to) ? 'active' : ''}`}
                 >
                   <Icon size={17} />
-                  <span>{label}</span>
+                  <span className="adm-nav-text">{label}</span>
+                  {badge && <NavBadge count={navCounts[badge]} />}
                 </Link>
               ))}
             </div>

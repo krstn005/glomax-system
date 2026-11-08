@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import logo from '../../../assets/images/logo.jpg';
 import apiClient from '../../../api/client';
+import { getInstallerTickets } from '../../../api/piTickets';
 import { toMediaUrl } from '../../../utils/mediaUrl';
 import PINotificationBell from './PINotificationBell';
 import '../styles/pi-layout.css';
@@ -34,7 +35,7 @@ const NAV_GROUPS = [
   {
     label: 'My Work',
     items: [
-      { to: '/partner-installer/incoming-tickets', label: 'Incoming Tickets', icon: Inbox },
+      { to: '/partner-installer/incoming-tickets', label: 'Incoming Tickets', icon: Inbox, badge: 'incoming' },
       { to: '/partner-installer/ticket-history', label: 'Ticket History', icon: History },
     ],
   },
@@ -47,6 +48,29 @@ const NAV_GROUPS = [
     items: [{ to: '/partner-installer/my-ratings', label: 'My Ratings', icon: Star }],
   },
 ];
+
+// Same tickets the Incoming Tickets page shows under "All Active"
+const ACTIVE_STATUSES = ['PI_ASSIGNED', 'ASSESSMENT_SUBMITTED', 'STAFF_REVIEW', 'ADMIN_REVIEW'];
+
+// How often the sidebar numbers refresh, and how long a fetch is reused.
+const COUNT_REFRESH_MS = 60000;
+const COUNT_FRESH_MS = 15000;
+
+// Kept outside the component. Every page has its own layout, so the layout
+// is created again on each page change - this keeps the last numbers so
+// they do not jump back to 0 while loading.
+let savedCounts = { incoming: 0 };
+let savedAt = 0;
+
+// Small gold number next to a sidebar link. Hidden when it is 0.
+function NavBadge({ count }) {
+  if (!count) return null;
+  return (
+    <span className="pi-nav-badge" aria-label={`${count} waiting`}>
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
 
 // Keeps a link like /partner-installer/incoming-tickets highlighted on
 // its detail pages too (/partner-installer/incoming-tickets/42).
@@ -83,6 +107,7 @@ export default function PILayout({ children, pageTitle, pageSubtitle }) {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [username, setUsername] = useState(localStorage.getItem('username') || 'Partner Installer');
   const [picture, setPicture] = useState(localStorage.getItem('profilePicture') || null);
+  const [navCounts, setNavCounts] = useState(savedCounts);
   const profileRef = useRef(null);
   const initials = username.slice(0, 2).toUpperCase();
 
@@ -147,6 +172,40 @@ export default function PILayout({ children, pageTitle, pageSubtitle }) {
     };
   }, []);
 
+  // Numbers beside sidebar links: Incoming Tickets = active assigned tickets
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCounts(force = false) {
+      if (!force && Date.now() - savedAt <= COUNT_FRESH_MS) {
+        setNavCounts(savedCounts);
+        return;
+      }
+      try {
+        const data = await getInstallerTickets();
+        const list = Array.isArray(data) ? data : data?.results ?? [];
+        const total = list.filter((t) => ACTIVE_STATUSES.includes(t.status)).length;
+        savedCounts = { ...savedCounts, incoming: total };
+        savedAt = Date.now();
+        if (!cancelled) setNavCounts(savedCounts);
+      } catch {
+        // Keep the last numbers if the request fails.
+      }
+    }
+
+    loadCounts();
+    const timer = setInterval(() => loadCounts(true), COUNT_REFRESH_MS);
+    function handleVisible() {
+      if (document.visibilityState === 'visible') loadCounts();
+    }
+    document.addEventListener('visibilitychange', handleVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisible);
+    };
+  }, [location.pathname]);
+
   function goToSettings() {
     setMenuOpen(false);
     navigate('/partner-installer/settings');
@@ -188,7 +247,7 @@ export default function PILayout({ children, pageTitle, pageSubtitle }) {
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="pi-nav-group">
               <p className="pi-nav-label">{group.label}</p>
-              {group.items.map(({ to, label, icon: Icon, alsoActive = [] }) => (
+              {group.items.map(({ to, label, icon: Icon, alsoActive = [], badge }) => (
                 <Link
                   key={to}
                   to={to}
@@ -197,7 +256,8 @@ export default function PILayout({ children, pageTitle, pageSubtitle }) {
                   }`}
                 >
                   <Icon size={17} />
-                  <span>{label}</span>
+                  <span className="pi-nav-text">{label}</span>
+                  {badge && <NavBadge count={navCounts[badge]} />}
                 </Link>
               ))}
             </div>
