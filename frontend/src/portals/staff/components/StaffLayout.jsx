@@ -60,6 +60,12 @@ const NAV_GROUPS = [
 // How often the sidebar numbers refresh by themselves (1 minute)
 const COUNT_REFRESH_MS = 60000;
 
+// Each page builds its own sidebar, so the numbers are kept here (outside
+// the component). That way, going to another page shows the same numbers
+// right away instead of starting from 0 and jumping.
+let savedCounts = { inquiries: 0, tickets: 0, assessments: 0 };
+let savedAt = 0;
+
 // Small number on a sidebar link. Hidden when there is nothing to do.
 function NavBadge({ count }) {
   if (!count) return null;
@@ -107,7 +113,7 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
   const [username, setUsername] = useState(localStorage.getItem('username') || 'Staff');
   const [picture, setPicture] = useState(localStorage.getItem('profilePicture') || null);
   const profileRef = useRef(null);
-  const [navCounts, setNavCounts] = useState({ inquiries: 0, tickets: 0, assessments: 0 });
+  const [navCounts, setNavCounts] = useState(savedCounts);
   const initials = username.slice(0, 2).toUpperCase();
 
   // Close the profile dropdown when clicking outside it or pressing Esc
@@ -178,30 +184,30 @@ export default function StaffLayout({ children, pageTitle, pageSubtitle }) {
     let cancelled = false;
 
     async function loadCounts() {
+      savedAt = Date.now();
       const results = await Promise.allSettled([
         getInquiriesPage(1, false),
         getStaffTicketsPage(1, 'REQUEST_SUBMITTED'),
         getAssessmentReviewPage(1, 'NEEDS_REVIEW'),
       ]);
-      if (cancelled) return;
       const keys = ['inquiries', 'tickets', 'assessments'];
-      setNavCounts((old) => {
-        const next = { ...old };
-        results.forEach((r, i) => {
-          if (r.status === 'fulfilled') {
-            const data = r.value;
-            next[keys[i]] = Array.isArray(data) ? data.length : Number(data?.count || 0);
-          }
-        });
-        return next;
+      const next = { ...savedCounts };
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled') {
+          const data = r.value;
+          next[keys[i]] = Array.isArray(data) ? data.length : Number(data?.count || 0);
+        }
       });
+      savedCounts = next;
+      if (!cancelled) setNavCounts(next);
     }
 
     function handleVisible() {
       if (document.visibilityState === 'visible') loadCounts();
     }
 
-    loadCounts();
+    // Skip the fetch if the numbers are still fresh (just came from another page)
+    if (Date.now() - savedAt > 15000) loadCounts();
     const timer = setInterval(loadCounts, COUNT_REFRESH_MS);
     document.addEventListener('visibilitychange', handleVisible);
     return () => {
