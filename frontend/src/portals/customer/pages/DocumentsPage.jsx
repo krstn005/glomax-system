@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
   FileText,
@@ -120,22 +121,108 @@ function FilterDropdown({ options, value, counts, onChange }) {
   );
 }
 
-// One downloadable file. Shows "Preparing..." while working, then
-// "Downloaded" with a check for a few seconds so the customer knows it worked.
+// Pop-up card that opens when a download starts. It zooms in, shows
+// "Preparing...", then a check mark, then zooms out by itself.
+// It is drawn on document.body so the page layout cannot trap it.
+function DownloadModal({ status, tone, title, closing, onClose, onRetry }) {
+  const busy = status === 'busy';
+
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'Escape' && !busy) onClose();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [busy, onClose]);
+
+  let heading = `Preparing your ${title}`;
+  let text = 'Please wait a moment. Your PDF will download automatically.';
+  if (status === 'done') {
+    heading = 'Downloaded';
+    text = `Your ${title} was saved. Check your Downloads folder.`;
+  } else if (status === 'error') {
+    heading = 'Download failed';
+    text = `We could not download the ${title}. Please try again.`;
+  }
+
+  return createPortal(
+    <div className={`doc-modal-overlay ${closing ? 'closing' : ''}`} onMouseDown={() => !busy && onClose()}>
+      <div
+        className={`doc-modal ${closing ? 'closing' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-live="polite"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <span className={`doc-modal-badge ${status} tone-${tone}`}>
+          {status === 'busy' && <span className="doc-modal-spinner" />}
+          {status === 'done' && <Check size={30} strokeWidth={3} />}
+          {status === 'error' && <AlertCircle size={30} />}
+        </span>
+
+        <h3>{heading}</h3>
+        <p>{text}</p>
+
+        {busy && (
+          <span className="doc-modal-bar" aria-hidden="true">
+            <span />
+          </span>
+        )}
+
+        {status === 'error' && (
+          <div className="doc-modal-actions">
+            <button type="button" className="doc-btn-secondary" onClick={onClose}>
+              Close
+            </button>
+            <button type="button" className="doc-btn-primary" onClick={onRetry}>
+              Try again
+            </button>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// One downloadable file. Clicking Download opens the pop-up above.
+// The tile button also shows "Downloaded" with a check for a few seconds.
 function FileTile({ icon: Icon, tone, title, subtitle, onDownload }) {
-  const [state, setState] = useState('idle'); // idle | busy | done
-  const [error, setError] = useState('');
+  const [state, setState] = useState('idle'); // idle | busy | done | error
+  const [showModal, setShowModal] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const timers = useRef([]);
+
+  function later(fn, ms) {
+    timers.current.push(setTimeout(fn, ms));
+  }
+
+  useEffect(() => {
+    const list = timers.current;
+    return () => list.forEach(clearTimeout);
+  }, []);
+
+  // Zoom out first, then remove the pop-up
+  function closeModal() {
+    setClosing(true);
+    later(() => {
+      setShowModal(false);
+      setClosing(false);
+      setState((s) => (s === 'error' ? 'idle' : s));
+    }, 220);
+  }
 
   async function handleClick() {
     setState('busy');
-    setError('');
+    setClosing(false);
+    setShowModal(true);
     try {
       await onDownload();
       setState('done');
-      setTimeout(() => setState('idle'), 2500);
+      later(closeModal, 1600);
+      later(() => setState('idle'), 3000);
     } catch {
-      setState('idle');
-      setError(`Could not download the ${title}. Please try again.`);
+      setState('error');
     }
   }
 
@@ -163,16 +250,15 @@ function FileTile({ icon: Icon, tone, title, subtitle, onDownload }) {
         </button>
       </div>
 
-      {error && (
-        <div className="doc-alert doc-alert-red doc-alert-small">
-          <span className="doc-alert-icon">
-            <AlertCircle size={15} />
-          </span>
-          <div className="doc-alert-text">
-            <p className="doc-alert-title">Download failed</p>
-            <p>{error}</p>
-          </div>
-        </div>
+      {showModal && (
+        <DownloadModal
+          status={state === 'idle' ? 'done' : state}
+          tone={tone}
+          title={title}
+          closing={closing}
+          onClose={closeModal}
+          onRetry={handleClick}
+        />
       )}
     </div>
   );
