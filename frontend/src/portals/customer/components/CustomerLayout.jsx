@@ -73,6 +73,15 @@ const NAV_GROUPS = [
   },
 ];
 
+// "Juan Dela Cruz" becomes "JC" (first and last word)
+function getInitials(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'CU';
+  const first = parts[0][0];
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : parts[0][1] || '';
+  return (first + last).toUpperCase();
+}
+
 // Shows the profile photo if there is one, otherwise the initials.
 // If the photo link is broken, it falls back to the initials too.
 function HeaderAvatar({ picture, initials, large = false }) {
@@ -101,7 +110,10 @@ export default function CustomerLayout({ children, pageTitle, pageSubtitle }) {
   const navigate = useNavigate();
   const location = useLocation();
   const profileRef = useRef(null);
-  const [username, setUsername] = useState(localStorage.getItem('username') || '');
+  // The name shown in the header: the Full Name from Settings, or the username if there is none
+  const [username, setUsername] = useState(
+    localStorage.getItem('displayName') || localStorage.getItem('username') || '',
+  );
   const [profilePicture, setProfilePicture] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -158,7 +170,11 @@ export default function CustomerLayout({ children, pageTitle, pageSubtitle }) {
         const res = await apiClient.get('/accounts/me/');
         if (cancelled) return;
         setProfilePicture(toMediaUrl(res.data.profile_picture));
-        if (res.data.username) setUsername(res.data.username);
+        const shownName = (res.data.full_name || '').trim() || res.data.username || '';
+        if (shownName) {
+          setUsername(shownName);
+          localStorage.setItem('displayName', shownName);
+        }
       } catch {
         // Non-critical - the header just shows initials instead.
       }
@@ -219,7 +235,7 @@ export default function CustomerLayout({ children, pageTitle, pageSubtitle }) {
     navigate('/login');
   }
 
-  const initials = (username || 'CU').slice(0, 2).toUpperCase();
+  const initials = getInitials(username);
 
   return (
     <div className="cst-layout">
