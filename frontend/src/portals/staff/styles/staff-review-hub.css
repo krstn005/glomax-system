@@ -1,0 +1,71 @@
+/* ===== Staff Assessment & Quotation tabs (stfhub-) ===== */
+
+.stfhub-tabs {
+  display: inline-flex;
+  gap: 4px;
+  max-width: 100%;
+  margin-bottom: 18px;
+  padding: 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(13, 31, 60, 0.04);
+}
+
+.stfhub-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.stfhub-tab:hover:not(.active) {
+  background: #f1f5f9;
+  color: #0d1f3c;
+}
+
+.stfhub-tab.active {
+  background: #0d1f3c;
+  color: #fff;
+}
+
+.stfhub-tab.active svg {
+  color: #facc15;
+}
+
+.stfhub-tab-badge {
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #facc15;
+  color: #0d1f3c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+@media (max-width: 480px) {
+  .stfhub-tabs {
+    display: flex;
+    width: 100%;
+  }
+
+  .stfhub-tab {
+    flex: 1;
+    justify-content: center;
+    padding: 0 10px;
+  }
+}

@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Mail,
-  FileText,
   Activity,
   ClipboardCheck,
   CheckCircle,
@@ -33,17 +32,16 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'Inquiries & Quotations',
+    label: 'Inquiries',
     items: [
       { to: '/staff/email-inquiries', label: 'Email Inquiries', icon: Mail, badge: 'inquiries' },
-      { to: '/staff/quotation-management', label: 'Quotation Management', icon: FileText },
     ],
   },
   {
     label: 'Ticket Management',
     items: [
       { to: '/staff/manage-tickets', label: 'Ticket Tracking', icon: Activity, badge: 'tickets' },
-      { to: '/staff/assessment-review', label: 'Assessment Review', icon: ClipboardCheck, badge: 'assessments' },
+      { to: '/staff/assessment-review', label: 'Assessment & Quotation', icon: ClipboardCheck, badge: 'assessments' },
       { to: '/staff/completed-tickets', label: 'Completed Tickets', icon: CheckCircle },
     ],
   },

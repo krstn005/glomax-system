@@ -273,7 +273,18 @@ function getPageNumbers(current, total) {
   return result;
 }
 
-export default function StaffQuotationManagementPage() {
+// Shows the page inside the Staff layout, or just the content when it sits
+// inside the Assessment & Quotation page (which already has the layout).
+function Shell({ embedded, title, subtitle, children }) {
+  if (embedded) return children;
+  return (
+    <StaffLayout pageTitle={title} pageSubtitle={subtitle}>
+      {children}
+    </StaffLayout>
+  );
+}
+
+export default function StaffQuotationManagementPage({ embedded = false }) {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
   const [count, setCount] = useState(0);
@@ -380,7 +391,7 @@ export default function StaffQuotationManagementPage() {
   const needsCount = filterCounts.NEEDS_QUOTATION;
 
   return (
-    <StaffLayout pageTitle="Quotation Management" pageSubtitle="Manage quotations for active tickets">
+    <Shell embedded={embedded} title="Quotation Management" subtitle="Manage quotations for active tickets">
       <div className="stfqm-page">
         {/* ---------- Banner ---------- */}
         <section className="stfqm-hero">
@@ -547,6 +558,6 @@ export default function StaffQuotationManagementPage() {
           Prices under {formatCurrency(LOW_PRICE_WARNING)} get a "Check" tag, in case of a typo.
         </p>
       </div>
-    </StaffLayout>
+    </Shell>
   );
 }

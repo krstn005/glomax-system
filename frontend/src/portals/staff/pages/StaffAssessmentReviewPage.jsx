@@ -249,7 +249,18 @@ function getPageNumbers(current, total) {
   return result;
 }
 
-export default function StaffAssessmentReviewPage() {
+// Shows the page inside the Staff layout, or just the content when it sits
+// inside the Assessment & Quotation page (which already has the layout).
+function Shell({ embedded, title, subtitle, children }) {
+  if (embedded) return children;
+  return (
+    <StaffLayout pageTitle={title} pageSubtitle={subtitle}>
+      {children}
+    </StaffLayout>
+  );
+}
+
+export default function StaffAssessmentReviewPage({ embedded = false }) {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
   const [count, setCount] = useState(0);
@@ -356,7 +367,7 @@ export default function StaffAssessmentReviewPage() {
   const needsCount = filterCounts.NEEDS_REVIEW;
 
   return (
-    <StaffLayout pageTitle="Assessment Review" pageSubtitle="Review submitted roof assessments and forward decisions">
+    <Shell embedded={embedded} title="Assessment Review" subtitle="Review submitted roof assessments and forward decisions">
       <div className="stfar-page">
         {/* ---------- Banner ---------- */}
         <section className="stfar-hero">
@@ -532,6 +543,6 @@ export default function StaffAssessmentReviewPage() {
           Assessments waiting {OLD_WAIT_DAYS} days or more are marked in orange.
         </p>
       </div>
-    </StaffLayout>
+    </Shell>
   );
 }

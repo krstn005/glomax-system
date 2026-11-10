@@ -19,9 +19,8 @@ import SetPasswordPage from './portals/shared/pages/SetPasswordPage';
 import StaffDashboardPage from './portals/staff/pages/StaffDashboardPage';
 import StaffEmailInquiriesPage from './portals/staff/pages/StaffEmailInquiriesPage';
 import StaffInquiryQuotationPage from './portals/staff/pages/StaffInquiryQuotationPage';
-import StaffQuotationManagementPage from './portals/staff/pages/StaffQuotationManagementPage';
 import StaffManageTicketsPage from './portals/staff/pages/StaffManageTicketsPage';
-import StaffAssessmentReviewPage from './portals/staff/pages/StaffAssessmentReviewPage';
+import StaffReviewHubPage from './portals/staff/pages/StaffReviewHubPage';
 import StaffAssessmentDetailPage from './portals/staff/pages/StaffAssessmentDetailPage';
 import StaffCompletedTicketsPage from './portals/staff/pages/StaffCompletedTicketsPage';
 import StaffCompletedTicketDetailPage from './portals/staff/pages/StaffCompletedTicketDetailPage';
@@ -101,10 +100,11 @@ function App() {
       <Route path="/staff/dashboard" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffDashboardPage /></ProtectedRoute>} />
       <Route path="/staff/email-inquiries" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffEmailInquiriesPage /></ProtectedRoute>} />
       <Route path="/staff/email-inquiries/:id/quotation" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffInquiryQuotationPage /></ProtectedRoute>} />
-      <Route path="/staff/quotation-management" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffQuotationManagementPage /></ProtectedRoute>} />
+      {/* Quotation Management now lives in the Assessment & Quotation page (second tab) */}
+      <Route path="/staff/quotation-management" element={<Navigate to="/staff/assessment-review?tab=quotations" replace />} />
       <Route path="/staff/manage-tickets" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffManageTicketsPage /></ProtectedRoute>} />
       <Route path="/staff/manage-tickets/:id" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffTicketDetailPage /></ProtectedRoute>} />
-      <Route path="/staff/assessment-review" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffAssessmentReviewPage /></ProtectedRoute>} />
+      <Route path="/staff/assessment-review" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffReviewHubPage /></ProtectedRoute>} />
       <Route path="/staff/assessment-review/:id" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffAssessmentDetailPage /></ProtectedRoute>} />
       <Route path="/staff/completed-tickets" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffCompletedTicketsPage /></ProtectedRoute>} />
       <Route path="/staff/completed-tickets/:id" element={<ProtectedRoute allowedRoles={["STAFF"]}><StaffCompletedTicketDetailPage /></ProtectedRoute>} />
