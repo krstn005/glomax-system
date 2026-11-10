@@ -1,71 +1,39 @@
-/* ===== Staff Assessment & Quotation tabs (stfhub-) ===== */
+/* ===== Staff Assessment & Quotation - one list (stfrv-) =====
+   Uses the stfar- list styles and the stfqm- price styles. This file only
+   sets the column layout for the combined list. */
 
-.stfhub-tabs {
-  display: inline-flex;
-  gap: 4px;
-  max-width: 100%;
-  margin-bottom: 18px;
-  padding: 4px;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(13, 31, 60, 0.04);
+/* Ticket # | Customer | Submitted | Status | Price | Next Step */
+.stfar-page .stfrv-row {
+  grid-template-columns: 96px minmax(0, 1.5fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1.2fr) 190px;
 }
 
-.stfhub-tab {
+/* Installer name under the package */
+.stfar-page .stfrv-installer {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 18px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  color: #64748b;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.stfhub-tab:hover:not(.active) {
-  background: #f1f5f9;
-  color: #0d1f3c;
-}
-
-.stfhub-tab.active {
-  background: #0d1f3c;
-  color: #fff;
-}
-
-.stfhub-tab.active svg {
-  color: #facc15;
-}
-
-.stfhub-tab-badge {
-  min-width: 22px;
-  height: 22px;
-  display: inline-grid;
-  place-items: center;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: #facc15;
-  color: #0d1f3c;
+  gap: 5px;
+  max-width: 100%;
+  overflow: hidden;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
+  color: #b45309;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-@media (max-width: 480px) {
-  .stfhub-tabs {
-    display: flex;
-    width: 100%;
-  }
+.stfar-page .stfrv-installer svg {
+  flex-shrink: 0;
+}
 
-  .stfhub-tab {
-    flex: 1;
-    justify-content: center;
-    padding: 0 10px;
+/* Price and Next Step hide first, then Submitted */
+@container stfar-card (max-width: 1100px) {
+  .stfar-page .stfrv-row {
+    grid-template-columns: 90px minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+}
+
+@container stfar-card (max-width: 640px) {
+  .stfar-page .stfrv-row {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
