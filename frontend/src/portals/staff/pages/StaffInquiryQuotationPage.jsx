@@ -16,6 +16,8 @@ import {
   MessagesSquare,
   X,
   Tag,
+  MapPin,
+  ExternalLink,
 } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
 import {
@@ -85,6 +87,34 @@ function renderWithLinks(text) {
       </span>
     );
   });
+}
+
+// Reads the property address and pinned spot out of the inquiry message.
+function getLocation(message) {
+  const text = message || "";
+  const pinMatch = text.match(/Pinned location:\s*https?:\/\/[^\s]*[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/i);
+  const addrMatch = text.match(/Property address:\s*(.+)/i);
+  const address = addrMatch ? addrMatch[1].trim() : "";
+  if (pinMatch) {
+    const lat = pinMatch[1];
+    const lng = pinMatch[2];
+    return {
+      address,
+      pinned: true,
+      embed: `https://www.google.com/maps?q=${lat},${lng}&z=18&t=k&output=embed`,
+      open: `https://www.google.com/maps?q=${lat},${lng}`,
+    };
+  }
+  if (address) {
+    const q = encodeURIComponent(address);
+    return {
+      address,
+      pinned: false,
+      embed: `https://www.google.com/maps?q=${q}&z=16&output=embed`,
+      open: `https://www.google.com/maps?q=${q}`,
+    };
+  }
+  return null;
 }
 
 function ConfirmModal({ onCancel, onConfirm, busy, summary }) {
@@ -318,6 +348,7 @@ export default function StaffInquiryQuotationPage() {
   }
 
   const alreadySent = inquiry?.quotation_sent;
+  const location = inquiry ? getLocation(inquiry.message) : null;
 
   // Build the chat list: original inquiry first, then the replies,
   // with a day divider whenever the date changes.
@@ -525,6 +556,37 @@ export default function StaffInquiryQuotationPage() {
                     </div>
                   </div>
                 </section>
+
+                {location && (
+                  <section className="stfquote-card">
+                    <h3 className="stfquote-side-title">Customer location</h3>
+                    {location.address && (
+                      <p style={{ margin: "0 0 10px", fontSize: 14, lineHeight: 1.4 }}>{location.address}</p>
+                    )}
+                    <iframe
+                      title="Customer location map"
+                      src={location.embed}
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      style={{ width: "100%", height: 230, border: 0, borderRadius: 12 }}
+                    />
+                    <p style={{ margin: "8px 0 0", fontSize: 12, opacity: 0.7 }}>
+                      {location.pinned
+                        ? "The customer pinned this spot on the map."
+                        : "Shown from the typed address. It may not be the exact house."}
+                    </p>
+                    <a
+                      href={location.open}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 13, fontWeight: 600 }}
+                    >
+                      <MapPin size={14} />
+                      Open in Google Maps
+                      <ExternalLink size={12} />
+                    </a>
+                  </section>
+                )}
 
                 {alreadySent ? (
                   <section className="stfquote-card stfquote-quote sent">
