@@ -837,6 +837,8 @@ export default function RequestStatusPage() {
     const reschedules = [...(ticket.reschedule_requests || [])].sort((a, b) => b.id - a.id);
     const pendingReschedule = reschedules.find((r) => r.status === 'PENDING');
     const lastResolvedReschedule = reschedules.find((r) => r.status !== 'PENDING');
+    // Once a new date is approved, the customer does not need the reschedule box anymore
+    const hasApprovedReschedule = reschedules.some((r) => r.status === 'APPROVED');
 
     content = (
       <div className="rs-card">
@@ -1048,7 +1050,7 @@ export default function RequestStatusPage() {
                 </div>
               )}
 
-              {!pendingReschedule && (
+              {!pendingReschedule && !hasApprovedReschedule && (
                 <div className="rs-reschedule-row">
                   <span className="rs-reschedule-icon">
                     <CalendarClock size={18} />

@@ -5,7 +5,6 @@ import {
   FileText,
   Award,
   Download,
-  Lock,
   AlertCircle,
   FolderOpen,
   Clock,
@@ -20,14 +19,14 @@ import {
   ChevronDown,
   Layers,
 } from 'lucide-react';
-import { getMyTickets, downloadFinalSheetPDF, downloadCompletionCertificatePDF } from '../../../api/tickets';
+import { getMyTickets, downloadFinalSheetPDF } from '../../../api/tickets';
 import CustomerLayout from '../components/CustomerLayout';
 import '../styles/documents.css';
 
 // Choices in the Filter drop-down
 const FILTER_OPTIONS = [
   { key: 'ALL', label: 'All Documents', icon: Layers, tone: 'navy', match: () => true },
-  { key: 'COMPLETED', label: 'Record Ready', icon: Award, tone: 'gold', match: (s) => s === 'COMPLETED' },
+  { key: 'COMPLETED', label: 'Completed', icon: Award, tone: 'gold', match: (s) => s === 'COMPLETED' },
   { key: 'APPROVED', label: 'Approved', icon: Clock, tone: 'blue', match: (s) => s === 'APPROVED' },
 ];
 
@@ -264,24 +263,6 @@ function FileTile({ icon: Icon, tone, title, subtitle, onDownload }) {
   );
 }
 
-// Shown in place of the Completion Record before the request is completed
-function LockedTile({ title, subtitle }) {
-  return (
-    <div className="doc-file-wrap">
-      <div className="doc-file doc-file-locked">
-        <span className="doc-file-icon">
-          <Lock size={18} />
-        </span>
-        <div className="doc-file-text">
-          <p className="doc-file-title">{title}</p>
-          <p className="doc-file-sub">{subtitle}</p>
-        </div>
-        <span className="doc-locked-tag">Not yet available</span>
-      </div>
-    </div>
-  );
-}
-
 function DocumentCard({ ticket }) {
   const isCompleted = ticket.status === 'COMPLETED';
 
@@ -319,17 +300,6 @@ function DocumentCard({ ticket }) {
           onDownload={() => downloadFinalSheetPDF(ticket.id, ticket.ticket_number)}
         />
 
-        {isCompleted ? (
-          <FileTile
-            icon={Award}
-            tone="gold"
-            title="Completion Record"
-            subtitle={`Completed on ${formatDate(ticket.completed_at)}`}
-            onDownload={() => downloadCompletionCertificatePDF(ticket.id, ticket.ticket_number)}
-          />
-        ) : (
-          <LockedTile title="Completion Record" subtitle="Available once your request is completed" />
-        )}
       </div>
     </div>
   );
@@ -411,7 +381,7 @@ export default function DocumentsPage() {
   }
 
   return (
-    <CustomerLayout pageTitle="My Documents" pageSubtitle="Download your Disclosure Agreements and Completion Records">
+    <CustomerLayout pageTitle="My Documents" pageSubtitle="Download your Disclosure Agreements">
       <div className="doc-page">
         <section className="doc-hero">
           <div className="doc-hero-glow" aria-hidden="true" />
@@ -420,7 +390,7 @@ export default function DocumentsPage() {
           </div>
           <div className="doc-hero-text">
             <h1>Your Documents</h1>
-            <p>Disclosure Agreements and Completion Records for your approved requests, ready to download as PDF.</p>
+            <p>Disclosure Agreements for your approved requests, ready to download as PDF.</p>
           </div>
         </section>
 
@@ -449,8 +419,7 @@ export default function DocumentsPage() {
               </span>
               <p className="doc-empty-title">No documents yet</p>
               <p className="doc-empty-hint">
-                Your Disclosure Agreement will show up here once a request is approved. Your Completion Record comes
-                after the request is completed.
+                Your Disclosure Agreement will show up here once a request is approved.
               </p>
               <Link to="/request-status" className="doc-btn-primary">
                 View Request Status
