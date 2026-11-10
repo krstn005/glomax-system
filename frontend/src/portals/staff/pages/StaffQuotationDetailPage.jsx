@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
-import PaymentTermsSelect from "../../../components/PaymentTermsSelect";
+import PaymentTermsSelect from "../components/PaymentTermsSelect";
 import { getStaffTickets } from "../../../api/staffTickets";
 import { getPaymentTerms, sendQuotation } from "../../../api/staffQuotations";
 import { formatCurrency, formatPaymentTerms, formatDateTime } from "../../../utils/currency";
