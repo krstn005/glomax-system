@@ -1,6 +1,7 @@
 """
 Sends the saved SMS templates (Admin > Settings > SMS Templates) to
-customers, through Semaphore.
+customers. The text is sent through TextBee (default) or Semaphore,
+whichever SMS_PROVIDER is set to (see accounts/sms.py).
 
 How it works:
   1. Each template name starts with a number, like "06 - Installer Assigned".
@@ -26,6 +27,8 @@ import threading
 from urllib import parse, request as urlrequest
 
 from django.conf import settings
+
+from accounts.sms import SmsError, get_provider, send_textbee
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +84,16 @@ def _post_to_semaphore(number, message):
         logger.exception('Could not send the SMS to %s', number)
 
 
+def _post_to_textbee(number, message):
+    """Runs in the background. Never raises, only logs."""
+    try:
+        send_textbee(number, message)
+    except SmsError as exc:
+        logger.error('TextBee did not send the SMS to %s: %s', number, exc)
+    except Exception:
+        logger.exception('Could not send the SMS to %s', number)
+
+
 def send_sms(number, message, label=''):
     """
     Sends one text. Returns True if it was sent (or queued to send), or
@@ -99,13 +112,20 @@ def send_sms(number, message, label=''):
             logger.warning('[SMS OFF - not sent] %s -> %s: %s', label, cleaned, message)
             return True
 
-        if not getattr(settings, 'SEMAPHORE_API_KEY', ''):
-            logger.warning('SMS "%s" skipped: SEMAPHORE_API_KEY is not set.', label)
-            return False
+        if get_provider() == 'textbee':
+            if not getattr(settings, 'TEXTBEE_API_KEY', ''):
+                logger.warning('SMS "%s" skipped: TEXTBEE_API_KEY is not set.', label)
+                return False
+            target = _post_to_textbee
+        else:
+            if not getattr(settings, 'SEMAPHORE_API_KEY', ''):
+                logger.warning('SMS "%s" skipped: SEMAPHORE_API_KEY is not set.', label)
+                return False
+            target = _post_to_semaphore
 
-        # Send in the background, so the page does not wait for Semaphore
+        # Send in the background, so the page does not wait for the provider
         threading.Thread(
-            target=_post_to_semaphore, args=(cleaned, message), daemon=True
+            target=target, args=(cleaned, message), daemon=True
         ).start()
         return True
     except Exception:
