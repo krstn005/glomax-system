@@ -60,6 +60,33 @@ function getInitials(name) {
   return (first + last).toUpperCase();
 }
 
+// Turns web links inside a message into clickable links (open in a new tab).
+function renderWithLinks(text) {
+  const value = text || "";
+  const parts = value.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) => {
+    if (!/^https?:\/\//.test(part)) return part;
+    // keep trailing punctuation outside the link
+    const match = part.match(/^(.*?)([.,;:!?)]*)$/);
+    const url = match[1];
+    const tail = match[2];
+    const isMap = /google\.[a-z.]+\/maps/.test(url);
+    return (
+      <span key={i}>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "inherit", textDecoration: "underline", fontWeight: 600, wordBreak: "break-all" }}
+        >
+          {isMap ? "Open pinned location in Google Maps" : url}
+        </a>
+        {tail}
+      </span>
+    );
+  });
+}
+
 function ConfirmModal({ onCancel, onConfirm, busy, summary }) {
   useEffect(() => {
     function handleKey(e) {
@@ -138,7 +165,9 @@ function ChatBubble({ side, sender, time, content, isFirst }) {
           {isFirst && <span className="stfquote-msg-tag">Original inquiry</span>}
           <span className="stfquote-msg-time">{formatTime(time)}</span>
         </div>
-        <p className="stfquote-msg-content">{content}</p>
+        <p className="stfquote-msg-content" style={{ whiteSpace: "pre-wrap" }}>
+          {renderWithLinks(content)}
+        </p>
       </div>
       {side === "staff" && <span className="stfquote-msg-avatar staff">{getInitials(sender)}</span>}
     </div>
