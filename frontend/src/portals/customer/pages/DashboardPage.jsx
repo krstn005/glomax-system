@@ -24,6 +24,7 @@ import {
   Star,
   SearchX,
 } from 'lucide-react';
+import apiClient from '../../../api/client';
 import { getMyTickets, withdrawTicket } from '../../../api/tickets';
 import { formatCurrency } from '../../../utils/currency';
 import CustomerLayout from '../components/CustomerLayout';
@@ -354,9 +355,34 @@ export default function DashboardPage() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [toast, setToast] = useState(null);
   const [filterKey, setFilterKey] = useState('ALL');
+  // The name in the greeting: the Full Name the customer typed when they registered
+  // (or the username if there is none). Starts from what was saved, then updates from the server.
+  const [shownName, setShownName] = useState(
+    localStorage.getItem('displayName') || localStorage.getItem('full_name') || localStorage.getItem('username') || '',
+  );
 
   useEffect(() => {
     loadTickets();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiClient
+      .get('/accounts/me/')
+      .then((res) => {
+        if (cancelled) return;
+        const name = (res.data.full_name || '').trim() || res.data.username || '';
+        if (name) {
+          setShownName(name);
+          localStorage.setItem('displayName', name);
+        }
+      })
+      .catch(() => {
+        // Not important - the greeting keeps the saved name
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // silent = refresh in the background without showing the skeleton again
@@ -386,7 +412,7 @@ export default function DashboardPage() {
   // A finished job that still has no feedback
   const needsFeedback = tickets.find((t) => t.status === 'COMPLETED' && !t.feedback);
 
-  const firstName = (localStorage.getItem('username') || 'there').split(' ')[0];
+  const firstName = (shownName || 'there').trim().split(' ')[0];
   const hello = greeting();
   const HelloIcon = hello.icon;
   const todayLabel = new Date().toLocaleDateString('en-US', {
