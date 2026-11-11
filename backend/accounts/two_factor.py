@@ -14,7 +14,13 @@ The flow in plain words:
      no new code is needed. This makes it easier for people who sign
      in often, or who closed the system by mistake.
 
-Text messages are sent through Semaphore (see sms.py).
+Text messages are sent through the SMS provider chosen in settings
+(TextBee, SMSGate or Semaphore - see sms.py).
+
+If the text message cannot be sent on a sign-in screen, the same code is
+sent to the user's email instead (when the account has an email). This
+way nobody is locked out just because the phone that sends the texts is
+off or has no signal.
 """
 import logging
 from datetime import timedelta
@@ -37,7 +43,7 @@ LOCKOUT_LIMIT = 3
 LOCKOUT_MINUTES = 15
 
 # How long to wait before another code can be sent. Text messages cost
-# Semaphore credits, so they wait a little longer than emails.
+# credits (or free daily texts), so they wait a little longer than emails.
 RESEND_WAIT_SECONDS = {
     User.TwoFactorMethod.EMAIL: 30,
     User.TwoFactorMethod.SMS: 60,
@@ -118,7 +124,8 @@ def challenge_phone(challenge):
 
 def sent_to_hint(challenge):
     """What the "We sent a code to ..." line should say."""
-    if challenge_method(challenge) == User.TwoFactorMethod.SMS:
+    sent_by = getattr(challenge, 'sent_by', None) or challenge_method(challenge)
+    if sent_by == User.TwoFactorMethod.SMS:
         return {'phone_hint': mask_phone(challenge_phone(challenge))}
     return {'email_hint': mask_email(challenge.user.email)}
 
@@ -156,22 +163,41 @@ def send_login_code(challenge):
     challenge.save(update_fields=['code_hash', 'code_sent_at', 'codes_sent'])
 
     is_setup = challenge.purpose == LoginChallenge.Purpose.SETUP
+
+    # Remembers how this code was really sent (it can change to EMAIL below)
+    challenge.sent_by = method
+
+    def send_by_email():
+        send_code_email(
+            challenge.user,
+            code,
+            subject='Your Glomax verification code',
+            heading='Confirm your email for 2-step login' if is_setup else 'Your sign-in code',
+            intro=(
+                'Use the code below to finish turning on 2-step login for your account.'
+                if is_setup else
+                'Someone (hopefully you) just signed in to your Glomax account. Use the code below to finish signing in.'
+            ),
+            minutes=LoginChallenge.CODE_MINUTES,
+        )
+
     try:
         if method == User.TwoFactorMethod.SMS:
-            send_otp_sms(challenge_phone(challenge), code, minutes=LoginChallenge.CODE_MINUTES)
+            try:
+                send_otp_sms(challenge_phone(challenge), code, minutes=LoginChallenge.CODE_MINUTES)
+            except Exception:
+                # No email to fall back to, or this is the setup screen
+                # (setup must really prove the phone number works).
+                if is_setup or not challenge.user.email:
+                    raise
+                logger.exception(
+                    "Could not send 2FA text to user %s - sending the code by email instead",
+                    challenge.user_id,
+                )
+                send_by_email()
+                challenge.sent_by = User.TwoFactorMethod.EMAIL
         else:
-            send_code_email(
-                challenge.user,
-                code,
-                subject='Your Glomax verification code',
-                heading='Confirm your email for 2-step login' if is_setup else 'Your sign-in code',
-                intro=(
-                    'Use the code below to finish turning on 2-step login for your account.'
-                    if is_setup else
-                    'Someone (hopefully you) just signed in to your Glomax account. Use the code below to finish signing in.'
-                ),
-                minutes=LoginChallenge.CODE_MINUTES,
-            )
+            send_by_email()
         return True
     except Exception:
         logger.exception("Could not send 2FA code (%s) to user %s", method, challenge.user_id)
@@ -307,6 +333,12 @@ def start_login_challenge(user, trusted_tokens=None):
         data['code_sent'] = send_login_code(challenge)
         if not data['code_sent']:
             data['send_error'] = send_failed_message(user.two_factor_method)
+        elif getattr(challenge, 'sent_by', None) == User.TwoFactorMethod.EMAIL \
+                and user.two_factor_method == User.TwoFactorMethod.SMS:
+            # The text could not be sent, so the code went to the email
+            data['method'] = User.TwoFactorMethod.EMAIL
+            data['sms_fallback'] = True
+            data['notice'] = "We couldn't send the text message, so we sent your code to your email instead."
 
     return Response(data)
 
@@ -368,11 +400,16 @@ def resend_code(challenge):
     if not send_login_code(challenge):
         return Response({"detail": send_failed_message(method)}, status=503)
 
-    return Response({
+    response = {
         "detail": "A new code has been sent.",
         "resend_wait": RESEND_WAIT_SECONDS.get(method, 30),
         **sent_to_hint(challenge),
-    })
+    }
+    if getattr(challenge, 'sent_by', None) == User.TwoFactorMethod.EMAIL \
+            and method == User.TwoFactorMethod.SMS:
+        response['detail'] = "We couldn't send the text message, so we sent the code to your email instead."
+        response['sms_fallback'] = True
+    return Response(response)
 
 
 # ---------- Setup (first time, or changing method) ----------
