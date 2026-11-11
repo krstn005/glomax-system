@@ -45,7 +45,7 @@ import aboutImage from '../assets/images/testimonials/prf17.jpg';
 import logo from '../../../assets/images/logo.jpg';
 import '../styles/landing.css';
 
-// Customer pictures (the sliding row under About Us). Just put the pictures in
+// Work pictures (the sliding row under About Us). Just put the pictures in
 // src/portals/customer/assets/images/testimonials/ (jpg, png or webp).
 // They show up in the slider by themselves, in file name order.
 // If the folder has no pictures, the slider is hidden.
@@ -271,7 +271,7 @@ function getErrorText(err) {
   return 'Something went wrong sending your inquiry. Please try again.';
 }
 
-// Customer pictures that keep sliding by themselves, left to right, on a loop.
+// Pictures of our work that keep sliding by themselves, left to right, on a loop.
 // Nobody needs to click anything. The row is shown twice so the loop has no gap.
 // It stops while the mouse is over it.
 function TestimonialSlider({ images }) {
@@ -280,14 +280,14 @@ function TestimonialSlider({ images }) {
 
   return (
     <div className="lnd-tst" data-reveal>
-      <h3 className="lnd-tst-title">Proof from Our Customers</h3>
+      <h3 className="lnd-tst-title">Our Work in Action</h3>
 
-      <div className="lnd-tst-marquee" aria-label="Pictures from our customers">
+      <div className="lnd-tst-marquee" aria-label="Pictures of our work in action">
         <div className="lnd-tst-belt" style={{ animationDuration: `${seconds}s` }}>
           {[0, 1].map((copy) =>
             images.map((src, i) => (
               <div className="lnd-tst-card" key={`${copy}-${src}`} aria-hidden={copy === 1 ? 'true' : undefined}>
-                <img src={src} alt={copy === 0 ? `Customer picture ${i + 1}` : ''} loading="lazy" decoding="async" />
+                <img src={src} alt={copy === 0 ? `Our work in action ${i + 1}` : ''} loading="lazy" decoding="async" />
               </div>
             )),
           )}
