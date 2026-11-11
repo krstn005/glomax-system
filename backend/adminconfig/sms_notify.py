@@ -1,7 +1,7 @@
 """
 Sends the saved SMS templates (Admin > Settings > SMS Templates) to
-customers. The text is sent through TextBee (default) or Semaphore,
-whichever SMS_PROVIDER is set to (see accounts/sms.py).
+customers. The text is sent through TextBee (default), SMSGate or
+Semaphore, whichever SMS_PROVIDER is set to (see accounts/sms.py).
 
 How it works:
   1. Each template name starts with a number, like "06 - Installer Assigned".
@@ -28,7 +28,7 @@ from urllib import parse, request as urlrequest
 
 from django.conf import settings
 
-from accounts.sms import SmsError, get_provider, send_textbee
+from accounts.sms import SmsError, gateway_is_configured, get_provider, send_gateway_sms
 
 logger = logging.getLogger(__name__)
 
@@ -84,12 +84,12 @@ def _post_to_semaphore(number, message):
         logger.exception('Could not send the SMS to %s', number)
 
 
-def _post_to_textbee(number, message):
+def _post_to_gateway(number, message):
     """Runs in the background. Never raises, only logs."""
     try:
-        send_textbee(number, message)
+        send_gateway_sms(number, message)
     except SmsError as exc:
-        logger.error('TextBee did not send the SMS to %s: %s', number, exc)
+        logger.error('The SMS to %s was not sent: %s', number, exc)
     except Exception:
         logger.exception('Could not send the SMS to %s', number)
 
@@ -112,11 +112,12 @@ def send_sms(number, message, label=''):
             logger.warning('[SMS OFF - not sent] %s -> %s: %s', label, cleaned, message)
             return True
 
-        if get_provider() == 'textbee':
-            if not getattr(settings, 'TEXTBEE_API_KEY', ''):
-                logger.warning('SMS "%s" skipped: TEXTBEE_API_KEY is not set.', label)
+        provider = get_provider()
+        if provider in ('textbee', 'smsgate'):
+            if not gateway_is_configured(provider):
+                logger.warning('SMS "%s" skipped: the %s settings are not set.', label, provider)
                 return False
-            target = _post_to_textbee
+            target = _post_to_gateway
         else:
             if not getattr(settings, 'SEMAPHORE_API_KEY', ''):
                 logger.warning('SMS "%s" skipped: SEMAPHORE_API_KEY is not set.', label)

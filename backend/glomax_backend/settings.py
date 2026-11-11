@@ -301,6 +301,9 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 #              (https://textbee.dev). Put your API key in the .env file.
 #              TEXTBEE_DEVICE_ID is optional: only needed if you linked
 #              more than one phone.
+#   smsgate    SMSGate / Android SMS Gateway, Cloud Server mode
+#              (https://sms-gate.app). Needs SMSGATE_USERNAME and
+#              SMSGATE_PASSWORD, shown in the SMSGate app.
 #   semaphore  Semaphore (https://semaphore.co)
 # SEMAPHORE_SENDER_NAME is optional: leave it empty to use Semaphore's
 # default sender name until your own name is approved.
@@ -309,6 +312,8 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 SMS_PROVIDER = config('SMS_PROVIDER', default='textbee')
 TEXTBEE_API_KEY = config('TEXTBEE_API_KEY', default='')
 TEXTBEE_DEVICE_ID = config('TEXTBEE_DEVICE_ID', default='')
+SMSGATE_USERNAME = config('SMSGATE_USERNAME', default='')
+SMSGATE_PASSWORD = config('SMSGATE_PASSWORD', default='')
 SEMAPHORE_API_KEY = config('SEMAPHORE_API_KEY', default='')
 SEMAPHORE_SENDER_NAME = config('SEMAPHORE_SENDER_NAME', default='')
 

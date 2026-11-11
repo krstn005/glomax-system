@@ -1,11 +1,13 @@
 """
 Sends text messages (SMS) for Glomax.
 
-Two providers are supported. Choose one with SMS_PROVIDER in the .env
+Three providers are supported. Choose one with SMS_PROVIDER in the .env
 file (or in the Render Environment settings):
 
   SMS_PROVIDER=textbee     (default) TextBee, an Android phone that
                            works as an SMS gateway. https://textbee.dev
+  SMS_PROVIDER=smsgate     SMSGate (Android SMS Gateway), another free
+                           Android phone gateway. https://sms-gate.app
   SMS_PROVIDER=semaphore   Semaphore, a Philippine SMS provider.
                            https://semaphore.co/docs
 
@@ -13,6 +15,10 @@ TextBee settings:
   TEXTBEE_API_KEY    - the API key from your TextBee dashboard
   TEXTBEE_DEVICE_ID  - optional. Only needed if you linked more than
                        one phone. Leave it empty to use your default phone.
+
+SMSGate settings (Cloud Server mode in the app):
+  SMSGATE_USERNAME   - the username shown in the SMSGate app
+  SMSGATE_PASSWORD   - the password shown in the SMSGate app
 
 Semaphore settings:
   SEMAPHORE_API_KEY      - from your Semaphore account
@@ -39,6 +45,7 @@ logger = logging.getLogger(__name__)
 
 SEMAPHORE_OTP_URL = 'https://api.semaphore.co/api/v4/otp'
 TEXTBEE_SEND_URL = 'https://api.textbee.dev/api/v1/gateway/send-sms'
+SMSGATE_SEND_URL = 'https://api.sms-gate.app/3rdparty/v1/messages'
 
 
 class SmsError(Exception):
@@ -82,9 +89,61 @@ def mask_phone(number):
 
 
 def get_provider():
-    """Returns 'textbee' or 'semaphore'. TextBee is the default."""
+    """Returns 'textbee', 'smsgate' or 'semaphore'. TextBee is the default."""
     provider = str(getattr(settings, 'SMS_PROVIDER', 'textbee') or 'textbee').strip().lower()
-    return provider if provider in ('textbee', 'semaphore') else 'textbee'
+    return provider if provider in ('textbee', 'smsgate', 'semaphore') else 'textbee'
+
+
+def gateway_is_configured(provider):
+    """True if the settings for this phone gateway are filled in."""
+    if provider == 'smsgate':
+        return bool(getattr(settings, 'SMSGATE_USERNAME', '') and getattr(settings, 'SMSGATE_PASSWORD', ''))
+    return bool(getattr(settings, 'TEXTBEE_API_KEY', ''))
+
+
+def send_smsgate(number, message):
+    """
+    Sends one text through SMSGate (Android SMS Gateway, Cloud Server
+    mode). Raises SmsError if SMSGate did not accept it.
+    """
+    international = to_international(number)
+    if not international:
+        raise SmsError('Invalid mobile number.')
+
+    username = getattr(settings, 'SMSGATE_USERNAME', '')
+    password = getattr(settings, 'SMSGATE_PASSWORD', '')
+    if not (username and password):
+        raise SmsError('SMSGATE_USERNAME or SMSGATE_PASSWORD is not set.')
+
+    payload = {
+        'textMessage': {'text': message},
+        'phoneNumbers': [international],
+    }
+
+    try:
+        response = requests.post(
+            SMSGATE_SEND_URL,
+            json=payload,
+            auth=(username, password),
+            timeout=15,
+        )
+    except requests.RequestException as exc:
+        raise SmsError(f'Could not reach SMSGate: {exc}') from exc
+
+    if response.status_code == 401:
+        raise SmsError('SMSGate says the username or password is wrong.')
+    # A good answer is 200 or 202: SMSGate accepted the text. The phone
+    # sends it a moment later.
+    if response.status_code not in (200, 201, 202):
+        raise SmsError(f'SMSGate error {response.status_code}: {response.text[:300]}')
+
+
+def send_gateway_sms(number, message):
+    """Sends one text with the phone gateway chosen in SMS_PROVIDER."""
+    if get_provider() == 'smsgate':
+        send_smsgate(number, message)
+    else:
+        send_textbee(number, message)
 
 
 def send_textbee(number, message):
@@ -148,20 +207,20 @@ def send_otp_sms(number, code, minutes):
 
     provider = get_provider()
 
-    if provider == 'textbee':
-        if not getattr(settings, 'TEXTBEE_API_KEY', ''):
+    if provider in ('textbee', 'smsgate'):
+        if not gateway_is_configured(provider):
             if settings.DEBUG:
                 # Local testing only: show the code in the terminal
-                print(f"\n[SMS not sent - no TEXTBEE_API_KEY] Code for {number}: {code}\n")
+                print(f"\n[SMS not sent - {provider} is not set up] Code for {number}: {code}\n")
                 return
-            raise SmsError('TEXTBEE_API_KEY is not set.')
+            raise SmsError(f'The {provider} settings are not set.')
 
         message = (
             f'Your Glomax Solar code is {code}. It expires in '
             f'{minutes} minutes. Never share this code with anyone.'
         )
-        send_textbee(number, message)
-        logger.info("2FA code sent by SMS to %s (TextBee, queued)", mask_phone(number))
+        send_gateway_sms(number, message)
+        logger.info("2FA code sent by SMS to %s (%s, queued)", mask_phone(number), provider)
         return
 
     # ---------- Semaphore ----------
