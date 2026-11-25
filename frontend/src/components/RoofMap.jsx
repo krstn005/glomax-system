@@ -70,6 +70,37 @@ export function distanceMeters(lat1, lng1, lat2, lng2) {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(a));
 }
 
+// Free address search is strict. So we try the address a few ways,
+// from the most detailed to the simplest, and use the first one that is found.
+function addressTries(text) {
+  const spelled = text
+    .replace(/\bsta\.?(?=\s)/gi, 'Santa')
+    .replace(/\bsto\.?(?=\s)/gi, 'Santo')
+    .replace(/\bst\.?(?=\s|,|$)/gi, 'Street')
+    .replace(/\bave\.?(?=\s|,|$)/gi, 'Avenue')
+    .replace(/\bblvd\.?(?=\s|,|$)/gi, 'Boulevard')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Take out barangay, zone, purok and subdivision words that the map does not know
+  const noBarangay = spelled
+    .replace(/\b(brgy|bgy|barangay)\.?\s*[\w-]*/gi, '')
+    .replace(/\b(zone|purok|phase|block|blk|lot)\.?\s*[\w-]*/gi, '')
+    .replace(/(,\s*)+/g, ', ')
+    .replace(/^[\s,]+|[\s,]+$/g, '')
+    .replace(/\s+/g, ' ');
+  // Without the house number
+  const noNumber = noBarangay.replace(/^#?\d+[\w-]*\s+/, '');
+  // Only the last two parts, usually the area and the city
+  const parts = noBarangay.split(',').map((p) => p.trim()).filter(Boolean);
+  const area = parts.slice(-2).join(', ');
+  const list = [text, spelled, noBarangay, noNumber, area, parts.slice(-1).join(', ')];
+  return [...new Set(list.filter((q) => q && q.length >= 4))].slice(0, 5);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default function RoofMap({
   mode = 'pin',
   pin = null, // { lat, lng } for pin mode
@@ -314,12 +345,18 @@ export default function RoofMap({
       setBusy(true);
       setNote('');
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ph&q=${encodeURIComponent(clean)}`,
-          { signal: controller.signal },
-        );
-        const data = await res.json();
-        const hit = Array.isArray(data) ? data[0] : null;
+        let hit = null;
+        const tries = addressTries(clean);
+        for (let i = 0; i < tries.length && !hit; i += 1) {
+          if (i > 0) await sleep(1100); // the free service asks for one search per second
+          if (controller.signal.aborted) return;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ph&q=${encodeURIComponent(tries[i])}`,
+            { signal: controller.signal },
+          );
+          const data = await res.json();
+          hit = Array.isArray(data) ? data[0] : null;
+        }
         if (hit && mapRef.current) {
           const lat = Number(hit.lat);
           const lng = Number(hit.lon);
@@ -327,7 +364,7 @@ export default function RoofMap({
           mapRef.current.setView([lat, lng], 18);
           propsRef.current.onPinChange?.({ lat, lng }, null);
         } else {
-          setNote('We could not find that address. Add your barangay and city, or tap the map to pin your roof.');
+          setNote('We could not find that address. Add your street and city, or tap the map to pin your roof.');
         }
       } catch (err) {
         if (err?.name !== 'AbortError') {
