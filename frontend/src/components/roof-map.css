@@ -1,0 +1,329 @@
+/* Shared map (RoofMap.jsx) and roof assessment results (RoofResult.jsx) */
+
+.rm-wrap {
+  border: 1px solid #d7deea;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+.rm-wrap.invalid {
+  border-color: #dc2626;
+}
+.rm-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f4f7fb;
+  border-bottom: 1px solid #d7deea;
+}
+.rm-switch {
+  display: inline-flex;
+  border: 1px solid #c3cde0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.rm-switch button {
+  border: 0;
+  background: #fff;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2f4f;
+  cursor: pointer;
+}
+.rm-switch button.on {
+  background: #0d1f3c;
+  color: #fff;
+}
+.rm-tool {
+  border: 1px solid #c3cde0;
+  background: #fff;
+  color: #1f2f4f;
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rm-tool:hover:not(:disabled) {
+  background: #eef2f9;
+}
+.rm-tool:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.rm-tool.danger {
+  color: #b91c1c;
+  border-color: #f0b4b4;
+}
+.rm-busy {
+  font-size: 12px;
+  color: #51607e;
+}
+.rm-box {
+  width: 100%;
+  z-index: 0;
+}
+.rm-help {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #3b4a68;
+  background: #f4f7fb;
+  border-top: 1px solid #d7deea;
+}
+.rm-note {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #92400e;
+  background: #fff7e6;
+  border-top: 1px solid #f5dfae;
+}
+.rm-pin {
+  background: none;
+  border: 0;
+}
+.rm-pin svg {
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.rm-corner {
+  background: none;
+  border: 0;
+}
+.rm-corner span {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #facc15;
+  border: 3px solid #0d1f3c;
+  box-sizing: border-box;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Results ---------- */
+.rr-card {
+  border: 1px solid #d7deea;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+.rr-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #0d1f3c;
+  color: #fff;
+}
+.rr-score {
+  flex: 0 0 auto;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #0d1f3c;
+  border: 5px solid #16a34a;
+}
+.rr-score.moderate {
+  border-color: #f59e0b;
+}
+.rr-score.low {
+  border-color: #dc2626;
+}
+.rr-score strong {
+  font-size: 26px;
+  line-height: 1;
+}
+.rr-score small {
+  font-size: 10px;
+  color: #51607e;
+}
+.rr-head-text h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+.rr-head-text p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.85;
+}
+.rr-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1px;
+  background: #d7deea;
+  border-bottom: 1px solid #d7deea;
+}
+.rr-stat {
+  background: #fff;
+  padding: 12px 14px;
+}
+.rr-stat span {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #51607e;
+}
+.rr-stat strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 17px;
+  color: #0d1f3c;
+}
+.rr-steps-title {
+  margin: 0;
+  padding: 12px 16px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0d1f3c;
+}
+.rr-steps {
+  list-style: none;
+  margin: 0;
+  padding: 4px 16px 14px;
+}
+.rr-steps li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px dashed #d7deea;
+}
+.rr-steps li:first-child {
+  border-top: 0;
+}
+.rr-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #eef2f9;
+  color: #0d1f3c;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rr-step-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0d1f3c;
+}
+.rr-step-label span:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+.rr-step-note {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: #51607e;
+}
+.rr-stale {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+  background: #fff7e6;
+  color: #92400e;
+  border-bottom: 1px solid #f5dfae;
+}
+.rr-warn {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+  background: #fdecec;
+  color: #991b1b;
+  border-top: 1px solid #f3c2c2;
+}
+.rr-calc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+.rr-calc-btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  background: #facc15;
+  color: #0d1f3c;
+  cursor: pointer;
+}
+.rr-calc-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rr-calc-hint {
+  font-size: 13px;
+  color: #51607e;
+}
+.rr-error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #b91c1c;
+}
+.rr-geo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #d7deea;
+  border-radius: 12px;
+  background: #f4f7fb;
+  font-size: 13px;
+  color: #1f2f4f;
+}
+.rr-geo.ok {
+  background: #ecfdf3;
+  border-color: #b7e4c7;
+}
+.rr-geo.far {
+  background: #fff7e6;
+  border-color: #f5dfae;
+}
+.rr-geo button {
+  border: 1px solid #c3cde0;
+  background: #fff;
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rr-suggest {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #facc15;
+  color: #0d1f3c;
+  font-size: 11px;
+  font-weight: 700;
+}
+.rr-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+@media (max-width: 600px) {
+  .rr-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

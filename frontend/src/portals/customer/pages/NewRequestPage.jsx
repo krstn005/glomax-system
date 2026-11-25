@@ -22,12 +22,14 @@ import {
   Send,
   PlusCircle,
   RotateCcw,
+  Wallet,
 } from 'lucide-react';
 import apiClient from '../../../api/client';
 import { createTicket, getMyTickets, reapplyTicket } from '../../../api/tickets';
 import { sanitizePhoneNumber } from '../../../utils/phone';
 import { formatCurrency } from '../../../utils/currency';
 import { getServerErrorMessage } from '../../../utils/profileHelpers';
+import RoofMap from '../../../components/RoofMap';
 import CustomerLayout from '../components/CustomerLayout';
 import '../styles/new-request.css';
 
@@ -42,6 +44,23 @@ const PACKAGES = [
   { id: '8kw-hybrid', label: '8KW Hybrid', tag: 'Hybrid', desc: 'Large Residential Hybrid — High-capacity backup system', price: 335000, systemType: 'HYBRID' },
   { id: '10kw-hybrid', label: '10KW Hybrid', tag: 'Hybrid', desc: 'Commercial Premium — For large homes or businesses', price: 375000, systemType: 'HYBRID' },
 ];
+
+// The kW number in a package name, like "6KW Hybrid" -> 6
+function packageKw(pkg) {
+  const match = (pkg.label || '').match(/(\d+)\s*kw/i);
+  return match ? Number(match[1]) : 0;
+}
+
+// A rough starting suggestion from the monthly bill. The real size is
+// worked out later from the roof measured by the Partner Installer.
+// About 12 pesos per kWh, and about 4 kWh a day from each installed kW.
+function suggestedPackageKw(monthlyBill) {
+  const bill = Number(monthlyBill);
+  if (!bill || bill <= 0) return 0;
+  const neededKw = bill / 12 / 30 / 4;
+  const sizes = [3, 6, 8, 10];
+  return sizes.find((kw) => kw >= neededKw) || 10;
+}
 
 const PACKAGE_GROUPS = [
   {
@@ -328,6 +347,8 @@ export default function NewRequestPage() {
     contactNumber: '',
     address: '',
     packageId: '',
+    monthlyBill: '',
+    pin: null, // { lat, lng }
   });
 
   useEffect(() => {
@@ -373,6 +394,11 @@ export default function NewRequestPage() {
         contactNumber: source.contact_number || prev.contactNumber,
         address: source.property_address || prev.address,
         packageId: findPackageId(source.solar_package) || prev.packageId,
+        monthlyBill: source.monthly_bill ? String(Math.round(Number(source.monthly_bill))) : prev.monthlyBill,
+        pin:
+          source.latitude != null && source.longitude != null
+            ? { lat: Number(source.latitude), lng: Number(source.longitude) }
+            : prev.pin,
       }));
     }
 
@@ -414,6 +440,7 @@ export default function NewRequestPage() {
   }, [showConfirm, submitting]);
 
   const selectedPackage = PACKAGES.find((p) => p.id === form.packageId);
+  const suggestedKw = suggestedPackageKw(form.monthlyBill);
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -426,6 +453,13 @@ export default function NewRequestPage() {
     setPhoneWarning(hadInvalidChar ? 'Phone Number can only contain numbers.' : '');
   }
 
+  // The customer tapped the map or dragged the pin. If the map found the
+  // address of that spot, it is filled in too.
+  function handlePinChange(pin, addressText) {
+    setForm((prev) => ({ ...prev, pin, address: addressText || prev.address }));
+    setFieldErrors((prev) => ({ ...prev, pin: '', address: addressText ? '' : prev.address }));
+  }
+
   function goToStep2(e) {
     e.preventDefault();
     const errors = {};
@@ -434,6 +468,11 @@ export default function NewRequestPage() {
       errors.contactNumber = 'Please enter an 11-digit mobile number starting with 09.';
     }
     if (!form.address.trim()) errors.address = 'Please enter your address.';
+    if (!form.pin) errors.pin = 'Please pin your roof on the map.';
+    const bill = Number(form.monthlyBill);
+    if (!bill || bill < 100 || bill > 1000000) {
+      errors.monthlyBill = 'Please enter your average monthly electric bill in pesos (at least 100).';
+    }
 
     setFieldErrors(errors);
     if (Object.keys(errors).length === 0) setStep(2);
@@ -454,6 +493,9 @@ export default function NewRequestPage() {
         contact_number: form.contactNumber.replace(/\D/g, ''),
         solar_package: selectedPackage.label,
         system_type: selectedPackage.systemType,
+        latitude: form.pin.lat.toFixed(6),
+        longitude: form.pin.lng.toFixed(6),
+        monthly_bill: Number(form.monthlyBill).toFixed(2),
       };
       // Reapply uses the same ticket. A normal submit can still reuse the
       // latest ticket on the server side - "reapplied" tells us if it did.
@@ -613,6 +655,44 @@ export default function NewRequestPage() {
                     {fieldErrors.address && <p className="nr-field-error">{fieldErrors.address}</p>}
                   </div>
 
+                  <div className="nr-field">
+                    <label>Pin Your Roof on the Map *</label>
+                    <RoofMap
+                      mode="pin"
+                      pin={form.pin}
+                      onPinChange={handlePinChange}
+                      address={form.address}
+                      invalid={Boolean(fieldErrors.pin)}
+                      height={320}
+                    />
+                    {fieldErrors.pin && <p className="nr-field-error">{fieldErrors.pin}</p>}
+                    {!fieldErrors.pin && (
+                      <p className="nr-field-hint">
+                        This helps our Partner Installer find your house and measure your roof.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="nr-field">
+                    <label htmlFor="nr-bill">Average Monthly Electric Bill *</label>
+                    <div className={`nr-input-wrap ${fieldErrors.monthlyBill ? 'has-error' : ''}`}>
+                      <Wallet size={16} />
+                      <input
+                        id="nr-bill"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="e.g. 5000"
+                        maxLength={7}
+                        value={form.monthlyBill}
+                        onChange={(e) => updateField('monthlyBill', e.target.value.replace(/\D/g, ''))}
+                      />
+                    </div>
+                    {fieldErrors.monthlyBill && <p className="nr-field-error">{fieldErrors.monthlyBill}</p>}
+                    {!fieldErrors.monthlyBill && (
+                      <p className="nr-field-hint">In pesos. We use it to work out the right system size for you.</p>
+                    )}
+                  </div>
+
                   <div className="nr-tip">
                     <span className="nr-tip-icon">
                       <Info size={16} />
@@ -647,6 +727,7 @@ export default function NewRequestPage() {
             <SectionTitle icon={Package}>Preferred Package</SectionTitle>
             <p className="nr-hint">
               Pick the package you're interested in. The system type is set automatically from your choice.
+              {suggestedKw > 0 && ' Our Partner Installer will measure your roof and confirm the best size.'}
             </p>
 
             {PACKAGE_GROUPS.map((group) => {
@@ -679,6 +760,9 @@ export default function NewRequestPage() {
                             </span>
                           )}
                           <span className="nr-package-name">{pkg.label}</span>
+                          {suggestedKw > 0 && packageKw(pkg) === suggestedKw && (
+                            <span className="rr-suggest">Suggested for your bill</span>
+                          )}
                           <span className="nr-package-desc">{pkg.desc}</span>
                           <span className="nr-package-price">{formatCurrency(pkg.price)}</span>
                         </button>
@@ -727,6 +811,16 @@ export default function NewRequestPage() {
               <SummaryField icon={User} label="Full Name" value={form.fullName} />
               <SummaryField icon={Phone} label="Phone Number" value={form.contactNumber} />
               <SummaryField icon={MapPin} label="Property Address" value={form.address} />
+              <SummaryField
+                icon={MapPin}
+                label="Roof Pin"
+                value={form.pin ? `${form.pin.lat.toFixed(5)}, ${form.pin.lng.toFixed(5)}` : '—'}
+              />
+              <SummaryField
+                icon={Wallet}
+                label="Monthly Electric Bill"
+                value={formatCurrency(Number(form.monthlyBill))}
+              />
               <SummaryField icon={Package} label="Preferred Package" value={selectedPackage.label} />
               <SummaryField icon={Zap} label="System Type" value={selectedPackage.tag} />
             </div>

@@ -8,6 +8,15 @@ export async function getInstallerTickets(statusFilter) {
   return res.data;
 }
 
+// Works out the roof result from the site data (the "Calculate" button on
+// the Assessment Sheet). Nothing is saved. Send JSON like:
+// { roof_outline: [[lat, lng], ...], roof_tilt_degrees, roof_direction,
+//   shading_level, roof_condition, monthly_bill, system_type }
+export async function previewRoofAssessment(ticketId, data) {
+  const res = await apiClient.post(`/assessments/tickets/${ticketId}/preview/`, data);
+  return res.data;
+}
+
 // Submits the Roof Assessment Digital Form (Assessment Sheet's
 // "Review and Submit" button). formData must be a FormData instance
 // including 1-2 "photos" files, since this is multipart/form-data.
