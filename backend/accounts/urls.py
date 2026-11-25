@@ -1,13 +1,8 @@
 from django.urls import path
 from .views import (
-    RegisterView,
-    GlomaxLoginView,
     MeView,
-    ChangePasswordView,
     RequestChangePasswordOtpView,
-    VerifyChangePasswordOtpView,
     GoogleLoginView,
-    TwoFactorVerifyView,
     TwoFactorResendView,
     TwoFactorSetupStartView,
     TwoFactorSetupConfirmView,
@@ -26,20 +21,40 @@ from .views import (
     PasswordSetupCompleteView,
     AdminResetTwoFactorView,
 )
+# Sign-in views with the wrong-password lockout and the audit log
+from .security import (
+    SecureLoginView,
+    SecureTwoFactorVerifyView,
+    AuditedChangePasswordView,
+    AuditedVerifyChangePasswordOtpView,
+    AuditLogListView,
+)
+# Sign-up with email + phone codes
+from .registration import (
+    RegisterStartView,
+    RegisterVerifyView,
+    RegisterResendView,
+)
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
-    path('register/', RegisterView.as_view(), name='register'),
-    path('login/', GlomaxLoginView.as_view(), name='login'),
+    # Sign-up: no account is made until BOTH the email code and the phone
+    # code are right. The old one-step register/ address was removed on
+    # purpose, so nobody can skip the codes.
+    path('register/start/', RegisterStartView.as_view(), name='register-start'),
+    path('register/verify/', RegisterVerifyView.as_view(), name='register-verify'),
+    path('register/resend/', RegisterResendView.as_view(), name='register-resend'),
+
+    path('login/', SecureLoginView.as_view(), name='login'),
     path('me/', MeView.as_view(), name='me'),
-    path('change-password/', ChangePasswordView.as_view(), name='change-password'),
+    path('change-password/', AuditedChangePasswordView.as_view(), name='change-password'),
     path('change-password/request-otp/', RequestChangePasswordOtpView.as_view(), name='change-password-request-otp'),
-    path('change-password/verify-otp/', VerifyChangePasswordOtpView.as_view(), name='change-password-verify-otp'),
+    path('change-password/verify-otp/', AuditedVerifyChangePasswordOtpView.as_view(), name='change-password-verify-otp'),
     path('google-login/', GoogleLoginView.as_view(), name='google-login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
 
     # Two-factor login (2FA) - during sign-in
-    path('2fa/verify/', TwoFactorVerifyView.as_view(), name='2fa-verify'),
+    path('2fa/verify/', SecureTwoFactorVerifyView.as_view(), name='2fa-verify'),
     path('2fa/resend/', TwoFactorResendView.as_view(), name='2fa-resend'),
     path('2fa/setup/start/', TwoFactorSetupStartView.as_view(), name='2fa-setup-start'),
     path('2fa/setup/confirm/', TwoFactorSetupConfirmView.as_view(), name='2fa-setup-confirm'),
@@ -86,4 +101,7 @@ urlpatterns = [
         StaffPartnerInstallerListView.as_view(),
         name='staff-partner-installer-list',
     ),
+
+    # Admin: read the audit log
+    path('admin/audit-log/', AuditLogListView.as_view(), name='admin-audit-log'),
 ]

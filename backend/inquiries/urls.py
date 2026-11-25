@@ -8,6 +8,12 @@ from .views import (
     StaffInquiryMessagesView,
     PublicInquiryThreadView,
 )
+from .chatbot_views import (
+    ChatbotAskView,
+    FaqAdminListCreateView,
+    FaqAdminDetailView,
+    FaqLoadDefaultsView,
+)
 
 urlpatterns = [
     path('', InquiryCreateView.as_view(), name='inquiry-create'),
@@ -33,4 +39,12 @@ urlpatterns = [
         PublicInquiryThreadView.as_view(),
         name='inquiry-public-thread',
     ),
+
+    # Chatbot: the chat box on the website (public)
+    path('chatbot/ask/', ChatbotAskView.as_view(), name='chatbot-ask'),
+
+    # Chatbot: Admin manages the FAQ list
+    path('admin/faqs/', FaqAdminListCreateView.as_view(), name='chatbot-faq-list'),
+    path('admin/faqs/load-defaults/', FaqLoadDefaultsView.as_view(), name='chatbot-faq-defaults'),
+    path('admin/faqs/<int:pk>/', FaqAdminDetailView.as_view(), name='chatbot-faq-detail'),
 ]
