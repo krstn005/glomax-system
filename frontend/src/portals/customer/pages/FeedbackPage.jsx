@@ -30,10 +30,8 @@ import '../styles/feedback.css';
 const HIGHLIGHT_OPTIONS = [
   { value: 'PROFESSIONAL_TEAM', label: 'Professional Team' },
   { value: 'ON_TIME', label: 'On-Time' },
-  { value: 'CLEAN_INSTALLATION', label: 'Clean Installation' },
   { value: 'QUALITY_MATERIALS', label: 'Quality Materials' },
   { value: 'FRIENDLY_STAFF', label: 'Friendly Staff' },
-  { value: 'FAST_INSTALLATION', label: 'Fast Installation' },
 ];
 
 const RATING_WORDS = {

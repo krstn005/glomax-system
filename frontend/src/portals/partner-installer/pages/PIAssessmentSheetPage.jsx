@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  FileCheck,
   MapPin,
   X,
   CheckCircle,
@@ -25,7 +24,6 @@ import {
   Send,
   AlertCircle,
   SearchX,
-  Hammer,
   Phone,
   CalendarDays,
   Navigation,
@@ -38,7 +36,7 @@ import {
   Save,
 } from 'lucide-react';
 import PILayout from '../components/PILayout';
-import { getInstallerTickets, submitAssessment, completeInstallation } from '../../../api/piTickets';
+import { getInstallerTickets, submitAssessment } from '../../../api/piTickets';
 import '../styles/pi-assessment-sheet.css';
 
 const ROOF_TYPE_OPTIONS = [
@@ -683,12 +681,6 @@ export default function PIAssessmentSheetPage() {
   const draftReady = useRef(false);
   const skipNextSave = useRef(false);
 
-  const [completionPhotos, setCompletionPhotos] = useState([]);
-  const [completeError, setCompleteError] = useState('');
-  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
-  const [completing, setCompleting] = useState(false);
-  const [justCompleted, setJustCompleted] = useState(false);
-
   // Every preview link made on this page, so they can all be freed when leaving
   const createdUrls = useRef([]);
 
@@ -857,18 +849,6 @@ export default function PIAssessmentSheetPage() {
     });
   }
 
-  function addCompletionPhotos(files) {
-    setCompleteError('');
-    setCompletionPhotos((prev) => [...prev, ...toItems(files)]);
-  }
-
-  function removeCompletionPhoto(index) {
-    setCompletionPhotos((prev) => {
-      URL.revokeObjectURL(prev[index].url);
-      return prev.filter((_, i) => i !== index);
-    });
-  }
-
   function handleFieldChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
     setSubmitError('');
@@ -954,39 +934,9 @@ export default function PIAssessmentSheetPage() {
     }
   }
 
-  function handleCompleteClick(e) {
-    e.preventDefault();
-    setCompleteError('');
-    if (completionPhotos.length < 1) {
-      setCompleteError('Please attach at least one completion photo.');
-      return;
-    }
-    setShowCompleteConfirm(true);
-  }
-
-  async function performComplete() {
-    setCompleting(true);
-    try {
-      const formData = new FormData();
-      completionPhotos.forEach((p) => formData.append('photos', p.file));
-
-      const updatedTicket = await completeInstallation(ticket.id, formData);
-      setTicket(updatedTicket);
-      setJustCompleted(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) {
-      setCompleteError(getErrorMessage(err, 'Could not mark this request as completed. Please try again.'));
-    } finally {
-      setCompleting(false);
-      setShowCompleteConfirm(false);
-    }
-  }
-
   const goBack = () => navigate('/partner-installer/incoming-tickets');
 
   const canEdit = ticket && ticket.status === 'PI_ASSIGNED' && !ticket.assessment;
-  const canComplete = ticket && ticket.status === 'APPROVED';
-  const isCompleted = ticket && ticket.status === 'COMPLETED';
 
   const badge = ticket ? STATUS_BADGE[ticket.status] || STATUS_BADGE.ASSESSMENT_SUBMITTED : null;
   const hint = ticket ? visitHint(ticket) : null;
@@ -1153,18 +1103,6 @@ export default function PIAssessmentSheetPage() {
               </div>
             )}
 
-            {justCompleted && (
-              <div className="pias-banner green">
-                <span className="pias-banner-icon">
-                  <CheckCircle size={20} />
-                </span>
-                <div>
-                  <p className="pias-banner-title">Service marked as completed!</p>
-                  <p className="pias-banner-sub">The customer has been notified. Thanks for finishing this one.</p>
-                </div>
-              </div>
-            )}
-
             <div className="pias-layout">
               <div className="pias-main">
                 {/* Assessment form */}
@@ -1326,66 +1264,6 @@ export default function PIAssessmentSheetPage() {
                   </form>
                 )}
 
-                {/* Mark service completed */}
-                {canComplete && (
-                  <form className="pias-card pias-complete-card" onSubmit={handleCompleteClick} noValidate>
-                    <SectionTitle
-                      icon={Hammer}
-                      tone="gold"
-                      title="Mark Service Completed"
-                      subtitle="Once the work is done, add at least one photo of the finished work. The customer will be notified."
-                    />
-
-                    <PhotoPicker
-                      items={completionPhotos}
-                      min={1}
-                      onAdd={addCompletionPhotos}
-                      onRemove={removeCompletionPhoto}
-                      onPreview={setLightboxSrc}
-                      hint="Photos of the finished work. JPG or PNG."
-                    />
-
-                    {completeError && (
-                      <p className="pias-notice red">
-                        <AlertCircle size={15} />
-                        <span>{completeError}</span>
-                      </p>
-                    )}
-
-                    <div className="pias-complete-foot">
-                      <button type="submit" className="pias-btn-primary" disabled={completing}>
-                        <FileCheck size={15} />
-                        {completing ? 'Marking Complete...' : 'Mark Service Completed'}
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {/* Completed */}
-                {isCompleted && (
-                  <div className="pias-card">
-                    <SectionTitle
-                      icon={Award}
-                      tone="gold"
-                      title="Service Completed"
-                      subtitle={`Completed on ${
-                        ticket.completed_at
-                          ? new Date(ticket.completed_at).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })
-                          : '—'
-                      }`}
-                    />
-                    {ticket.completion_photos?.length > 0 ? (
-                      <PhotoGallery photos={ticket.completion_photos} alt="Proof of completion" onPreview={setLightboxSrc} />
-                    ) : (
-                      <p className="pias-muted">No completion photos were attached.</p>
-                    )}
-                  </div>
-                )}
-
                 {/* Submitted assessment (read-only) */}
                 {!canEdit && (
                   <div className="pias-card">
@@ -1478,20 +1356,6 @@ export default function PIAssessmentSheetPage() {
           busy={false}
           onCancel={() => setShowStartOver(false)}
           onConfirm={handleStartOver}
-        />
-      )}
-
-      {showCompleteConfirm && (
-        <ConfirmModal
-          icon={Award}
-          tone="gold"
-          title="Mark this service as completed?"
-          message="The customer will be notified. You can't undo this from here."
-          confirmLabel="Mark Complete"
-          busyLabel="Marking Complete..."
-          busy={completing}
-          onCancel={() => setShowCompleteConfirm(false)}
-          onConfirm={performComplete}
         />
       )}
 
