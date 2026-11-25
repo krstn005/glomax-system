@@ -52,6 +52,7 @@ import AdminCustomersLogPage from './portals/admin/pages/AdminCustomersLogPage';
 import AdminReportsPage from './portals/admin/pages/AdminReportsPage';
 import AdminCustomerFeedbackPage from './portals/admin/pages/AdminCustomerFeedbackPage';
 import AdminSettingsPage from './portals/admin/pages/AdminSettingsPage';
+import AdminAuditLogPage from './portals/admin/pages/AdminAuditLogPage';
 
 // The old staff. / installer. / admin. addresses just forward to the one login page
 const OLD_PORTAL_HOSTS = ['staff.', 'installer.', 'admin.'];
@@ -137,6 +138,7 @@ function App() {
       <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminReportsPage /></ProtectedRoute>} />
       <Route path="/admin/customer-feedback" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminCustomerFeedbackPage /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminSettingsPage /></ProtectedRoute>} />
+      <Route path="/admin/audit-log" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminAuditLogPage /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
