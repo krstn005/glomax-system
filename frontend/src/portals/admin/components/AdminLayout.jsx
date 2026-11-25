@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Menu,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import logo from '../../../assets/images/logo.jpg';
 import apiClient from '../../../api/client';
@@ -57,6 +58,10 @@ const NAV_GROUPS = [
       { to: '/admin/reports', label: 'Reports & Analytics', icon: BarChart3 },
       { to: '/admin/customer-feedback', label: 'Customer Feedback', icon: Star },
     ],
+  },
+  {
+    label: 'Security',
+    items: [{ to: '/admin/audit-log', label: 'Audit Log', icon: ShieldCheck }],
   },
 ];
 
