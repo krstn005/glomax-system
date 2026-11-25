@@ -45,18 +45,30 @@ class Command(BaseCommand):
         except requests.RequestException as exc:
             out(self.style.ERROR(f'Could not reach Semaphore: {exc}'))
             return
-        if res.status_code != 200:
+        throttled = res.status_code == 429
+        if throttled:
+            out(self.style.WARNING(
+                'Semaphore says "Too Many Attempts" for the account check. This is a short limit, '
+                'not a wrong key. Skipping the credits check.'
+            ))
+        elif res.status_code in (401, 403):
             out(self.style.ERROR(f'Semaphore said {res.status_code}: {res.text[:200]}'))
             out('The API key is probably wrong. Copy it again from your Semaphore account.')
             return
-        info = res.json()
-        out(self.style.SUCCESS(
-            f'Key works. Account: {info.get("account_name", "?")}, status: {info.get("status", "?")}, '
-            f'credits left: {info.get("credit_balance", "?")}'
-        ))
+        elif res.status_code != 200:
+            out(self.style.ERROR(f'Semaphore said {res.status_code}: {res.text[:200]}'))
+            return
+        else:
+            info = res.json()
+            out(self.style.SUCCESS(
+                f'Key works. Account: {info.get("account_name", "?")}, status: {info.get("status", "?")}, '
+                f'credits left: {info.get("credit_balance", "?")}'
+            ))
 
         # 2. Sender names
         try:
+            if throttled:
+                raise RuntimeError('skip')
             names = requests.get(SENDERNAMES_URL, params={'apikey': key}, timeout=15).json()
             if isinstance(names, list) and names:
                 out('Sender names on your account: ' + ', '.join(
