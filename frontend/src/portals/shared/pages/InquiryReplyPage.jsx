@@ -63,7 +63,9 @@ function buildItems(thread) {
   thread.messages.forEach((msg) => {
     items.push({
       key: `m-${msg.id}`,
-      kind: msg.sender_type === "STAFF" ? "staff" : "customer",
+      // The chatbot's automatic replies sit on the Glomax side, marked as automatic
+      kind: msg.sender_type === "STAFF" || msg.sender_type === "BOT" ? "staff" : "customer",
+      bot: msg.sender_type === "BOT",
       time: msg.sent_at,
       text: msg.content,
     });
@@ -100,6 +102,9 @@ function getStatusText(items) {
   const hasQuotation = items.some((item) => item.kind === "quotation");
   const last = talk[talk.length - 1];
 
+  if (last.bot) {
+    return `Our assistant sent an automatic reply on ${formatTime(last.time)}. A team member will also follow up, and you can write below anytime.`;
+  }
   if (last.kind === "staff") {
     return `Glomax Solar replied on ${formatTime(last.time)}. You can answer below.`;
   }
@@ -179,7 +184,7 @@ export default function InquiryReplyPage() {
           !isInitial &&
           before &&
           data.messages.length > before.messages.length &&
-          data.messages[data.messages.length - 1].sender_type === "STAFF";
+          ["STAFF", "BOT"].includes(data.messages[data.messages.length - 1].sender_type);
 
         if (gotNewStaffMessage) {
           // If the customer is looking at the end of the conversation,
@@ -506,7 +511,7 @@ export default function InquiryReplyPage() {
                 <div className="inqreply-bubble-wrap">
                   <div className="inqreply-meta">
                     <span className="inqreply-who">
-                      {item.kind === "staff" ? "Glomax Solar" : "You"}
+                      {item.bot ? "Glomax Assistant (automatic reply)" : item.kind === "staff" ? "Glomax Solar" : "You"}
                     </span>
                     <span className="inqreply-time">{formatTime(item.time)}</span>
                   </div>

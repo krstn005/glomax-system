@@ -185,7 +185,7 @@ function Toast({ message, type = "success", onDone }) {
   );
 }
 
-function ChatBubble({ side, sender, time, content, isFirst }) {
+function ChatBubble({ side, sender, time, content, isFirst, isBot }) {
   return (
     <div className={`stfquote-msg-row ${side}`}>
       {side === "customer" && <span className="stfquote-msg-avatar">{getInitials(sender)}</span>}
@@ -193,6 +193,7 @@ function ChatBubble({ side, sender, time, content, isFirst }) {
         <div className="stfquote-msg-meta">
           <span className="stfquote-msg-sender">{sender}</span>
           {isFirst && <span className="stfquote-msg-tag">Original inquiry</span>}
+          {isBot && <span className="stfquote-msg-tag">Automatic reply</span>}
           <span className="stfquote-msg-time">{formatTime(time)}</span>
         </div>
         <p className="stfquote-msg-content" style={{ whiteSpace: "pre-wrap" }}>
@@ -365,10 +366,17 @@ export default function StaffInquiryQuotationPage() {
       },
       ...messages.map((msg) => ({
         key: msg.id,
-        side: msg.sender_type === "STAFF" ? "staff" : "customer",
-        sender: msg.sender_type === "STAFF" ? msg.staff_username || "Staff" : inquiry.full_name,
+        // The chatbot's automatic replies sit on the Staff side, with its own name
+        side: msg.sender_type === "STAFF" || msg.sender_type === "BOT" ? "staff" : "customer",
+        sender:
+          msg.sender_type === "STAFF"
+            ? msg.staff_username || "Staff"
+            : msg.sender_type === "BOT"
+            ? "Glomax Assistant"
+            : inquiry.full_name,
         time: msg.sent_at,
         content: msg.content,
+        isBot: msg.sender_type === "BOT",
       })),
     ];
     let lastDay = "";
@@ -382,7 +390,8 @@ export default function StaffInquiryQuotationPage() {
     });
   }
 
-  const replyCount = messages.length;
+  // Automatic chatbot replies do not count as a person talking with the customer
+  const replyCount = messages.filter((m) => m.sender_type !== "BOT").length;
   const missing = (value) => triedSend && !value.trim();
 
   return (
@@ -466,6 +475,7 @@ export default function StaffInquiryQuotationPage() {
                         time={item.time}
                         content={item.content}
                         isFirst={item.isFirst}
+                        isBot={item.isBot}
                       />
                     )
                   )}

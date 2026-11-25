@@ -53,6 +53,8 @@ import AdminReportsPage from './portals/admin/pages/AdminReportsPage';
 import AdminCustomerFeedbackPage from './portals/admin/pages/AdminCustomerFeedbackPage';
 import AdminSettingsPage from './portals/admin/pages/AdminSettingsPage';
 import AdminAuditLogPage from './portals/admin/pages/AdminAuditLogPage';
+import AdminChatbotPage from './portals/admin/pages/AdminChatbotPage';
+import ChatbotWidget from './components/ChatbotWidget';
 
 // The old staff. / installer. / admin. addresses just forward to the one login page
 const OLD_PORTAL_HOSTS = ['staff.', 'installer.', 'admin.'];
@@ -67,6 +69,7 @@ function forwardOldAddress() {
 function App() {
   if (forwardOldAddress()) return null;
   return (
+    <>
     <Routes>
       {/* Public - one login page for every role */}
       <Route path="/" element={<LandingPage />} />
@@ -139,9 +142,13 @@ function App() {
       <Route path="/admin/customer-feedback" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminCustomerFeedbackPage /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminSettingsPage /></ProtectedRoute>} />
       <Route path="/admin/audit-log" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminAuditLogPage /></ProtectedRoute>} />
+      <Route path="/admin/chatbot" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AdminChatbotPage /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    {/* Chat box with automatic answers, only on the public pages */}
+    <ChatbotWidget />
+    </>
   );
 }
 

@@ -142,3 +142,29 @@ def send_reply_email(inquiry, staff_message_content, sent_by=None):
         sent_by=sent_by,
     )
     email.send(fail_silently=False)
+
+
+def send_bot_reply_email(inquiry, answer_text):
+    """
+    Sends the chatbot's automatic reply to a new inquiry. It includes the
+    Reply Link, so the customer can keep talking inside the system, and
+    says plainly that a team member will follow up.
+    """
+    reply_link = _get_reply_link(inquiry)
+
+    blocks = [
+        p(f"Hi {inquiry.full_name},"),
+        p("Thank you for contacting Glomax Solar Enterprises. This is an automatic reply with answers to what you asked:"),
+        quote(answer_text, label="Glomax Assistant"),
+        p("A member of our team will also read your message and send you a quotation or follow up if you need more help."),
+        centered("Have another question?"),
+        button("View Conversation & Reply", reply_link, 'navy'),
+    ]
+
+    email = build_email(
+        "We received your Glomax Solar inquiry",
+        inquiry.email,
+        "We got your message",
+        blocks,
+    )
+    email.send(fail_silently=False)

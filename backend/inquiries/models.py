@@ -70,6 +70,8 @@ class Message(models.Model):
     class SenderType(models.TextChoices):
         STAFF = 'STAFF', 'Staff'
         CUSTOMER = 'CUSTOMER', 'Customer'
+        # Automatic reply from the FAQ chatbot (see inquiries/chatbot.py)
+        BOT = 'BOT', 'Glomax Assistant'
 
     inquiry = models.ForeignKey(Inquiry, on_delete=models.CASCADE, related_name='messages')
     sender_type = models.CharField(max_length=10, choices=SenderType.choices)
@@ -89,3 +91,31 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.get_sender_type_display()} message on Inquiry #{self.inquiry_id}"
+
+
+class FaqEntry(models.Model):
+    """
+    One question and answer the chatbot can use. Admin manages these on
+    the Chatbot FAQs page. The chatbot reads a customer's message, looks
+    for the keywords below, and replies with the answer of the best match.
+
+    keywords: words or short phrases, separated by commas. A phrase with
+    spaces (like "roof assessment") counts double, because it is more
+    exact than a single word.
+    """
+    question = models.CharField(max_length=200)
+    keywords = models.TextField(
+        help_text='Words or phrases that point to this question, separated by commas.'
+    )
+    answer = models.TextField()
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=100)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', 'id']
+        verbose_name = 'Chatbot FAQ'
+        verbose_name_plural = 'Chatbot FAQs'
+
+    def __str__(self):
+        return self.question

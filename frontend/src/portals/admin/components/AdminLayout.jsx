@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   ShieldCheck,
+  Bot,
 } from 'lucide-react';
 import logo from '../../../assets/images/logo.jpg';
 import apiClient from '../../../api/client';
@@ -62,6 +63,10 @@ const NAV_GROUPS = [
   {
     label: 'Security',
     items: [{ to: '/admin/audit-log', label: 'Audit Log', icon: ShieldCheck }],
+  },
+  {
+    label: 'Automation',
+    items: [{ to: '/admin/chatbot', label: 'Chatbot FAQs', icon: Bot }],
   },
 ];
 
