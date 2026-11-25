@@ -31,8 +31,11 @@ import {
   ClipboardList,
   ZoomIn,
   Lock,
+  Crosshair,
+  AlertTriangle,
 } from "lucide-react";
 import StaffLayout from "../components/StaffLayout";
+import RoofResult from "../../../components/RoofResult";
 import PaymentTermsSelect from "../components/PaymentTermsSelect";
 import ReapplyDaysField, { DEFAULT_REAPPLY_DAYS, parseDays } from "../components/ReapplyDaysField";
 import { getStaffTickets, submitDecision } from "../../../api/staffTickets";
@@ -539,6 +542,15 @@ export default function StaffAssessmentDetailPage() {
                     </div>
                   </div>
 
+                  {assessment.differs_from_recommendation && (
+                    <p className="rr-geo far">
+                      <AlertTriangle size={16} />
+                      The Partner Installer chose a different package
+                      {assessment.computed_package_kw ? ` than the system's pick (${assessment.computed_package_kw}KW)` : " than the system's pick"}
+                      . Please read the worker notes below before deciding.
+                    </p>
+                  )}
+
                   {assessment.notes && (
                     <div className="stfad-notes">
                       <div className="stfad-notes-head">
@@ -549,6 +561,27 @@ export default function StaffAssessmentDetailPage() {
                     </div>
                   )}
                 </section>
+
+                {assessment.calculation?.steps && (
+                  <section className="stfad-card">
+                    <div className="stfad-card-head">
+                      <h2>
+                        <Gauge size={18} />
+                        System Calculation
+                      </h2>
+                      <p>Worked out by the system from the roof the Partner Installer measured. Use it to check the numbers above.</p>
+                    </div>
+                    <RoofResult result={assessment.calculation} title="Roof assessment result" />
+                    {assessment.visit_distance_m != null && (
+                      <p className={`rr-geo ${assessment.visit_within_geofence ? "ok" : "far"}`} style={{ marginTop: 12 }}>
+                        <Crosshair size={16} />
+                        {assessment.visit_within_geofence
+                          ? `Location check passed: sent from about ${assessment.visit_distance_m} m of the customer's pin.`
+                          : `Location check: sent about ${assessment.visit_distance_m} m away from the customer's pin. Please confirm the visit happened.`}
+                      </p>
+                    )}
+                  </section>
+                )}
 
                 {assessment.photos?.length > 0 && (
                   <section className="stfad-card">
