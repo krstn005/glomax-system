@@ -63,6 +63,16 @@ class Ticket(models.Model):
         blank=True,  # auto-filled once a package is selected
     )
 
+    # --- Roof location and electric bill (New Request page) ---
+    # The customer pins the roof on the map. The Partner Installer uses
+    # this pin to find the house, to measure the roof, and for the
+    # location check on the day of the visit.
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    # Average monthly electric bill in pesos. Used to work out how big
+    # the solar system should be.
+    monthly_bill = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
     # --- Set by Staff on the Assign Partner Installer page ---
     visit_date = models.DateField(
         null=True,

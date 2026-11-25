@@ -91,7 +91,33 @@ class TicketCreateSerializer(serializers.ModelSerializer):
             'preferred_date',
             'solar_package',
             'system_type',
+            'latitude',
+            'longitude',
+            'monthly_bill',
         ]
+
+    # The Philippines only. This stops fake or random pins.
+    def validate_latitude(self, value):
+        if value is not None and not (4.0 <= float(value) <= 22.0):
+            raise serializers.ValidationError("The pin must be inside the Philippines.")
+        return value
+
+    def validate_longitude(self, value):
+        if value is not None and not (116.0 <= float(value) <= 127.5):
+            raise serializers.ValidationError("The pin must be inside the Philippines.")
+        return value
+
+    def validate_monthly_bill(self, value):
+        if value is not None and not (0 < value <= 1000000):
+            raise serializers.ValidationError("Enter your monthly electric bill in pesos.")
+        return value
+
+    def validate(self, attrs):
+        # A pin needs both numbers
+        lat, lng = attrs.get('latitude'), attrs.get('longitude')
+        if (lat is None) != (lng is None):
+            raise serializers.ValidationError("Please pin your roof on the map again.")
+        return attrs
 
 
 class TicketSerializer(serializers.ModelSerializer):
@@ -142,6 +168,9 @@ class TicketSerializer(serializers.ModelSerializer):
             'visit_date',
             'solar_package',
             'system_type',
+            'latitude',
+            'longitude',
+            'monthly_bill',
             'status',
             'status_display',
             'admin_revision_notes',
