@@ -1,170 +1,459 @@
-from urllib.parse import urlencode
+import logging
+import re
 
-from django.conf import settings
+from django.db.models import Q
+from django.utils import timezone
+from rest_framework import generics, permissions, status, throttling
+from rest_framework.exceptions import NotFound
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
-from glomax_backend.email_design import (
-    COMPANY_ADDRESS,
-    attach_logo,
-    build_email,
-    button,
-    button_html,
-    centered,
-    details,
-    link_line,
-    p,
-    quote,
-    wrap_html,
+from anymail.exceptions import AnymailError
+
+from .models import Inquiry, Message
+from .serializers import (
+    InquiryCreateSerializer,
+    InquirySerializer,
+    InquirySendQuotationSerializer,
+    MessageSerializer,
+    MessageCreateSerializer,
+    PublicInquiryThreadSerializer,
 )
+from accounts.models import User
+from accounts.permissions import IsStaff
+from notifications.models import Notification
+from .utils import send_quotation_email, send_reply_email
+from .chatbot import auto_reply
+
+logger = logging.getLogger(__name__)
 
 
-def _get_reply_link(inquiry):
+def notify_customer_account_of_reply(inquiry):
     """
-    Builds the public, no-login reply-link URL for this inquiry, using
-    its access_token (never the database id). FRONTEND_BASE_URL should
-    be set in settings.py to the real deployed frontend domain in
-    production - falls back to localhost for local dev if it isn't
-    set yet.
+    If the person who sent this inquiry also has a Customer account
+    (same email), put a bell notification in their portal that opens
+    the full conversation page. Guests with no account only get the
+    email. This never breaks the reply: if anything goes wrong here,
+    it is logged and skipped.
     """
-    base_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173")
-    return f"{base_url.rstrip('/')}/inquiry-reply/{inquiry.access_token}/"
+    try:
+        customers = User.objects.filter(
+            role=User.Role.CUSTOMER,
+            email__iexact=inquiry.email,
+        )
+        link = f"/inquiry-reply/{inquiry.access_token}/"
+        for customer in customers:
+            Notification.objects.create(
+                recipient=customer,
+                kind=Notification.Kind.INQUIRY_REPLY,
+                message="Glomax Staff replied to your inquiry. Tap to view the full conversation.",
+                link=link,
+            )
+    except Exception as e:
+        logger.error(f"Could not create inquiry reply notification for inquiry {inquiry.pk}: {e}")
 
 
-def _get_site_links(inquiry):
+def notify_staff_of_inquiry(inquiry, kind, message):
     """
-    Links to our website for the Initial Quotation email, so the
-    customer can go straight to it without searching or opening the
-    conversation page first.
-
-    The Register link carries the customer's name and email, so the
-    form is already filled in. Registering with the same email also
-    lets the system connect their quotation to their new request.
+    Puts a bell notification in every active Staff account's portal.
+    Used when a customer sends a new inquiry, or a follow-up message.
+    The link opens Staff's Email Inquiries page. This never breaks
+    the customer's action: if anything goes wrong here, it is logged
+    and skipped.
     """
-    base_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
-    params = urlencode({
-        "name": (inquiry.full_name or "")[:100],
-        "email": (inquiry.email or "")[:150],
-    })
-    return {
-        "register": f"{base_url}/register?{params}",
-        "login": f"{base_url}/login",
-    }
+    try:
+        staff_members = User.objects.filter(
+            role=User.Role.STAFF,
+            is_active=True,
+            is_active_account=True,
+        )
+        for staff in staff_members:
+            Notification.objects.create(
+                recipient=staff,
+                kind=kind,
+                message=message[:255],
+                link="/staff/email-inquiries",
+            )
+    except Exception as e:
+        logger.error(f"Could not create staff inquiry notification for inquiry {inquiry.pk}: {e}")
 
 
-# --- The email design now lives in glomax_backend/email_design.py, so
-# every email in the system looks the same. These small helpers are
-# kept so other files that still import them keep working.
-
-def _attach_logo(email):
-    attach_logo(email)
-
-
-def _email_wrapper_html(inner_html):
-    return wrap_html(inner_html)
-
-
-def _reply_button_html(reply_link, label="Reply to this Inquiry"):
-    return button_html(label, reply_link, 'navy')
-
-
-def _cta_button_html(link, label):
-    return button_html(label, link, 'gold')
-
-
-def send_quotation_email(inquiry, package_details, estimated_cost, payment_terms, notes, sent_by=None):
+class InquiryCreateView(generics.CreateAPIView):
     """
-    Sends the Initial Quotation to whoever submitted the inquiry.
-    This can only be sent once per inquiry (enforced in the view).
-    The email includes the Reply Link, so the customer can continue
-    the conversation inside the system (via the public reply-link
-    page) instead of replying directly to this email or submitting a
-    brand new, disconnected inquiry.
-
-    Anything typed by a person (name, package, cost, terms, notes) is
-    escaped by the shared email design, so typed HTML or symbols can
-    never change how the email looks or works.
+    POST /api/inquiries/  - public Landing Page contact form.
+    No login required - anyone can submit an inquiry.
+    Every active Staff member gets a bell notification.
     """
-    reply_link = _get_reply_link(inquiry)
-    site_links = _get_site_links(inquiry)
+    queryset = Inquiry.objects.all()
+    serializer_class = InquiryCreateSerializer
+    permission_classes = [permissions.AllowAny]
 
-    blocks = [
-        p(f"Hi {inquiry.full_name},"),
-        p("Thank you for your inquiry with Glomax Solar Enterprises. Here is your initial quotation:"),
-        details([
-            ("Package Details", package_details),
-            ("Estimated Cost", estimated_cost),
-            ("Payment Terms", payment_terms),
-        ]),
-    ]
-    if notes:
-        blocks.append(quote(notes, label="Message from our team"))
-    blocks += [
-        p(
-            "If you'd like to proceed, please register an account on our website "
-            "and submit a schedule request for a roof assessment."
-        ),
-        button("Create My Account", site_links["register"], 'gold'),
-        link_line("Already have an account?", "Sign in", site_links["login"]),
-        centered("Have a follow-up question?"),
-        button("Reply to this Inquiry", reply_link, 'navy'),
-    ]
-
-    email = build_email(
-        "Your Glomax Solar Quotation",
-        inquiry.email,
-        "Your quotation",
-        blocks,
-        sent_by=sent_by,
-    )
-    email.send(fail_silently=False)
+    def perform_create(self, serializer):
+        inquiry = serializer.save()
+        # The FAQ chatbot answers right away when it knows the answer. Staff
+        # still get the notification and still send the quotation.
+        bot_message = auto_reply(inquiry, inquiry.message, send_email=True)
+        note = " (the chatbot already sent an automatic reply)" if bot_message else ""
+        notify_staff_of_inquiry(
+            inquiry,
+            Notification.Kind.NEW_INQUIRY,
+            f"New inquiry from {inquiry.full_name}: {inquiry.get_subject_display()}{note}",
+        )
 
 
-def send_reply_email(inquiry, staff_message_content, sent_by=None):
+class OptionalPageNumberPagination(PageNumberPagination):
     """
-    Sends Staff's follow-up reply to the customer's email. Includes
-    the same Reply Link again so the customer can keep the
-    conversation going as many times as needed.
+    Only paginates when the request explicitly asks for a page (via
+    ?page=N). If no ?page param is sent, returns the full unpaginated
+    list exactly as before - keeps every existing caller working with
+    zero changes needed on their end. Same pattern already used by
+    tickets/views.py's StaffTicketListView.
     """
-    reply_link = _get_reply_link(inquiry)
+    page_size = 20
+    page_query_param = 'page'
 
-    blocks = [
-        p(f"Hi {inquiry.full_name},"),
-        p("You have a new reply from Glomax Solar Enterprises regarding your inquiry:"),
-        quote(staff_message_content),
-        centered("Want to continue the conversation?"),
-        button("View Conversation & Reply", reply_link, 'gold'),
-    ]
-
-    email = build_email(
-        "New Reply to Your Glomax Solar Inquiry",
-        inquiry.email,
-        "You have a new reply",
-        blocks,
-        sent_by=sent_by,
-    )
-    email.send(fail_silently=False)
+    def paginate_queryset(self, queryset, request, view=None):
+        if request.query_params.get(self.page_query_param) is None:
+            return None
+        try:
+            return super().paginate_queryset(queryset, request, view)
+        except NotFound:
+            # Page number is too big (e.g. after a search gives fewer
+            # results) - show page 1 instead of an error.
+            self.request = request
+            paginator = self.django_paginator_class(queryset, self.get_page_size(request))
+            self.page = paginator.page(1)
+            return list(self.page)
 
 
-def send_bot_reply_email(inquiry, answer_text):
+class InquiryListView(generics.ListAPIView):
     """
-    Sends the chatbot's automatic reply to a new inquiry. It includes the
-    Reply Link, so the customer can keep talking inside the system, and
-    says plainly that a team member will follow up.
+    GET /api/inquiries/staff/  - Staff's Email Inquiries page listing.
+    Optional ?is_replied=false filter to show only unanswered ones.
+    Optional ?search=text to find by inquiry #, name, email, phone or message.
+    Optional ?page=N for pagination (20 per page) - omit ?page
+    entirely to get the full list, same as before this was added.
+    Always sorted with unread customer replies first (has_unread_reply
+    descending), then newest-received first, so Staff sees inquiries
+    needing attention at the top of the list rather than buried
+    wherever they happen to fall by date.
     """
-    reply_link = _get_reply_link(inquiry)
+    serializer_class = InquirySerializer
+    permission_classes = [permissions.IsAuthenticated, IsStaff]
+    pagination_class = OptionalPageNumberPagination
 
-    blocks = [
-        p(f"Hi {inquiry.full_name},"),
-        p("Thank you for contacting Glomax Solar Enterprises. This is an automatic reply with answers to what you asked:"),
-        quote(answer_text, label="Glomax Assistant"),
-        p("A member of our team will also read your message and send you a quotation or follow up if you need more help."),
-        centered("Have another question?"),
-        button("View Conversation & Reply", reply_link, 'navy'),
-    ]
+    def get_queryset(self):
+        queryset = Inquiry.objects.all().order_by('-has_unread_reply', '-received_at')
+        is_replied = self.request.query_params.get('is_replied')
+        if is_replied is not None:
+            queryset = queryset.filter(is_replied=(is_replied.lower() == 'true'))
 
-    email = build_email(
-        "We received your Glomax Solar inquiry",
-        inquiry.email,
-        "We got your message",
-        blocks,
-    )
-    email.send(fail_silently=False)
+        # Optional ?search= : inquiry # (5 or #5), name, email, phone or message
+        search_term = (self.request.query_params.get('search') or '').strip()
+        if search_term:
+            id_match = re.fullmatch(r'#?(\d{1,9})', search_term)
+            by_number = Q(id=int(id_match.group(1))) if id_match else Q(pk__in=[])
+            queryset = queryset.filter(
+                by_number |
+                Q(full_name__icontains=search_term) |
+                Q(email__icontains=search_term) |
+                Q(phone_number__icontains=search_term) |
+                Q(message__icontains=search_term)
+            )
+        return queryset
+
+
+class InquiryDetailView(generics.RetrieveAPIView):
+    """
+    GET /api/inquiries/staff/<id>/  - view one inquiry's full details,
+    including the saved Initial Quotation if one has already been sent.
+    """
+    queryset = Inquiry.objects.all()
+    serializer_class = InquirySerializer
+    permission_classes = [permissions.IsAuthenticated, IsStaff]
+
+
+class InquiryMarkRepliedView(APIView):
+    """
+    PATCH /api/inquiries/staff/<id>/mark-replied/  - marks an inquiry
+    as replied without sending a quotation (manual override if needed).
+    """
+    permission_classes = [permissions.IsAuthenticated, IsStaff]
+
+    def patch(self, request, pk):
+        try:
+            inquiry = Inquiry.objects.get(pk=pk)
+        except Inquiry.DoesNotExist:
+            return Response({"detail": "Inquiry not found."}, status=404)
+
+        inquiry.is_replied = True
+        inquiry.save()
+
+        return Response(InquirySerializer(inquiry).data)
+
+
+class InquirySendQuotationView(APIView):
+    """
+    POST /api/inquiries/staff/<id>/send-quotation/  - Staff's
+    "Send Initial Quotation" action. Sends a real email via Resend
+    AND saves the quotation content onto the Inquiry so it can be
+    viewed again later. Can only be sent once per inquiry - a second
+    attempt is blocked with a 400 error.
+
+    If the email fails to send (e.g. Resend sandbox restriction, rate
+    limit, or any API error), this now returns a clear 502 error
+    instead of an unhandled 500 - and deliberately does NOT save the
+    quotation fields or set quotation_sent=True in that case, so Staff
+    can safely retry without it being silently marked as already sent.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsStaff]
+
+    def post(self, request, pk):
+        try:
+            inquiry = Inquiry.objects.get(pk=pk)
+        except Inquiry.DoesNotExist:
+            return Response({"detail": "Inquiry not found."}, status=404)
+
+        if inquiry.quotation_sent:
+            return Response(
+                {"detail": "An Initial Quotation has already been sent for this inquiry."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = InquirySendQuotationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            send_quotation_email(
+                inquiry=inquiry,
+                package_details=data["package_details"],
+                estimated_cost=data["estimated_cost"],
+                payment_terms=data["payment_terms"],
+                notes=data.get("notes", ""),
+                sent_by=request.user,
+            )
+        except AnymailError as e:
+            logger.error(f"Failed to send quotation email for inquiry {pk}: {e}")
+            return Response(
+                {"detail": "Could not send the quotation email. Please check the email service and try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        inquiry.quotation_package_details = data["package_details"]
+        inquiry.quotation_estimated_cost = data["estimated_cost"]
+        inquiry.quotation_payment_terms = data["payment_terms"]
+        inquiry.quotation_message_to_customer = data.get("notes", "")
+        inquiry.quotation_sent = True
+        inquiry.quotation_sent_at = timezone.now()
+        inquiry.is_replied = True
+        inquiry.save()
+
+        # If the Customer already has an account and a ticket (they
+        # submitted their Schedule Request before Staff got around to
+        # replying to their inquiry), link this Initial Quotation onto
+        # that ticket right now instead of waiting for a ticket that
+        # already exists and never will trigger the other direction's
+        # auto-link logic.
+        from tickets.models import Ticket
+        from tickets.quotation_linking import link_initial_quotation_to_ticket
+
+        matching_ticket = (
+            Ticket.objects.filter(customer__email__iexact=inquiry.email)
+            .order_by('-created_at')
+            .first()
+        )
+        if matching_ticket:
+            link_initial_quotation_to_ticket(matching_ticket, inquiry)
+
+        return Response(InquirySerializer(inquiry).data, status=status.HTTP_200_OK)
+
+
+# --- Staff-side conversation thread ---
+
+class StaffInquiryMessagesView(APIView):
+    """
+    GET  /api/inquiries/staff/<id>/messages/  - list the full
+         follow-up conversation thread for one inquiry (Staff view).
+         Also clears has_unread_reply, since Staff is now viewing it.
+    POST /api/inquiries/staff/<id>/messages/  - Staff sends a reply.
+         Saves the message FIRST (so it's never lost even if the
+         email fails), then tries to email the customer. If the email
+         fails (Resend sandbox restriction, rate limit, API error,
+         etc.), the saved message and a 201 response are still
+         returned, but with an "email_sent": false flag and a
+         "warning" message, so the frontend can show Staff a clear
+         heads-up instead of a broken page.
+
+         If the customer also has an account (same email), a bell
+         notification is added too, and it opens the full
+         conversation page.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsStaff]
+
+    def get_inquiry(self, pk):
+        try:
+            return Inquiry.objects.get(pk=pk)
+        except Inquiry.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        inquiry = self.get_inquiry(pk)
+        if inquiry is None:
+            return Response({"detail": "Inquiry not found."}, status=404)
+
+        if inquiry.has_unread_reply:
+            inquiry.has_unread_reply = False
+            inquiry.save(update_fields=["has_unread_reply"])
+
+        messages = inquiry.messages.all()
+        return Response(MessageSerializer(messages, many=True).data)
+
+    def post(self, request, pk):
+        inquiry = self.get_inquiry(pk)
+        if inquiry is None:
+            return Response({"detail": "Inquiry not found."}, status=404)
+
+        serializer = MessageCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        content = serializer.validated_data["content"]
+
+        message = Message.objects.create(
+            inquiry=inquiry,
+            sender_type=Message.SenderType.STAFF,
+            staff_user=request.user,
+            content=content,
+        )
+
+        # Bell notification for customers who have an account
+        notify_customer_account_of_reply(inquiry)
+
+        email_sent = True
+        warning = None
+        try:
+            send_reply_email(inquiry=inquiry, staff_message_content=content, sent_by=request.user)
+        except AnymailError as e:
+            logger.error(f"Failed to send reply email for inquiry {pk}: {e}")
+            email_sent = False
+            warning = "Your reply was saved, but the email to the customer could not be sent. Please check the email service."
+
+        inquiry.is_replied = True
+        inquiry.save(update_fields=["is_replied"])
+
+        response_data = MessageSerializer(message).data
+        response_data["email_sent"] = email_sent
+        if warning:
+            response_data["warning"] = warning
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+# --- Public, no-login reply-link thread (customer side) ---
+
+class _TokenScopedThrottle(throttling.SimpleRateThrottle):
+    """
+    Base throttle keyed by the access_token in the URL (not just IP),
+    so a single link can't be hammered from many different IPs, and a
+    single IP can't hammer many different links either.
+    """
+
+    def get_cache_key(self, request, view):
+        token = view.kwargs.get("token")
+        ident = self.get_ident(request)
+        return self.cache_format % {
+            "scope": self.scope,
+            "ident": f"{token}:{ident}",
+        }
+
+
+class PublicInquiryReadThrottle(_TokenScopedThrottle):
+    """
+    Covers GET only - viewing the thread. This is what the page's
+    15-second auto-refresh polling hits repeatedly while the page is
+    open, so this needs a much higher ceiling than writing does; it's
+    read-only and low-risk regardless of how often it's called.
+    """
+    scope = "inquiry_public_read"
+
+
+class PublicInquiryWriteThrottle(_TokenScopedThrottle):
+    """
+    Covers POST only - submitting a new follow-up message. Kept tight,
+    since this is the actual abuse-prone action (someone scripting
+    repeated message submissions).
+    """
+    scope = "inquiry_public_write"
+
+
+class PublicInquiryThreadView(APIView):
+    """
+    GET  /api/inquiries/public/<uuid:token>/  - the public, no-login
+         reply-link page's data: read-only inquiry info, the saved
+         Initial Quotation, and the full follow-up message thread.
+         Polled automatically every 15s by the frontend while the
+         page is open, so this uses a generous throttle.
+    POST /api/inquiries/public/<uuid:token>/  - the customer submits a
+         new follow-up message from that same page. Sets
+         has_unread_reply = True so Staff sees a notification badge,
+         and puts a bell notification in every Staff portal.
+         Uses a tighter throttle, since this is a real write action.
+
+    Both actions are scoped ENTIRELY by the access_token in the URL -
+    there is no other way to reach a specific inquiry through this
+    endpoint, and PublicInquiryThreadSerializer never exposes the
+    token or database id back out, so nothing here can be used to
+    enumerate or guess other inquiries.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get_throttles(self):
+        if self.request.method == "POST":
+            return [PublicInquiryWriteThrottle()]
+        return [PublicInquiryReadThrottle()]
+
+    def get_inquiry(self, token):
+        try:
+            return Inquiry.objects.get(access_token=token)
+        except (Inquiry.DoesNotExist, ValueError):
+            return None
+
+    def get(self, request, token):
+        inquiry = self.get_inquiry(token)
+        if inquiry is None:
+            return Response({"detail": "This link is no longer valid."}, status=404)
+
+        return Response(PublicInquiryThreadSerializer(inquiry).data)
+
+    def post(self, request, token):
+        inquiry = self.get_inquiry(token)
+        if inquiry is None:
+            return Response({"detail": "This link is no longer valid."}, status=404)
+
+        serializer = MessageCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        content = serializer.validated_data["content"]
+
+        Message.objects.create(
+            inquiry=inquiry,
+            sender_type=Message.SenderType.CUSTOMER,
+            content=content,
+        )
+
+        inquiry.has_unread_reply = True
+        inquiry.save(update_fields=["has_unread_reply"])
+
+        # Once a Staff member has joined the conversation, people handle it
+        # and the chatbot stays quiet.
+        bot_message = None
+        if not inquiry.messages.filter(sender_type=Message.SenderType.STAFF).exists():
+            bot_message = auto_reply(inquiry, content)
+        note = " The chatbot already sent an automatic reply." if bot_message else ""
+
+        notify_staff_of_inquiry(
+            inquiry,
+            Notification.Kind.INQUIRY_FOLLOWUP,
+            f"{inquiry.full_name} sent a follow-up message on their inquiry.{note}",
+        )
+
+        return Response(PublicInquiryThreadSerializer(inquiry).data, status=status.HTTP_201_CREATED)
