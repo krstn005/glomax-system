@@ -295,31 +295,19 @@ ANYMAIL = {
 
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
-# SMS settings - 2-step login codes and ticket updates sent by text message.
-# SMS_PROVIDER picks who sends them:
-#   textbee    (default) an Android phone with the TextBee app
-#              (https://textbee.dev). Put your API key in the .env file.
-#              TEXTBEE_DEVICE_ID is optional: only needed if you linked
-#              more than one phone.
-#   smsgate    SMSGate / Android SMS Gateway, Cloud Server mode
-#              (https://sms-gate.app). Needs SMSGATE_USERNAME and
-#              SMSGATE_PASSWORD, shown in the SMSGate app.
-#   semaphore  Semaphore (https://semaphore.co)
+# SMS settings - sign-up and sign-in codes, and ticket updates, are sent by
+# text message through Semaphore (https://semaphore.co). Put your API key in
+# the .env file (or the Render Environment settings), never in the code.
 # SEMAPHORE_SENDER_NAME is optional: leave it empty to use Semaphore's
 # default sender name until your own name is approved.
 # While DEBUG is True and there's no API key, codes are printed in the
 # Django terminal instead of being sent (handy for local testing).
-SMS_PROVIDER = config('SMS_PROVIDER', default='textbee')
-TEXTBEE_API_KEY = config('TEXTBEE_API_KEY', default='')
-TEXTBEE_DEVICE_ID = config('TEXTBEE_DEVICE_ID', default='')
-SMSGATE_USERNAME = config('SMSGATE_USERNAME', default='')
-SMSGATE_PASSWORD = config('SMSGATE_PASSWORD', default='')
 SEMAPHORE_API_KEY = config('SEMAPHORE_API_KEY', default='')
 SEMAPHORE_SENDER_NAME = config('SEMAPHORE_SENDER_NAME', default='')
 
 # Request and update texts (Admin > Settings > SMS Templates) are only sent
 # when this is True. Keep it False (the default) until your SMS provider
-# (TextBee or Semaphore) is ready. While it is False, the texts are only written in the server
+# (Semaphore) is ready. While it is False, the texts are only written in the server
 # log, so nothing is sent and no credits are used.
 SMS_NOTIFICATIONS_ENABLED = config('SMS_NOTIFICATIONS_ENABLED', default=False, cast=bool)
 

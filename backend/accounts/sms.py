@@ -1,39 +1,21 @@
 """
-Sends text messages (SMS) for Glomax.
+Sends text messages (SMS) for Glomax, through Semaphore only.
+Semaphore is a Philippine SMS provider. https://semaphore.co/docs
 
-Three providers are supported. Choose one with SMS_PROVIDER in the .env
-file (or in the Render Environment settings):
-
-  SMS_PROVIDER=textbee     (default) TextBee, an Android phone that
-                           works as an SMS gateway. https://textbee.dev
-  SMS_PROVIDER=smsgate     SMSGate (Android SMS Gateway), another free
-                           Android phone gateway. https://sms-gate.app
-  SMS_PROVIDER=semaphore   Semaphore, a Philippine SMS provider.
-                           https://semaphore.co/docs
-
-TextBee settings:
-  TEXTBEE_API_KEY    - the API key from your TextBee dashboard
-  TEXTBEE_DEVICE_ID  - optional. Only needed if you linked more than
-                       one phone. Leave it empty to use your default phone.
-
-SMSGate settings (Cloud Server mode in the app):
-  SMSGATE_USERNAME   - the username shown in the SMSGate app
-  SMSGATE_PASSWORD   - the password shown in the SMSGate app
-
-Semaphore settings:
+Settings (in the .env file, or in the Render Environment settings):
   SEMAPHORE_API_KEY      - from your Semaphore account
-  SEMAPHORE_SENDER_NAME  - optional, your approved sender name
+  SEMAPHORE_SENDER_NAME  - optional, your approved sender name. Leave it
+                           empty to use Semaphore's default sender name.
 
-Notes about TextBee:
-  - The phone with the TextBee app must be on and online. The text is
-    sent from that phone's SIM.
-  - The free plan allows 50 texts per day and 300 per month.
-  - "Queued" does not mean "delivered". TextBee accepts the text first,
-    then the phone sends it.
+There are two kinds of text:
+  - send_otp_sms          the 6-digit codes (sign-up, sign-in, 2-step setup)
+  - send_semaphore_message  normal texts, like ticket updates
 
 While testing on your own computer (DEBUG = True) without an API key,
 the code is printed in the Django terminal instead of being sent, so
 you can still sign in without spending credits.
+
+Note: Semaphore ignores any message that starts with "TEST".
 """
 import logging
 import re
@@ -44,8 +26,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 SEMAPHORE_OTP_URL = 'https://api.semaphore.co/api/v4/otp'
-TEXTBEE_SEND_URL = 'https://api.textbee.dev/api/v1/gateway/send-sms'
-SMSGATE_SEND_URL = 'https://api.sms-gate.app/3rdparty/v1/messages'
+SEMAPHORE_MESSAGES_URL = 'https://api.semaphore.co/api/v4/messages'
 
 
 class SmsError(Exception):
@@ -73,7 +54,7 @@ def normalize_ph_mobile(number):
 
 
 def to_international(number):
-    """09171234567 -> +639171234567 (the format TextBee needs). '' if invalid."""
+    """09171234567 -> +639171234567. '' if invalid."""
     number = normalize_ph_mobile(number)
     if not number:
         return ''
@@ -88,112 +69,24 @@ def mask_phone(number):
     return f"{number[:4]}***{number[-4:]}"
 
 
-def get_provider():
-    """Returns 'textbee', 'smsgate' or 'semaphore'. TextBee is the default."""
-    provider = str(getattr(settings, 'SMS_PROVIDER', 'textbee') or 'textbee').strip().lower()
-    return provider if provider in ('textbee', 'smsgate', 'semaphore') else 'textbee'
-
-
-def gateway_is_configured(provider):
-    """True if the settings for this phone gateway are filled in."""
-    if provider == 'smsgate':
-        return bool(getattr(settings, 'SMSGATE_USERNAME', '') and getattr(settings, 'SMSGATE_PASSWORD', ''))
-    return bool(getattr(settings, 'TEXTBEE_API_KEY', ''))
-
-
-def send_smsgate(number, message):
-    """
-    Sends one text through SMSGate (Android SMS Gateway, Cloud Server
-    mode). Raises SmsError if SMSGate did not accept it.
-    """
-    international = to_international(number)
-    if not international:
-        raise SmsError('Invalid mobile number.')
-
-    username = getattr(settings, 'SMSGATE_USERNAME', '')
-    password = getattr(settings, 'SMSGATE_PASSWORD', '')
-    if not (username and password):
-        raise SmsError('SMSGATE_USERNAME or SMSGATE_PASSWORD is not set.')
-
-    payload = {
-        'textMessage': {'text': message},
-        'phoneNumbers': [international],
-    }
-
-    try:
-        response = requests.post(
-            SMSGATE_SEND_URL,
-            json=payload,
-            auth=(username, password),
-            timeout=15,
-        )
-    except requests.RequestException as exc:
-        raise SmsError(f'Could not reach SMSGate: {exc}') from exc
-
-    if response.status_code == 401:
-        raise SmsError('SMSGate says the username or password is wrong.')
-    # A good answer is 200 or 202: SMSGate accepted the text. The phone
-    # sends it a moment later.
-    if response.status_code not in (200, 201, 202):
-        raise SmsError(f'SMSGate error {response.status_code}: {response.text[:300]}')
-
-
-def send_gateway_sms(number, message):
-    """Sends one text with the phone gateway chosen in SMS_PROVIDER."""
-    if get_provider() == 'smsgate':
-        send_smsgate(number, message)
-    else:
-        send_textbee(number, message)
-
-
-def send_textbee(number, message):
-    """
-    Sends one text through TextBee. `number` can be typed in any common
-    Philippine format. Raises SmsError if TextBee did not accept it.
-
-    A good answer only means TextBee queued the text. The phone sends
-    it a moment later.
-    """
-    international = to_international(number)
-    if not international:
-        raise SmsError('Invalid mobile number.')
-
-    api_key = getattr(settings, 'TEXTBEE_API_KEY', '')
-    if not api_key:
-        raise SmsError('TEXTBEE_API_KEY is not set.')
-
-    payload = {
-        'recipients': [international],
-        'message': message,
-    }
-    device_id = getattr(settings, 'TEXTBEE_DEVICE_ID', '')
-    if device_id:
-        payload['deviceId'] = device_id
-
-    try:
-        response = requests.post(
-            TEXTBEE_SEND_URL,
-            json=payload,
-            headers={'x-api-key': api_key},
-            timeout=15,
-        )
-    except requests.RequestException as exc:
-        raise SmsError(f'Could not reach TextBee: {exc}') from exc
-
-    if response.status_code == 429:
-        raise SmsError('TextBee limit reached (free plan: 50 per day, 300 per month).')
+def _check_reply(response):
+    """Raises SmsError if Semaphore did not accept the text."""
     if response.status_code != 200:
-        raise SmsError(f'TextBee error {response.status_code}: {response.text[:300]}')
+        raise SmsError(f'Semaphore error {response.status_code}: {response.text[:300]}')
 
-    # A good reply looks like: {"data": {"success": true, "message": "SMS added to queue ..."}}
+    # A good reply is a list with one message, e.g. [{"status": "Pending", ...}]
     try:
         result = response.json()
     except ValueError as exc:
-        raise SmsError(f'Unexpected reply from TextBee: {response.text[:300]}') from exc
+        raise SmsError(f'Unexpected reply from Semaphore: {response.text[:300]}') from exc
 
-    data = result.get('data', result) if isinstance(result, dict) else {}
-    if isinstance(data, dict) and data.get('success') is False:
-        raise SmsError(f'TextBee did not accept the message: {data}')
+    first = result[0] if isinstance(result, list) and result else result
+    if not isinstance(first, dict):
+        return ''
+    status = str(first.get('status', '')).lower()
+    if status in ('failed', 'refunded'):
+        raise SmsError(f'Semaphore could not deliver the message: {first}')
+    return status
 
 
 def send_otp_sms(number, code, minutes):
@@ -205,26 +98,6 @@ def send_otp_sms(number, code, minutes):
     if not number:
         raise SmsError('Invalid mobile number.')
 
-    provider = get_provider()
-
-    if provider in ('textbee', 'smsgate'):
-        if not gateway_is_configured(provider):
-            if settings.DEBUG:
-                # Local testing only: show the code in the terminal
-                print(f"\n[SMS not sent - {provider} is not set up] Code for {number}: {code}\n")
-                return
-            raise SmsError(f'The {provider} settings are not set.')
-
-        message = (
-            f'Your Glomax Solar code is {code}. It expires in '
-            f'{minutes} minutes. Never share this code with anyone.'
-        )
-        send_gateway_sms(number, message)
-        logger.info("2FA code sent by SMS to %s (%s, queued)", mask_phone(number), provider)
-        return
-
-    # ---------- Semaphore ----------
-    # Note: Semaphore ignores any message that starts with "TEST".
     # Semaphore fills in {otp} with the code we send below.
     message = (
         'Your Glomax Solar code is {otp}. It expires in '
@@ -254,18 +127,36 @@ def send_otp_sms(number, code, minutes):
     except requests.RequestException as exc:
         raise SmsError(f'Could not reach Semaphore: {exc}') from exc
 
-    if response.status_code != 200:
-        raise SmsError(f'Semaphore error {response.status_code}: {response.text[:300]}')
-
-    # A good reply is a list with one message, e.g. [{"status": "Pending", ...}]
-    try:
-        result = response.json()
-    except ValueError as exc:
-        raise SmsError(f'Unexpected reply from Semaphore: {response.text[:300]}') from exc
-
-    first = result[0] if isinstance(result, list) and result else result
-    status = str((first or {}).get('status', '')).lower() if isinstance(first, dict) else ''
-    if status in ('failed', 'refunded'):
-        raise SmsError(f'Semaphore could not deliver the message: {first}')
-
+    status = _check_reply(response)
     logger.info("2FA code sent by SMS to %s (status: %s)", mask_phone(number), status or 'unknown')
+
+
+def send_semaphore_message(number, message):
+    """
+    Sends one normal text (like a ticket update). Raises SmsError if
+    Semaphore did not accept it.
+    """
+    number = normalize_ph_mobile(number)
+    if not number:
+        raise SmsError('Invalid mobile number.')
+
+    api_key = getattr(settings, 'SEMAPHORE_API_KEY', '')
+    if not api_key:
+        raise SmsError('SEMAPHORE_API_KEY is not set.')
+
+    payload = {
+        'apikey': api_key,
+        'number': number,
+        'message': message,
+    }
+    sender_name = getattr(settings, 'SEMAPHORE_SENDER_NAME', '')
+    if sender_name:
+        payload['sendername'] = sender_name
+
+    try:
+        response = requests.post(SEMAPHORE_MESSAGES_URL, data=payload, timeout=15)
+    except requests.RequestException as exc:
+        raise SmsError(f'Could not reach Semaphore: {exc}') from exc
+
+    status = _check_reply(response)
+    logger.info("SMS sent to %s (status: %s)", mask_phone(number), status or 'unknown')

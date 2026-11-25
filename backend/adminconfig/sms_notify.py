@@ -1,7 +1,6 @@
 """
 Sends the saved SMS templates (Admin > Settings > SMS Templates) to
-customers. The text is sent through TextBee (default), SMSGate or
-Semaphore, whichever SMS_PROVIDER is set to (see accounts/sms.py).
+customers. The text is sent through Semaphore (see accounts/sms.py).
 
 How it works:
   1. Each template name starts with a number, like "06 - Installer Assigned".
@@ -20,20 +19,15 @@ Safe by default:
   - Customers who turned off SMS Updates in their Settings get no text.
 """
 
-import json
 import logging
 import re
 import threading
-from urllib import parse, request as urlrequest
 
 from django.conf import settings
 
-from accounts.sms import SmsError, gateway_is_configured, get_provider, send_gateway_sms
+from accounts.sms import SmsError, send_semaphore_message
 
 logger = logging.getLogger(__name__)
-
-SEMAPHORE_URL = 'https://api.semaphore.co/api/v4/messages'
-
 
 def clean_number(raw):
     """
@@ -58,36 +52,9 @@ def fill_template(text, values):
 
 
 def _post_to_semaphore(number, message):
-    data = {
-        'apikey': settings.SEMAPHORE_API_KEY,
-        'number': number,
-        'message': message,
-    }
-    sender = getattr(settings, 'SEMAPHORE_SENDER_NAME', '')
-    if sender:
-        data['sendername'] = sender
-
-    req = urlrequest.Request(
-        SEMAPHORE_URL,
-        data=parse.urlencode(data).encode('utf-8'),
-        method='POST',
-    )
-    try:
-        with urlrequest.urlopen(req, timeout=15) as response:
-            body = response.read().decode('utf-8', 'replace')
-        # Semaphore answers with a list of sent messages. An error comes
-        # back as a dictionary instead.
-        parsed = json.loads(body)
-        if isinstance(parsed, dict):
-            logger.error('Semaphore did not send the SMS to %s: %s', number, body[:200])
-    except Exception:
-        logger.exception('Could not send the SMS to %s', number)
-
-
-def _post_to_gateway(number, message):
     """Runs in the background. Never raises, only logs."""
     try:
-        send_gateway_sms(number, message)
+        send_semaphore_message(number, message)
     except SmsError as exc:
         logger.error('The SMS to %s was not sent: %s', number, exc)
     except Exception:
@@ -112,21 +79,13 @@ def send_sms(number, message, label=''):
             logger.warning('[SMS OFF - not sent] %s -> %s: %s', label, cleaned, message)
             return True
 
-        provider = get_provider()
-        if provider in ('textbee', 'smsgate'):
-            if not gateway_is_configured(provider):
-                logger.warning('SMS "%s" skipped: the %s settings are not set.', label, provider)
-                return False
-            target = _post_to_gateway
-        else:
-            if not getattr(settings, 'SEMAPHORE_API_KEY', ''):
-                logger.warning('SMS "%s" skipped: SEMAPHORE_API_KEY is not set.', label)
-                return False
-            target = _post_to_semaphore
+        if not getattr(settings, 'SEMAPHORE_API_KEY', ''):
+            logger.warning('SMS "%s" skipped: SEMAPHORE_API_KEY is not set.', label)
+            return False
 
         # Send in the background, so the page does not wait for the provider
         threading.Thread(
-            target=target, args=(cleaned, message), daemon=True
+            target=_post_to_semaphore, args=(cleaned, message), daemon=True
         ).start()
         return True
     except Exception:
