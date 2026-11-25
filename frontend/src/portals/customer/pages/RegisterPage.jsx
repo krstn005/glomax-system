@@ -17,9 +17,10 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  ShieldCheck,
 } from 'lucide-react';
 import GoogleSignInButton from '../../../components/auth/GoogleSignInButton';
-import { register } from '../../../api/auth';
+import { registerStart, registerVerify, registerResend } from '../../../api/auth';
 import { googleLogin } from '../../../api/google';
 import { sanitizePhoneNumber } from '../../../utils/phone';
 import { ROLE_CONFIG } from '../../../roleConfig';
@@ -71,6 +72,13 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [googleWidth, setGoogleWidth] = useState(getGoogleWidth);
 
+  // Step 2 - the customer types the email code and the phone code
+  const [step, setStep] = useState('form'); // 'form' | 'verify'
+  const [pending, setPending] = useState(null);
+  const [codes, setCodes] = useState({ email: '', phone: '' });
+  const [wait, setWait] = useState({ email: 0, phone: 0 });
+  const [notice, setNotice] = useState('');
+
   useEffect(() => {
     function onResize() {
       setGoogleWidth(getGoogleWidth());
@@ -78,6 +86,70 @@ export default function RegisterPage() {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  // Count down the "send again" waits
+  useEffect(() => {
+    if (step !== 'verify') return undefined;
+    const timer = setInterval(() => {
+      setWait((w) => ({ email: Math.max(0, w.email - 1), phone: Math.max(0, w.phone - 1) }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [step]);
+
+  function backToForm(message) {
+    setStep('form');
+    setPending(null);
+    setCodes({ email: '', phone: '' });
+    setNotice('');
+    setError(message || '');
+  }
+
+  async function handleVerify(e) {
+    e.preventDefault();
+    setError('');
+    setNotice('');
+    if (!codes.email && !codes.phone) {
+      setError('Please type the code from your email and the code from your text message.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await registerVerify(pending.registration_token, codes.email, codes.phone);
+      navigate('/login', { state: { justRegistered: true } });
+    } catch (err) {
+      const data = err.response?.data;
+      if (!err.response) {
+        setError("Can't reach the server right now. Please check your connection and try again.");
+      } else if (data?.restart) {
+        backToForm(data.detail);
+      } else {
+        // The server remembers which code was already right
+        if (data?.registration_token) setPending((prev) => ({ ...prev, ...data }));
+        setError(data?.detail || 'Could not verify your codes. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleResend(channel) {
+    setError('');
+    setNotice('');
+    try {
+      const data = await registerResend(pending.registration_token, channel);
+      setPending((prev) => ({ ...prev, ...data }));
+      setWait((w) => ({ ...w, [channel]: data.resend_wait?.[channel] || 60 }));
+      setNotice(channel === 'email' ? 'A new code was sent to your email.' : 'A new code was sent to your phone.');
+    } catch (err) {
+      const data = err.response?.data;
+      if (data?.restart) {
+        backToForm(data.detail);
+      } else {
+        if (data?.wait_seconds) setWait((w) => ({ ...w, [channel]: data.wait_seconds }));
+        setError(data?.detail || "We couldn't send a new code. Please try again.");
+      }
+    }
+  }
 
   function clearFieldError(name) {
     setFieldErrors((prev) => {
@@ -136,13 +208,17 @@ export default function RegisterPage() {
 
     setIsSubmitting(true);
     try {
-      await register({
+      // This only starts the sign-up. The account is made after both codes are typed.
+      const data = await registerStart({
         ...form,
         full_name: form.full_name.trim().replace(/\s+/g, ' '),
         email: form.email.trim(),
         address: form.address.trim(),
       });
-      navigate('/login', { state: { justRegistered: true } });
+      setPending(data);
+      setCodes({ email: '', phone: '' });
+      setWait({ email: data.resend_wait?.email || 30, phone: data.resend_wait?.phone || 60 });
+      setStep('verify');
     } catch (err) {
       const data = err.response?.data;
       if (!err.response) {
@@ -249,17 +325,21 @@ export default function RegisterPage() {
               <Sun size={22} />
             </span>
             <div>
-              <h1 className="cl-title">Create your account</h1>
-              <p className="cl-subtitle">It only takes a minute</p>
+              <h1 className="cl-title">{step === 'form' ? 'Create your account' : 'Verify your details'}</h1>
+              <p className="cl-subtitle">
+                {step === 'form' ? 'It only takes a minute' : 'We sent you two codes - one by email, one by text'}
+              </p>
             </div>
           </div>
 
-          <div className="cl-tabs">
-            <Link to="/login" className="cl-tab">
-              Sign In
-            </Link>
-            <span className="cl-tab active">Register</span>
-          </div>
+          {step === 'form' && (
+            <div className="cl-tabs">
+              <Link to="/login" className="cl-tab">
+                Sign In
+              </Link>
+              <span className="cl-tab active">Register</span>
+            </div>
+          )}
 
           {error && (
             <div className="cl-error" role="alert">
@@ -268,6 +348,115 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {notice && (
+            <div className="cl-error" role="status" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', color: '#065f46' }}>
+              <CheckCircle2 size={16} />
+              <span>{notice}</span>
+            </div>
+          )}
+
+          {step === 'verify' && pending ? (
+            <form onSubmit={handleVerify} className="cl-form">
+              <label className="cl-field">
+                <span className="cl-label">Email code</span>
+                <span className="cl-input-wrap">
+                  <Mail size={17} className="cl-input-icon" />
+                  <input
+                    id="email_code"
+                    name="email_code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="6-digit code"
+                    maxLength={6}
+                    value={pending.email_verified ? 'Verified' : codes.email}
+                    onChange={(e) => setCodes((c) => ({ ...c, email: e.target.value.replace(/\D/g, '') }))}
+                    disabled={pending.email_verified}
+                    autoFocus
+                  />
+                </span>
+                <span className="cl-field-hint">
+                  Sent to {pending.email_hint}.{' '}
+                  {pending.email_verified ? (
+                    'Verified.'
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleResend('email')}
+                      disabled={wait.email > 0}
+                      style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline', cursor: wait.email > 0 ? 'default' : 'pointer', opacity: wait.email > 0 ? 0.6 : 1 }}
+                    >
+                      {wait.email > 0 ? `Send again in ${wait.email}s` : 'Send again'}
+                    </button>
+                  )}
+                </span>
+              </label>
+
+              <label className="cl-field">
+                <span className="cl-label">Text message code</span>
+                <span className="cl-input-wrap">
+                  <Phone size={17} className="cl-input-icon" />
+                  <input
+                    id="phone_code"
+                    name="phone_code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="6-digit code"
+                    maxLength={6}
+                    value={pending.phone_verified ? 'Verified' : codes.phone}
+                    onChange={(e) => setCodes((c) => ({ ...c, phone: e.target.value.replace(/\D/g, '') }))}
+                    disabled={pending.phone_verified}
+                  />
+                </span>
+                <span className="cl-field-hint">
+                  Sent to {pending.phone_hint}.{' '}
+                  {pending.phone_verified ? (
+                    'Verified.'
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleResend('phone')}
+                      disabled={wait.phone > 0}
+                      style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline', cursor: wait.phone > 0 ? 'default' : 'pointer', opacity: wait.phone > 0 ? 0.6 : 1 }}
+                    >
+                      {wait.phone > 0 ? `Send again in ${wait.phone}s` : 'Send again'}
+                    </button>
+                  )}
+                </span>
+              </label>
+
+              <p className="cl-field-hint">
+                Your account is only made after both codes are correct. The codes work for {pending.code_minutes || 10} minutes.
+              </p>
+
+              <button type="submit" className="cl-submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={17} className="cl-spin" />
+                    Checking...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={17} />
+                    Verify and Create Account
+                  </>
+                )}
+              </button>
+
+              <p className="cl-register">
+                Wrong email or number?{' '}
+                <button
+                  type="button"
+                  onClick={() => backToForm('')}
+                  style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}
+                >
+                  Change my details
+                </button>
+              </p>
+            </form>
+          ) : (
+          <>
           <form onSubmit={handleSubmit} className="cl-form">
             <label className="cl-field">
               <span className="cl-label">Full Name</span>
@@ -469,7 +658,7 @@ export default function RegisterPage() {
                 </>
               ) : (
                 <>
-                  Create Account
+                  Continue
                 </>
               )}
             </button>
@@ -491,6 +680,8 @@ export default function RegisterPage() {
           <p className="cl-register">
             Already have an account? <Link to="/login">Sign in</Link>
           </p>
+          </>
+          )}
         </div>
 
         <p className="cl-footer">Glomax Solar Enterprises · Customer Portal</p>

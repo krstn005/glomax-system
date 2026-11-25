@@ -305,3 +305,108 @@ class TrustedDevice(models.Model):
 
     def __str__(self):
         return f"{self.user.username} remembered device ({self.label or 'browser'})"
+
+
+class PendingRegistration(models.Model):
+    """
+    A sign-up that is waiting for its two codes (email and phone).
+    NO user account exists yet. The real account is made only after
+    BOTH codes are typed correctly. Unfinished sign-ups just expire,
+    so fake emails or numbers never become accounts.
+
+    The password is saved hashed (never plain), and the codes are saved
+    hashed too.
+    """
+    LIFETIME_MINUTES = 30
+    CODE_MINUTES = 10
+    # Most wrong codes allowed on one sign-up, for both codes together
+    MAX_ATTEMPTS = 6
+    # Most codes one sign-up can send, per channel. Protects the SMS credits.
+    MAX_SENDS = 5
+
+    token = models.CharField(max_length=64, unique=True)
+    full_name = models.CharField(max_length=150)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=20)
+    address = models.CharField(max_length=255, blank=True)
+    password_hash = models.CharField(max_length=128)
+
+    email_code_hash = models.CharField(max_length=128, blank=True)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+    email_sends = models.PositiveSmallIntegerField(default=0)
+    email_verified = models.BooleanField(default=False)
+
+    phone_code_hash = models.CharField(max_length=128, blank=True)
+    phone_sent_at = models.DateTimeField(null=True, blank=True)
+    phone_sends = models.PositiveSmallIntegerField(default=0)
+    phone_verified = models.BooleanField(default=False)
+
+    attempts = models.PositiveSmallIntegerField(default=0)
+    is_used = models.BooleanField(default=False)
+    ip_address = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=self.LIFETIME_MINUTES)
+
+    def is_locked(self):
+        return self.attempts >= self.MAX_ATTEMPTS
+
+    def is_open(self):
+        return not self.is_used and not self.is_expired() and not self.is_locked()
+
+    def set_code(self, channel, code):
+        """channel is 'email' or 'phone'."""
+        setattr(self, f'{channel}_code_hash', make_password(code))
+        setattr(self, f'{channel}_sent_at', timezone.now())
+        setattr(self, f'{channel}_sends', getattr(self, f'{channel}_sends') + 1)
+
+    def check_code(self, channel, code):
+        code_hash = getattr(self, f'{channel}_code_hash')
+        sent_at = getattr(self, f'{channel}_sent_at')
+        if not code_hash or not sent_at:
+            return False
+        if timezone.now() > sent_at + timedelta(minutes=self.CODE_MINUTES):
+            return False
+        return check_password(code, code_hash)
+
+    @staticmethod
+    def generate_token():
+        return secrets.token_urlsafe(32)
+
+    @staticmethod
+    def generate_code():
+        return ''.join(secrets.choice('0123456789') for _ in range(6))
+
+    def __str__(self):
+        return f"{self.email} - pending ({'used' if self.is_used else 'open'})"
+
+
+class AuditLog(models.Model):
+    """
+    A record of important security events: sign-ins, wrong passwords,
+    lockouts, registrations, password changes and so on. Admin can read
+    it on the Audit Log page. Rows are only added, never edited.
+    """
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='audit_events',
+    )
+    # Kept as text too, so the record still reads well if the account is deleted
+    actor_name = models.CharField(max_length=150, blank=True)
+    actor_role = models.CharField(max_length=20, blank=True)
+    action = models.CharField(max_length=40, db_index=True)
+    detail = models.CharField(max_length=300, blank=True)
+    # What was typed on the sign-in or sign-up form (email or username)
+    identifier = models.CharField(max_length=150, blank=True, db_index=True)
+    ip_address = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f"{self.created_at:%Y-%m-%d %H:%M} {self.action} {self.actor_name or self.identifier}"
