@@ -3,15 +3,18 @@ Verified registration.
 
 No account is made when the form is sent. Instead:
   1. /register/start/   checks the form, saves it as a PendingRegistration
-                        and sends one code to the email and one to the phone.
-  2. /register/verify/  the customer types both codes. Only when BOTH are
-                        right is the real account made.
+                        and sends a code to the EMAIL only.
+  2. /register/verify/  the customer types the email code first. Only when
+                        it is right do we send the text message code (so no
+                        text credits are spent on a fake email). When the
+                        phone code is right too, the real account is made.
   3. /register/resend/  sends a new code (with a wait between sends).
 
 Fake or unreachable emails and numbers can never finish step 2, so they
 never become accounts.
 """
 import logging
+import socket
 from types import SimpleNamespace
 
 from django.contrib.auth.hashers import make_password
@@ -46,6 +49,57 @@ DISPOSABLE_DOMAINS = {
     'fexpost.com', 'mailtemp.net', 'tmpmail.org', 'tmpmail.net', 'emailfake.com',
     'fakemail.net', 'mail.tm', 'dropmail.me', 'minuteinbox.com',
 }
+
+
+# Common spelling mistakes in the email domain, and what the customer meant.
+DOMAIN_TYPOS = {
+    'gmial.com': 'gmail.com', 'gmai.com': 'gmail.com', 'gamil.com': 'gmail.com',
+    'gmail.con': 'gmail.com', 'gmail.co': 'gmail.com', 'gmaill.com': 'gmail.com',
+    'gnail.com': 'gmail.com', 'gmail.cm': 'gmail.com', 'gmal.com': 'gmail.com',
+    'yaho.com': 'yahoo.com', 'yahooo.com': 'yahoo.com', 'yahoo.con': 'yahoo.com',
+    'yahho.com': 'yahoo.com', 'hotmial.com': 'hotmail.com', 'hotmail.con': 'hotmail.com',
+    'hotmai.com': 'hotmail.com', 'outlok.com': 'outlook.com', 'outlook.con': 'outlook.com',
+    'icloud.con': 'icloud.com', 'icoud.com': 'icloud.com',
+}
+
+
+def domain_can_receive_mail(domain):
+    """
+    True if this domain can receive email (it has a mail server, or at
+    least an address). False only when the domain clearly does not exist.
+    If the lookup itself fails (slow DNS, no internet), we say True, so a
+    problem on our side never blocks a real customer.
+    """
+    try:
+        import dns.exception
+        import dns.resolver
+    except ImportError:
+        dns = None
+
+    if dns is not None:
+        resolver = dns.resolver.Resolver()
+        resolver.lifetime = 4
+        found_nothing = 0
+        for record in ('MX', 'A', 'AAAA'):
+            try:
+                resolver.resolve(domain, record)
+                return True
+            except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+                found_nothing += 1
+            except dns.resolver.NoNameservers:
+                return True
+            except dns.exception.DNSException:
+                return True
+        return found_nothing < 3
+
+    # dnspython is not installed: fall back to a simple address lookup
+    try:
+        socket.getaddrinfo(domain, None)
+        return True
+    except socket.gaierror as err:
+        return err.errno not in (socket.EAI_NONAME,)
+    except OSError:
+        return True
 
 
 # ---------- Rate limits (per internet address) ----------
@@ -91,6 +145,10 @@ class RegisterStartSerializer(serializers.Serializer):
         domain = value.rsplit('@', 1)[-1]
         if domain in DISPOSABLE_DOMAINS:
             raise serializers.ValidationError('Please use a real email address. Temporary email services are not allowed.')
+        if domain in DOMAIN_TYPOS:
+            raise serializers.ValidationError(f'Did you mean {value.rsplit("@", 1)[0]}@{DOMAIN_TYPOS[domain]}? Please check the spelling.')
+        if '.' not in domain or not domain_can_receive_mail(domain):
+            raise serializers.ValidationError('This email address cannot receive mail. Please check the spelling or use another email.')
         if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError('An account with this email already exists. Please sign in instead.')
         return value
@@ -151,6 +209,7 @@ def _status(pending):
         'phone_hint': mask_phone(pending.phone_number),
         'email_verified': pending.email_verified,
         'phone_verified': pending.phone_verified,
+        'phone_sent': bool(pending.phone_sent_at),
         'resend_wait': RESEND_WAIT,
         'code_minutes': PendingRegistration.CODE_MINUTES,
     }
@@ -166,6 +225,25 @@ def _get_open(token):
     if pending.is_locked():
         return None, Response({'detail': 'Too many wrong codes. Please fill in the form again.', 'restart': True}, status=400)
     return pending, None
+
+
+def _wrong_code(pending, label):
+    """Counts a wrong code and builds the error response."""
+    pending.attempts += 1
+    pending.save()
+    left = max(0, PendingRegistration.MAX_ATTEMPTS - pending.attempts)
+    if left == 0:
+        return Response({'detail': 'Too many wrong codes. Please fill in the form again.', 'restart': True}, status=400)
+    body = _status(pending)
+    body['detail'] = f'The {label} code is wrong or has expired. {left} {"try" if left == 1 else "tries"} left.'
+    body['wrong'] = [label]
+    return Response(body, status=400)
+
+
+def _need(pending, message):
+    body = _status(pending)
+    body['detail'] = message
+    return Response(body, status=400)
 
 
 # ---------- Views ----------
@@ -195,6 +273,8 @@ class RegisterStartView(APIView):
                         or request.META.get('REMOTE_ADDR', ''))[:64],
         )
 
+        # Only the email code goes out now. The text message is sent after
+        # the email code is right, so a fake email costs no SMS credits.
         try:
             _send(pending, 'email')
         except Exception:
@@ -204,18 +284,9 @@ class RegisterStartView(APIView):
                  'email': "We couldn't send a code to this email."},
                 status=400,
             )
-        try:
-            _send(pending, 'phone')
-        except SmsError:
-            logger.exception('Could not send the sign-up text to %s', mask_phone(pending.phone_number))
-            return Response(
-                {'detail': "We couldn't send a text to this mobile number. Please check the number and try again.",
-                 'phone_number': "We couldn't send a text to this number."},
-                status=400,
-            )
 
         pending.save()
-        audit('REGISTER_STARTED', request, identifier=pending.email, detail='Codes sent to email and phone.')
+        audit('REGISTER_STARTED', request, identifier=pending.email, detail='Code sent to email.')
         return Response(_status(pending), status=201)
 
 
@@ -234,35 +305,43 @@ class RegisterVerifyView(APIView):
         if error:
             return error
 
-        wrong = []
-        for channel, label in (('email', 'email'), ('phone', 'phone')):
-            if getattr(pending, f'{channel}_verified'):
-                continue
-            code = clean_code(request.data.get(f'{channel}_code'))
-            if not code:
-                continue
-            if is_six_digits(code) and pending.check_code(channel, code):
-                setattr(pending, f'{channel}_verified', True)
-            else:
-                pending.attempts += 1
-                wrong.append(label)
-        pending.save()
+        email_code = clean_code(request.data.get('email_code'))
+        phone_code = clean_code(request.data.get('phone_code'))
 
-        if wrong:
-            left = max(0, PendingRegistration.MAX_ATTEMPTS - pending.attempts)
-            if left == 0:
-                return Response({'detail': 'Too many wrong codes. Please fill in the form again.', 'restart': True}, status=400)
-            what = ' and '.join(wrong)
-            body = _status(pending)
-            body['detail'] = f'The {what} code is wrong or has expired. {left} {"try" if left == 1 else "tries"} left.'
-            body['wrong'] = wrong
-            return Response(body, status=400)
+        # Step 1: the email code. The text message is only sent after this is right.
+        if not pending.email_verified:
+            if not email_code:
+                return _need(pending, 'Please enter the code from your email.')
+            if not (is_six_digits(email_code) and pending.check_code('email', email_code)):
+                return _wrong_code(pending, 'email')
 
-        if not (pending.email_verified and pending.phone_verified):
+            pending.email_verified = True
+            pending.save()
+            try:
+                _send(pending, 'phone')
+            except Exception:
+                logger.exception('Could not send the sign-up text to %s', mask_phone(pending.phone_number))
+                pending.save()
+                return _need(
+                    pending,
+                    "Your email is confirmed, but we couldn't send a text to your mobile number. Please tap Send again.",
+                )
+            pending.save()
             body = _status(pending)
-            missing = 'phone' if pending.email_verified else 'email'
-            body['detail'] = f'Please enter the {missing} code too.'
-            return Response(body, status=400)
+            body['detail'] = 'Email confirmed. We sent a code to your phone.'
+            body['next'] = 'phone'
+            return Response(body)
+
+        # Step 2: the phone code
+        if not pending.phone_verified:
+            if not pending.phone_sent_at:
+                return _need(pending, "We haven't sent the text yet. Please tap Send again.")
+            if not phone_code:
+                return _need(pending, 'Please enter the code from your text message.')
+            if not (is_six_digits(phone_code) and pending.check_code('phone', phone_code)):
+                return _wrong_code(pending, 'phone')
+            pending.phone_verified = True
+            pending.save()
 
         with transaction.atomic():
             pending = PendingRegistration.objects.select_for_update().get(pk=pending.pk)
@@ -309,6 +388,8 @@ class RegisterResendView(APIView):
             return Response({'detail': 'Choose email or phone.'}, status=400)
         if getattr(pending, f'{channel}_verified'):
             return Response({'detail': f'Your {channel} is already verified.'}, status=400)
+        if channel == 'phone' and not pending.email_verified:
+            return Response({'detail': 'Please confirm your email code first. We text you after that.'}, status=400)
         if getattr(pending, f'{channel}_sends') >= PendingRegistration.MAX_SENDS:
             return Response({'detail': 'Too many codes were sent. Please fill in the form again.', 'restart': True}, status=400)
 

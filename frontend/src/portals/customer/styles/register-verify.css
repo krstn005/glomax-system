@@ -1,0 +1,59 @@
+/* Verify step of the Register page */
+.rv-form { gap: 14px; }
+
+.rv-steps { list-style: none; display: flex; align-items: center; gap: 0; margin: 0 0 4px; padding: 0; }
+.rv-steps li { flex: 1; display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: #94a3b8; }
+.rv-steps li + li::before { content: ''; flex: 1; height: 2px; margin-right: 8px; background: #e2e8f0; border-radius: 2px; }
+.rv-steps li span { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #e2e8f0; color: #64748b; font-size: 12px; font-weight: 700; }
+.rv-steps li.active { color: #0d1f3c; }
+.rv-steps li.active span { background: #facc15; color: #0d1f3c; box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.25); }
+.rv-steps li.done { color: #047857; }
+.rv-steps li.done span { background: #10b981; color: #fff; }
+.rv-steps li.done + li::before { background: #10b981; }
+
+.rv-code { display: flex; flex-direction: column; gap: 12px; padding: 14px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 16px; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; }
+.rv-code:focus-within { border-color: #facc15; box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.2); }
+.rv-code.is-ready { border-color: #34d399; }
+.rv-code.is-verified { border-color: #a7f3d0; background: #f0fdf9; }
+
+.rv-code-head { display: flex; align-items: center; gap: 12px; }
+.rv-code-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; background: #0d1f3c; color: #facc15; }
+.rv-code.is-verified .rv-code-icon { background: #10b981; color: #fff; }
+.rv-code-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; cursor: pointer; }
+.rv-code-title strong { font-size: 14.5px; color: #0d1f3c; }
+.rv-code-title span { font-size: 12.5px; color: #64748b; overflow-wrap: anywhere; }
+
+.rv-chip { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; background: #f1f5f9; color: #64748b; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rv-code.is-ready .rv-chip { background: #d1fae5; color: #047857; }
+.rv-code.is-verified .rv-chip { background: #10b981; color: #fff; }
+
+.rv-input { width: 100%; box-sizing: border-box; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; background: #f8fafc; color: #0d1f3c; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 26px; font-weight: 700; letter-spacing: 0.5em; text-align: center; text-indent: 0.5em; outline: none; transition: border-color 0.2s, background 0.2s; }
+.rv-input::placeholder { color: #cbd5e1; }
+.rv-input:focus { border-color: #facc15; background: #fff; }
+
+.rv-code-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; color: #64748b; }
+.rv-resend { padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 999px; background: #fff; color: #0d1f3c; font: inherit; font-weight: 600; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.rv-resend:hover:not(:disabled) { background: #fff7d6; border-color: #facc15; }
+.rv-resend:disabled { color: #94a3b8; cursor: default; background: #f8fafc; }
+
+.rv-code-done { margin: 0; font-size: 13px; color: #047857; }
+
+.rv-expiry { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 12px; background: #fff7e6; color: #92400e; font-size: 12.5px; line-height: 1.45; }
+.rv-expiry svg { flex: none; margin-top: 2px; }
+
+.cl-form .cl-submit:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+
+.rv-link { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+
+@media (max-width: 480px) {
+  .rv-code { padding: 12px; }
+  .rv-input { font-size: 22px; letter-spacing: 0.4em; text-indent: 0.4em; }
+  .rv-steps li { font-size: 12px; gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rv-code, .rv-input, .rv-resend { transition: none; }
+}
+
+.rv-code.is-locked { background: #f8fafc; border-style: dashed; }
+.rv-code.is-locked .rv-code-icon { background: #cbd5e1; color: #64748b; }
+.rv-code.is-locked .rv-code-title strong { color: #64748b; }

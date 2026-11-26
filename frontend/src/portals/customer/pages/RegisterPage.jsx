@@ -18,6 +18,8 @@ import {
   XCircle,
   Loader2,
   ShieldCheck,
+  Clock,
+  Check,
 } from 'lucide-react';
 import GoogleSignInButton from '../../../components/auth/GoogleSignInButton';
 import { registerStart, registerVerify, registerResend } from '../../../api/auth';
@@ -26,6 +28,7 @@ import { sanitizePhoneNumber } from '../../../utils/phone';
 import { ROLE_CONFIG } from '../../../roleConfig';
 import logo from '../../../assets/images/logo.jpg';
 import '../styles/customer-login.css';
+import '../styles/register-verify.css';
 
 const FEATURES = [
   { icon: Home, label: 'Request a free roof check' },
@@ -49,6 +52,103 @@ function getStrength(password) {
 function getGoogleWidth() {
   if (typeof window === 'undefined') return 360;
   return Math.max(220, Math.min(400, window.innerWidth - 80));
+}
+
+const NAME_OK = /^[A-Za-z\u00C0-\u00FF][A-Za-z\u00C0-\u00FF .'-]*$/;
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PHONE_OK = /^(09\d{9}|\+639\d{9}|639\d{9})$/;
+
+// Checks every field before we ask the server. Returns { field: message }.
+function validateForm(f) {
+  const errors = {};
+
+  const name = f.full_name.trim().replace(/\s+/g, ' ');
+  if (!name) errors.full_name = 'Please enter your full name.';
+  else if (!NAME_OK.test(name)) errors.full_name = 'Your name can only have letters, spaces, and . - \'';
+  else if (name.replace(/[^A-Za-z\u00C0-\u00FF]/g, '').length < 4 || !name.includes(' '))
+    errors.full_name = 'Please enter your first and last name.';
+
+  const email = f.email.trim();
+  if (!email) errors.email = 'Please enter your email address.';
+  else if (!EMAIL_OK.test(email)) errors.email = 'Please enter a real email, like juan@email.com.';
+
+  const phone = f.phone_number.trim();
+  if (!phone) errors.phone_number = 'Please enter your phone number.';
+  else if (!PHONE_OK.test(phone)) errors.phone_number = 'Use a Philippine mobile number, like 09171234567.';
+
+  const address = f.address.trim();
+  if (!address) errors.address = 'Please enter your address.';
+  else if (address.length < 10 || !/[A-Za-z]/.test(address) || !/[\s,]/.test(address))
+    errors.address = 'Please enter your full address, like 123 Rizal St, Quezon City.';
+
+  if (!f.password) errors.password = 'Please create a password.';
+  else if (f.password.length < 8 || !/[A-Za-z]/.test(f.password) || !/\d/.test(f.password))
+    errors.password = 'Use at least 8 characters with letters and numbers.';
+
+  if (!f.confirm_password) errors.confirm_password = 'Please type your password again.';
+  else if (f.password !== f.confirm_password) errors.confirm_password = 'Passwords do not match.';
+
+  return errors;
+}
+
+function CodeField({ id, icon: Icon, title, hint, value, verified, wait, onChange, onResend, autoFocus, locked, lockedText }) {
+  const ready = !verified && !locked && value.length === 6;
+  const state = verified ? 'is-verified' : locked ? 'is-locked' : ready ? 'is-ready' : '';
+  return (
+    <div className={`rv-code ${state}`}>
+      <div className="rv-code-head">
+        <span className="rv-code-icon">
+          <Icon size={18} />
+        </span>
+        <label htmlFor={id} className="rv-code-title">
+          <strong>{title}</strong>
+          <span>{locked ? lockedText : `Sent to ${hint}`}</span>
+        </label>
+        <span className="rv-chip">
+          {verified ? (
+            <>
+              <CheckCircle2 size={13} /> Verified
+            </>
+          ) : locked ? (
+            <>
+              <Lock size={13} /> Next
+            </>
+          ) : ready ? (
+            <>
+              <Check size={13} /> Ready
+            </>
+          ) : (
+            `${value.length}/6`
+          )}
+        </span>
+      </div>
+
+      {verified ? (
+        <p className="rv-code-done">This code is correct. You do not need to type it again.</p>
+      ) : locked ? null : (
+        <>
+          <input
+            id={id}
+            name={id}
+            className="rv-input"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="______"
+            value={value}
+            onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            autoFocus={autoFocus}
+          />
+          <div className="rv-code-foot">
+            <span>Did not get it?</span>
+            <button type="button" className="rv-resend" onClick={onResend} disabled={wait > 0}>
+              {wait > 0 ? `Send again in ${wait}s` : 'Send again'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export default function RegisterPage() {
@@ -108,14 +208,27 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     setNotice('');
-    if (!codes.email && !codes.phone) {
-      setError('Please type the code from your email and the code from your text message.');
+    const emailStep = !pending.email_verified;
+    if (emailStep && codes.email.length !== 6) {
+      setError('Please type the 6-digit code from your email.');
+      return;
+    }
+    if (!emailStep && codes.phone.length !== 6) {
+      setError('Please type the 6-digit code from your text message.');
       return;
     }
     setIsSubmitting(true);
     try {
-      await registerVerify(pending.registration_token, codes.email, codes.phone);
-      navigate('/login', { state: { justRegistered: true } });
+      const data = await registerVerify(pending.registration_token, emailStep ? codes.email : '', emailStep ? '' : codes.phone);
+      if (!emailStep) {
+        // Both codes are right, the account is made
+        navigate('/login', { state: { justRegistered: true } });
+        return;
+      }
+      // Email is right. The text message code was just sent.
+      setPending((prev) => ({ ...prev, ...(data && typeof data === 'object' ? data : {}), email_verified: true, phone_sent: true }));
+      setWait((w) => ({ ...w, phone: data?.resend_wait?.phone || 60 }));
+      setNotice('Email confirmed. We sent a code to your phone.');
     } catch (err) {
       const data = err.response?.data;
       if (!err.response) {
@@ -125,7 +238,7 @@ export default function RegisterPage() {
       } else {
         // The server remembers which code was already right
         if (data?.registration_token) setPending((prev) => ({ ...prev, ...data }));
-        setError(data?.detail || 'Could not verify your codes. Please try again.');
+        setError(data?.detail || 'Could not verify your code. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -133,6 +246,7 @@ export default function RegisterPage() {
   }
 
   async function handleResend(channel) {
+    if (channel === 'phone' && !pending.email_verified) return;
     setError('');
     setNotice('');
     try {
@@ -200,9 +314,12 @@ export default function RegisterPage() {
     setError('');
     setFieldErrors({});
 
-    if (form.password !== form.confirm_password) {
-      setFieldErrors({ confirm_password: 'Passwords do not match.' });
+    const problems = validateForm(form);
+    if (Object.keys(problems).length) {
+      setFieldErrors(problems);
       setError('Please check the fields marked in red.');
+      const first = ['full_name', 'email', 'phone_number', 'address', 'password', 'confirm_password'].find((k) => problems[k]);
+      if (first) document.getElementById(first)?.focus();
       return;
     }
 
@@ -217,7 +334,7 @@ export default function RegisterPage() {
       });
       setPending(data);
       setCodes({ email: '', phone: '' });
-      setWait({ email: data.resend_wait?.email || 30, phone: data.resend_wait?.phone || 60 });
+      setWait({ email: data.resend_wait?.email || 30, phone: 0 });
       setStep('verify');
     } catch (err) {
       const data = err.response?.data;
@@ -327,7 +444,7 @@ export default function RegisterPage() {
             <div>
               <h1 className="cl-title">{step === 'form' ? 'Create your account' : 'Verify your details'}</h1>
               <p className="cl-subtitle">
-                {step === 'form' ? 'It only takes a minute' : 'We sent you two codes - one by email, one by text'}
+                {step === 'form' ? 'It only takes a minute' : pending?.email_verified ? 'Now type the code we texted to your phone' : 'We sent a code to your email. We will text you next'}
               </p>
             </div>
           </div>
@@ -356,108 +473,90 @@ export default function RegisterPage() {
           )}
 
           {step === 'verify' && pending ? (
-            <form onSubmit={handleVerify} className="cl-form">
-              <label className="cl-field">
-                <span className="cl-label">Email code</span>
-                <span className="cl-input-wrap">
-                  <Mail size={17} className="cl-input-icon" />
-                  <input
-                    id="email_code"
-                    name="email_code"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    placeholder="6-digit code"
-                    maxLength={6}
-                    value={pending.email_verified ? 'Verified' : codes.email}
-                    onChange={(e) => setCodes((c) => ({ ...c, email: e.target.value.replace(/\D/g, '') }))}
-                    disabled={pending.email_verified}
-                    autoFocus
-                  />
-                </span>
-                <span className="cl-field-hint">
-                  Sent to {pending.email_hint}.{' '}
-                  {pending.email_verified ? (
-                    'Verified.'
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleResend('email')}
-                      disabled={wait.email > 0}
-                      style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline', cursor: wait.email > 0 ? 'default' : 'pointer', opacity: wait.email > 0 ? 0.6 : 1 }}
-                    >
-                      {wait.email > 0 ? `Send again in ${wait.email}s` : 'Send again'}
-                    </button>
-                  )}
-                </span>
-              </label>
+            <form onSubmit={handleVerify} className="cl-form rv-form">
+              <ol className="rv-steps" aria-label="Sign-up steps">
+                <li className="done">
+                  <span>
+                    <Check size={13} />
+                  </span>
+                  Details
+                </li>
+                <li className="active">
+                  <span>2</span>
+                  Verify
+                </li>
+                <li>
+                  <span>3</span>
+                  Done
+                </li>
+              </ol>
 
-              <label className="cl-field">
-                <span className="cl-label">Text message code</span>
-                <span className="cl-input-wrap">
-                  <Phone size={17} className="cl-input-icon" />
-                  <input
-                    id="phone_code"
-                    name="phone_code"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    placeholder="6-digit code"
-                    maxLength={6}
-                    value={pending.phone_verified ? 'Verified' : codes.phone}
-                    onChange={(e) => setCodes((c) => ({ ...c, phone: e.target.value.replace(/\D/g, '') }))}
-                    disabled={pending.phone_verified}
-                  />
-                </span>
-                <span className="cl-field-hint">
-                  Sent to {pending.phone_hint}.{' '}
-                  {pending.phone_verified ? (
-                    'Verified.'
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleResend('phone')}
-                      disabled={wait.phone > 0}
-                      style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline', cursor: wait.phone > 0 ? 'default' : 'pointer', opacity: wait.phone > 0 ? 0.6 : 1 }}
-                    >
-                      {wait.phone > 0 ? `Send again in ${wait.phone}s` : 'Send again'}
-                    </button>
-                  )}
-                </span>
-              </label>
+              <CodeField
+                id="email_code"
+                icon={Mail}
+                title="Email code"
+                hint={pending.email_hint}
+                value={codes.email}
+                verified={!!pending.email_verified}
+                wait={wait.email}
+                onChange={(v) => setCodes((c) => ({ ...c, email: v }))}
+                onResend={() => handleResend('email')}
+                autoFocus={!pending.email_verified}
+              />
 
-              <p className="cl-field-hint">
-                Your account is only made after both codes are correct. The codes work for {pending.code_minutes || 10} minutes.
+              <CodeField
+                id="phone_code"
+                icon={Phone}
+                title="Text message code"
+                hint={pending.phone_hint}
+                value={codes.phone}
+                verified={!!pending.phone_verified}
+                wait={wait.phone}
+                onChange={(v) => setCodes((c) => ({ ...c, phone: v }))}
+                onResend={() => handleResend('phone')}
+                locked={!pending.email_verified}
+                lockedText="We text you after your email is confirmed"
+                autoFocus={!!pending.email_verified}
+              />
+
+              <p className="rv-expiry">
+                <Clock size={14} />
+                Codes work for {pending.code_minutes || 10} minutes. Your account is made after the email and phone codes are both correct.
               </p>
 
-              <button type="submit" className="cl-submit" disabled={isSubmitting}>
+              <button
+                type="submit"
+                className="cl-submit"
+                disabled={isSubmitting || (pending.email_verified ? codes.phone.length !== 6 : codes.email.length !== 6)}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 size={17} className="cl-spin" />
                     Checking...
                   </>
-                ) : (
+                ) : pending.email_verified ? (
                   <>
                     <ShieldCheck size={17} />
                     Verify and Create Account
+                  </>
+                ) : (
+                  <>
+                    <Mail size={17} />
+                    Confirm email code
                   </>
                 )}
               </button>
 
               <p className="cl-register">
                 Wrong email or number?{' '}
-                <button
-                  type="button"
-                  onClick={() => backToForm('')}
-                  style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}
-                >
+                <button type="button" className="rv-link" onClick={() => backToForm('')}>
                   Change my details
                 </button>
               </p>
             </form>
           ) : (
           <>
-          <form onSubmit={handleSubmit} className="cl-form">
+          <form onSubmit={handleSubmit} className="cl-form" noValidate>
             <label className="cl-field">
               <span className="cl-label">Full Name</span>
               <span className="cl-input-wrap">
@@ -519,6 +618,7 @@ export default function RegisterPage() {
                     type="tel"
                     inputMode="numeric"
                     placeholder="09171234567"
+                    maxLength={13}
                     value={form.phone_number}
                     onChange={handlePhoneChange}
                     autoComplete="tel"
