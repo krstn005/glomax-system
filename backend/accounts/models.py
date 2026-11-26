@@ -382,6 +382,62 @@ class PendingRegistration(models.Model):
         return f"{self.email} - pending ({'used' if self.is_used else 'open'})"
 
 
+class PasswordResetRequest(models.Model):
+    """
+    A "Forgot password" request. The customer gets a 6-digit code by text
+    message (or by email if the account has no mobile number) and can
+    choose a new password with it. The code is saved hashed, never plain.
+    """
+    LIFETIME_MINUTES = 15
+    CODE_MINUTES = 10
+    MAX_ATTEMPTS = 5
+    # Most codes one request can send. Protects the SMS credits.
+    MAX_SENDS = 4
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_requests')
+    token = models.CharField(max_length=64, unique=True)
+    code_hash = models.CharField(max_length=128, blank=True)
+    code_sent_at = models.DateTimeField(null=True, blank=True)
+    sends = models.PositiveSmallIntegerField(default=0)
+    sent_by = models.CharField(max_length=10, blank=True)  # SMS or EMAIL
+    attempts = models.PositiveSmallIntegerField(default=0)
+    is_used = models.BooleanField(default=False)
+    ip_address = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=self.LIFETIME_MINUTES)
+
+    def is_locked(self):
+        return self.attempts >= self.MAX_ATTEMPTS
+
+    def is_open(self):
+        return not self.is_used and not self.is_expired() and not self.is_locked()
+
+    def set_code(self, code):
+        self.code_hash = make_password(code)
+        self.code_sent_at = timezone.now()
+        self.sends += 1
+
+    def check_code(self, code):
+        if not self.code_hash or not self.code_sent_at:
+            return False
+        if timezone.now() > self.code_sent_at + timedelta(minutes=self.CODE_MINUTES):
+            return False
+        return check_password(code, self.code_hash)
+
+    @staticmethod
+    def generate_token():
+        return secrets.token_urlsafe(32)
+
+    @staticmethod
+    def generate_code():
+        return ''.join(secrets.choice('0123456789') for _ in range(6))
+
+    def __str__(self):
+        return f"{self.user.username} - password reset ({'used' if self.is_used else 'open'})"
+
+
 class AuditLog(models.Model):
     """
     A record of important security events: sign-ins, wrong passwords,

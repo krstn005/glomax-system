@@ -35,6 +35,12 @@ from .registration import (
     RegisterVerifyView,
     RegisterResendView,
 )
+# Forgot password by text message
+from .password_reset import (
+    PasswordResetStartView,
+    PasswordResetConfirmView,
+    PasswordResetResendView,
+)
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -44,6 +50,11 @@ urlpatterns = [
     path('register/start/', RegisterStartView.as_view(), name='register-start'),
     path('register/verify/', RegisterVerifyView.as_view(), name='register-verify'),
     path('register/resend/', RegisterResendView.as_view(), name='register-resend'),
+
+    # Forgot password: a code by text message, then a new password
+    path('password-reset/start/', PasswordResetStartView.as_view(), name='password-reset-start'),
+    path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
+    path('password-reset/resend/', PasswordResetResendView.as_view(), name='password-reset-resend'),
 
     path('login/', SecureLoginView.as_view(), name='login'),
     path('me/', MeView.as_view(), name='me'),
