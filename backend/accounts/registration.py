@@ -154,6 +154,8 @@ class RegisterStartSerializer(serializers.Serializer):
         return value
 
     def validate_phone_number(self, value):
+        if not (value.strip().isdigit() and len(value.strip()) == 11 and value.strip().startswith('09')):
+            raise serializers.ValidationError('Phone number must be 11 digits and start with 09, like 09171234567.')
         number = normalize_ph_mobile(value)
         if not number:
             raise serializers.ValidationError('Enter a valid Philippine mobile number, like 09171234567.')

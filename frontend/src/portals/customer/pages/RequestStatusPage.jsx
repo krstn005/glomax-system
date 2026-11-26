@@ -35,6 +35,7 @@ import { getMyTickets, downloadFinalSheetPDF, requestReschedule } from '../../..
 import { formatCurrency } from '../../../utils/currency';
 import VisitCalendar, { toDateKey } from '../../../components/VisitCalendar';
 import CustomerLayout from '../components/CustomerLayout';
+import RoofResult from '../../../components/RoofResult';
 import '../styles/request-status.css';
 
 const RESOLVED_STATUSES = ['APPROVED', 'COMPLETED', 'WITHDRAWN', 'NC_CANNOT_PROCEED'];
@@ -1007,6 +1008,17 @@ export default function RequestStatusPage() {
                 </div>
               </section>
             </div>
+          )}
+
+          {!isNotCompatible && !isWithdrawn && ticket.assessment?.calculation?.steps && (
+            <section className="rs-section">
+              <SectionTitle icon={Sun} tone="gold">How Your Roof Was Assessed</SectionTitle>
+              <p className="rs-tries-hint">
+                Your Partner Installer measured your roof on the map. These are the steps used to work out the
+                system size for your home.
+              </p>
+              <RoofResult result={ticket.assessment.calculation} title="Your roof results" />
+            </section>
           )}
 
           {canRequestReschedule && (

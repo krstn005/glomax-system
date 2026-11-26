@@ -56,7 +56,7 @@ function getGoogleWidth() {
 
 const NAME_OK = /^[A-Za-z\u00C0-\u00FF][A-Za-z\u00C0-\u00FF .'-]*$/;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const PHONE_OK = /^(09\d{9}|\+639\d{9}|639\d{9})$/;
+const PHONE_OK = /^09\d{9}$/;
 
 // Checks every field before we ask the server. Returns { field: message }.
 function validateForm(f) {
@@ -74,7 +74,7 @@ function validateForm(f) {
 
   const phone = f.phone_number.trim();
   if (!phone) errors.phone_number = 'Please enter your phone number.';
-  else if (!PHONE_OK.test(phone)) errors.phone_number = 'Use a Philippine mobile number, like 09171234567.';
+  else if (!PHONE_OK.test(phone)) errors.phone_number = 'Phone number must be 11 digits and start with 09, like 09171234567.';
 
   const address = f.address.trim();
   if (!address) errors.address = 'Please enter your address.';
@@ -281,7 +281,8 @@ export default function RegisterPage() {
   }
 
   function handlePhoneChange(e) {
-    const { value, hadInvalidChar } = sanitizePhoneNumber(e.target.value);
+    const { value: cleaned, hadInvalidChar } = sanitizePhoneNumber(e.target.value);
+    const value = cleaned.replace(/\D/g, '').slice(0, 11);
     setForm((prev) => ({ ...prev, phone_number: value }));
     setPhoneWarning(hadInvalidChar ? 'Phone number can only contain numbers.' : '');
     clearFieldError('phone_number');
@@ -618,7 +619,7 @@ export default function RegisterPage() {
                     type="tel"
                     inputMode="numeric"
                     placeholder="09171234567"
-                    maxLength={13}
+                    maxLength={11}
                     value={form.phone_number}
                     onChange={handlePhoneChange}
                     autoComplete="tel"

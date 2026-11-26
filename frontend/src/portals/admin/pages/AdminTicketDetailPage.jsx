@@ -32,6 +32,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import RoofResult from '../../../components/RoofResult';
 import { getAdminTickets } from '../../../api/adminTickets';
 import { approveTicket, returnForRevision } from '../../../api/adminTicketActions';
 import { downloadFinalSheetPDF } from '../../../api/tickets';
@@ -644,6 +645,34 @@ export default function AdminTicketDetailPage() {
                           {assessment.roof_condition_display || '—'}
                         </Field>
                       </div>
+
+                      {assessment.differs_from_recommendation && (
+                        <div className="admtd-notes">
+                          <p className="admtd-notes-label">
+                            <AlertCircle size={13} />
+                            Different from the computed size
+                          </p>
+                          <p className="admtd-notes-text">
+                            The system calculated {assessment.computed_package_kw} kW, but the recommended package is
+                            different. Check the notes from Staff and the Partner Installer.
+                          </p>
+                        </div>
+                      )}
+
+                      {assessment.calculation?.steps && (
+                        <div className="admtd-calc" style={{ marginTop: 16 }}>
+                          <RoofResult result={assessment.calculation} title="System Calculation" />
+                        </div>
+                      )}
+
+                      {assessment.visit_distance_m !== undefined && assessment.visit_distance_m !== null && (
+                        <p className="admtd-calc-geo" style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                          <MapPin size={13} />
+                          {assessment.visit_within_geofence
+                            ? `Visit location matched the customer's pin (${Math.round(assessment.visit_distance_m)} m away).`
+                            : `Visit location was ${Math.round(assessment.visit_distance_m)} m from the customer's pin.`}
+                        </p>
+                      )}
 
                       {assessment.notes && (
                         <div className="admtd-notes">

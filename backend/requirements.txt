@@ -49,3 +49,5 @@ whitenoise==6.12.0
 xhtml2pdf==0.2.17
 dnspython
 dnspython
+dnspython
+dnspython
